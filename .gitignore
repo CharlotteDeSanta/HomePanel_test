@@ -1,0 +1,32 @@
+# Example/reference projects
+Examples/
+
+# Build output
+build/
+Debug/
+Release/
+cmake-build-*/
+out/
+
+# Generated binaries and maps
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+
+# Intermediate/compiler output
+*.o
+*.obj
+*.d
+*.su
+*.tmp
+compile_commands.json
+
+# Local IDE/editor files
+.vscode/
+.settings/
+mx.scratch
+
+# Optional local CMake presets
+CMakeUserPresets.json
