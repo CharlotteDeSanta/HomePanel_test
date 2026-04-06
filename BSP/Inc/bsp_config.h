@@ -1,0 +1,25 @@
+#ifndef BSP_CONFIG_H
+#define BSP_CONFIG_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "stm32h7xx_hal.h"
+
+#define BSP_SDRAM_BASE_ADDR         0xD0000000U
+#define BSP_SDRAM_SIZE_BYTES        (64UL * 1024UL * 1024UL)
+
+#define BSP_DISPLAY_WIDTH           800U
+#define BSP_DISPLAY_HEIGHT          480U
+#define BSP_DISPLAY_BYTES_PER_PIXEL 4U
+#define BSP_DISPLAY_PIXEL_FORMAT    LTDC_PIXEL_FORMAT_ARGB8888
+#define BSP_DISPLAY_FRAMEBUFFER_ADDR BSP_SDRAM_BASE_ADDR
+#define BSP_DISPLAY_FRAMEBUFFER_SIZE \
+  (BSP_DISPLAY_WIDTH * BSP_DISPLAY_HEIGHT * BSP_DISPLAY_BYTES_PER_PIXEL)
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* BSP_CONFIG_H */

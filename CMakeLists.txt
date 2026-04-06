@@ -37,6 +37,14 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+# Keep board support code in BSP even if CubeMX regenerates these files.
+set_source_files_properties(
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/fmc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/ltdc.c
+    PROPERTIES HEADER_FILE_ONLY TRUE
+)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -44,12 +52,14 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_board.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_sdram.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_display.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined include paths
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Inc
 )
 
 # Add project symbols (macros)
