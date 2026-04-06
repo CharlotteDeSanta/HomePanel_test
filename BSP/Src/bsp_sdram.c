@@ -43,7 +43,7 @@ void BSP_SDRAM_Init(void)
   SdramTiming.ExitSelfRefreshDelay = 8;
   SdramTiming.SelfRefreshTime = 5;
   SdramTiming.RowCycleDelay = 8;
-  SdramTiming.WriteRecoveryTime = 2;
+  SdramTiming.WriteRecoveryTime = 4;
   SdramTiming.RPDelay = 2;
   SdramTiming.RCDDelay = 2;
 
