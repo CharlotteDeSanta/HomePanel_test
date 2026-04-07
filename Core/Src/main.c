@@ -30,6 +30,7 @@
 #include "bsp_board.h"
 #include "bsp_qspi_flash.h"
 #include "bsp_sdram.h"
+#include "bsp_touch_gt911.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -98,6 +99,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  (void)BSP_Touch_Init();
   CPU_CACHE_Enable();
   MX_FMC_Init();
   if (BSP_QSPI_Init() != HAL_OK)

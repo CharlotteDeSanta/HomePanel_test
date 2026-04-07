@@ -24,27 +24,19 @@
 
 #include <STM32TouchController.hpp>
 
+extern "C"
+{
+#include "bsp_touch_gt911.h"
+}
+
 void STM32TouchController::init()
 {
-    /**
-     * Initialize touch controller and driver
-     *
-     */
+    (void)BSP_Touch_Init();
 }
 
 bool STM32TouchController::sampleTouch(int32_t& x, int32_t& y)
 {
-    /**
-     * By default sampleTouch returns false,
-     * return true if a touch has been detected, otherwise false.
-     *
-     * Coordinates are passed to the caller by reference by x and y.
-     *
-     * This function is called by the TouchGFX framework.
-     * By default sampleTouch is called every tick, this can be adjusted by HAL::setTouchSampleRate(int8_t);
-     *
-     */
-    return false;
+    return BSP_Touch_Read(&x, &y) != 0U;
 }
 
 /* USER CODE END STM32TouchController */

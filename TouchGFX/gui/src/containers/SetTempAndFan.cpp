@@ -10,7 +10,7 @@ SetTempAndFan::SetTempAndFan() :
     closeDelay(0),
     openRoom(KITCHEN),
     idleTime(0),
-    moveRate(8),
+    moveRate(12),
     isInitialized(false),
     newTemp(0)
 {
@@ -139,6 +139,7 @@ void SetTempAndFan::showContainer(Rooms roomID, HVAC_FanMode_t fanMode, float te
     openRoom = roomID;
     idleTime = 0;
     isInitialized = false;
+    newTemp = temperature;
 
     scrollWheel1.setTempValue(temperature, isFahrenheit);
 
@@ -219,7 +220,7 @@ void SetTempAndFan::close()
 
 void SetTempAndFan::fadeIn()
 {
-    faderBox.setAlpha(255);
+    faderBox.setAlpha(0);
     headerImage.setAlpha(255);
     graphButton.setAlpha(255);
     fanSpeedText.setAlpha(255);
@@ -230,12 +231,13 @@ void SetTempAndFan::fadeIn()
     lowFanButton.setAlpha(255);
     headerText.setAlpha(255);
     scrollWheel1.setVisible(true);
-    faderBox.startFadeAnimation(0, 30, EasingEquations::quadEaseIn);
+    invalidate();
 }
 
 void SetTempAndFan::fadeOut()
 {
-    faderBox.startFadeAnimation(255, 30, EasingEquations::quadEaseIn);
+    faderBox.setAlpha(255);
+    faderBox.invalidate();
 }
 
 void SetTempAndFan::fanModeChanged()

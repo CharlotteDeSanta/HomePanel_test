@@ -51,7 +51,6 @@ void ScrollWheelContainer::scrollWheelAnimateToHandler(int16_t itemSelected)
 void ScrollWheelContainer::setTempValue(float value, bool isFahrenheit)
 {
     isFahrenheitSetting = isFahrenheit;
-    initialize();
 
     int16_t index;
 
@@ -64,5 +63,12 @@ void ScrollWheelContainer::setTempValue(float value, bool isFahrenheit)
         index = int16_t((value - 10) / 0.5f);
     }
 
-    scrollWheel1.animateToItem(index);
+    if (scrollWheel1.isAnimating())
+    {
+        scrollWheel1.stopAnimation();
+    }
+
+    // Opening the secondary card should not spend 30 ticks animating the wheel
+    // into the already-known setpoint.
+    scrollWheel1.animateToItem(index, 0);
 }

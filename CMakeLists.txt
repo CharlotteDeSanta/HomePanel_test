@@ -59,6 +59,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_sdram.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_display.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_qspi_flash.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_touch_gt911.c
 )
 
 # Add include paths
