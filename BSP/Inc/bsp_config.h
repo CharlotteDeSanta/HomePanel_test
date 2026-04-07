@@ -11,7 +11,7 @@ extern "C" {
 #define BSP_SDRAM_SIZE_BYTES        (64UL * 1024UL * 1024UL)
 
 #define BSP_QSPI_BASE_ADDR          0x90000000U
-#define BSP_QSPI_SIZE_BYTES         (64UL * 1024UL * 1024UL)
+#define BSP_QSPI_SIZE_BYTES         (32UL * 1024UL * 1024UL)
 
 #define BSP_DISPLAY_WIDTH           800U
 #define BSP_DISPLAY_HEIGHT          480U

@@ -40,28 +40,6 @@ HAL_StatusTypeDef BSP_QSPI_Init(void)
   return BSP_QSPI_Configure(QSPI_FLASH_ID_1, QSPI_DUALFLASH_DISABLE, 1U);
 }
 
-HAL_StatusTypeDef BSP_QSPI_ReadSingle(uint32_t flash_id, uint8_t *data, uint32_t address, uint32_t size)
-{
-  HAL_StatusTypeDef status;
-  HAL_StatusTypeDef restore_status;
-
-  status = BSP_QSPI_Reconfigure(flash_id, QSPI_DUALFLASH_DISABLE, 0U);
-  if (status != HAL_OK)
-  {
-    return status;
-  }
-
-  status = BSP_QSPI_Read(data, address, size);
-
-  restore_status = BSP_QSPI_Reconfigure(QSPI_FLASH_ID_1, QSPI_DUALFLASH_DISABLE, 1U);
-  if (status != HAL_OK)
-  {
-    return status;
-  }
-
-  return restore_status;
-}
-
 static HAL_StatusTypeDef BSP_QSPI_Configure(uint32_t flash_id, uint32_t dual_flash, uint32_t enable_quad_mode)
 {
   const uint32_t is_dual_flash = (dual_flash != QSPI_DUALFLASH_DISABLE) ? 1U : 0U;
@@ -210,12 +188,6 @@ HAL_StatusTypeDef BSP_QSPI_Read(uint8_t *data, uint32_t address, uint32_t size)
 
   return HAL_OK;
 }
-
-uint32_t BSP_QSPI_GetError(void)
-{
-  return HAL_QSPI_GetError(&hqspi);
-}
-
 void BSP_QSPI_MspInit(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};

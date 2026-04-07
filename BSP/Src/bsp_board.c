@@ -159,7 +159,7 @@ void BSP_Board_MPU_Config(void)
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
   MPU_InitStruct.Number = MPU_REGION_NUMBER2;
   MPU_InitStruct.BaseAddress = BSP_QSPI_BASE_ADDR;
-  MPU_InitStruct.Size = MPU_REGION_SIZE_64MB;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_32MB;
   MPU_InitStruct.SubRegionDisable = 0x00;
   /*
    * External QSPI flash now runs in verified single-flash memory-mapped mode.
