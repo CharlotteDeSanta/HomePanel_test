@@ -45,10 +45,12 @@ static HAL_StatusTypeDef BSP_QSPI_Configure(uint32_t flash_id, uint32_t dual_fla
 
   hqspi.Instance = QUADSPI;
   /*
-   * Keep the bus slow while we stabilize the external flash path.
-   * PLL2_R is 240 MHz in the current clock tree. Prescaler 7 gives 30 MHz.
+   * The single-flash path is now stable, so raise QSPI bandwidth to improve
+   * texture-heavy animations. PLL2_R is 240 MHz in the current clock tree.
+   * Prescaler 2 gives 80 MHz, which is more aggressive but still within the
+   * range commonly used by W25Q256 quad-read examples.
    */
-  hqspi.Init.ClockPrescaler = 7;
+  hqspi.Init.ClockPrescaler = 2;
   /*
    * The single-flash reference example uses a deeper FIFO threshold, 6-cycle CS
    * high time, clock mode 3, and FSIZE=24 for a 32 MiB W25Q256. Keeping the
@@ -207,7 +209,7 @@ void BSP_QSPI_MspInit(void)
 
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 
   GPIO_InitStruct.Pin = GPIO_PIN_2;
   GPIO_InitStruct.Alternate = GPIO_AF9_QUADSPI;

@@ -9,6 +9,10 @@ RoomCard::RoomCard() :
 
 void RoomCard::initialize()
 {
+    // The texture mapper is only visible during the flip animation, so prefer
+    // the cheaper sampling mode to reduce startup frame drops.
+    cardBackgroundMapper.setRenderingAlgorithm(touchgfx::TextureMapper::NEAREST_NEIGHBOR);
+
     roomNameText.setVisible(false);
     humidityText.setVisible(false);
     humidityDroplet.setVisible(false);
