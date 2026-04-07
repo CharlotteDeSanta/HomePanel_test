@@ -37,6 +37,9 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+# Add touchgfx generated sources and libraries
+add_subdirectory(cmake/touchgfx)
+
 # Keep board support code in BSP even if CubeMX regenerates these files.
 set_source_files_properties(
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c

@@ -18,9 +18,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "crc.h"
+#include "dma2d.h"
 #include "ltdc.h"
 #include "gpio.h"
 #include "fmc.h"
+#include "app_touchgfx.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -99,10 +102,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_FMC_Init();
-  MX_LTDC_Init();
-  /* USER CODE BEGIN 2 */
+  /* Verify SDRAM before the display stack starts using it. */
   BSP_SDRAM_Test();
-  BSP_Display_FillTestPattern();
+  MX_LTDC_Init();
+  MX_CRC_Init();
+  MX_DMA2D_Init();
+  MX_TouchGFX_Init();
+  /* USER CODE BEGIN 2 */
   BSP_Board_SetStatusLed(1U, 1U, 1U);
 
   /* USER CODE END 2 */
@@ -113,6 +119,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
+  MX_TouchGFX_Process();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
