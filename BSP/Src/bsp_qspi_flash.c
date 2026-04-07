@@ -23,7 +23,6 @@ static uint32_t bsp_qspi_memory_mapped = 0U;
 static uint32_t bsp_qspi_msp_initialized = 0U;
 
 static HAL_StatusTypeDef BSP_QSPI_Configure(uint32_t flash_id, uint32_t dual_flash, uint32_t enable_quad_mode);
-static HAL_StatusTypeDef BSP_QSPI_Reconfigure(uint32_t flash_id, uint32_t dual_flash, uint32_t enable_quad_mode);
 static HAL_StatusTypeDef BSP_QSPI_WriteEnable(void);
 static HAL_StatusTypeDef BSP_QSPI_WaitWhileBusy(uint32_t timeout_ms);
 static HAL_StatusTypeDef BSP_QSPI_ResetMemory(void);
@@ -85,24 +84,6 @@ static HAL_StatusTypeDef BSP_QSPI_Configure(uint32_t flash_id, uint32_t dual_fla
 
   bsp_qspi_initialized = 1U;
   return HAL_OK;
-}
-
-static HAL_StatusTypeDef BSP_QSPI_Reconfigure(uint32_t flash_id, uint32_t dual_flash, uint32_t enable_quad_mode)
-{
-  if (HAL_QSPI_Abort(&hqspi) != HAL_OK)
-  {
-    /* Ignore abort failures when the peripheral is already idle. */
-  }
-
-  if (HAL_QSPI_DeInit(&hqspi) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  bsp_qspi_initialized = 0U;
-  bsp_qspi_memory_mapped = 0U;
-
-  return BSP_QSPI_Configure(flash_id, dual_flash, enable_quad_mode);
 }
 
 HAL_StatusTypeDef BSP_QSPI_EnableMemoryMappedMode(void)
