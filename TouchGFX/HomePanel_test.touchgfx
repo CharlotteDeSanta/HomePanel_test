@@ -2,27 +2,2726 @@
   "Application": {
     "Screens": [
       {
-        "Name": "screen",
+        "Name": "Main",
         "Components": [
           {
             "Type": "Image",
-            "Name": "image1",
+            "Name": "backgroundImage",
             "Width": 800,
             "Height": 480,
-            "RelativeFilename": "__generated\\clay_theme_images_backgrounds_800x480_burly.png"
+            "RelativeFilename": "Main\\Main_bg_house.png"
+          },
+          {
+            "Type": "Container",
+            "Name": "bedroomButtonContainer",
+            "X": 495,
+            "Y": 305,
+            "Width": 305,
+            "Height": 155,
+            "LockPosition": true,
+            "Moveable": true,
+            "Components": [
+              {
+                "Type": "FlexButton",
+                "Name": "bedroomCardButton",
+                "X": 15,
+                "Width": 260,
+                "Height": 110,
+                "LockPosition": true,
+                "ButtonTrigger": {
+                  "Type": "ClickButtonTrigger"
+                },
+                "ButtonStyles": [
+                  {
+                    "Type": "TextButtonStyle",
+                    "TextId": "__SingleUse_TWMD",
+                    "TextRotation": "0",
+                    "ColorReleased": {
+                      "Red": 10,
+                      "Green": 10,
+                      "Blue": 10
+                    },
+                    "ColorPressed": {
+                      "Red": 10,
+                      "Green": 10,
+                      "Blue": 10
+                    }
+                  }
+                ]
+              },
+              {
+                "Type": "CustomContainerInstance",
+                "Name": "bedroomCardContainer",
+                "Y": -15,
+                "Width": 305,
+                "Height": 170,
+                "CustomContainerDefinitionName": "RoomCard"
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "livingroomButtonContainer",
+            "X": 495,
+            "Y": 178,
+            "Width": 305,
+            "Height": 125,
+            "LockPosition": true,
+            "Moveable": true,
+            "Components": [
+              {
+                "Type": "FlexButton",
+                "Name": "livingroomCardButton",
+                "X": 15,
+                "Y": 1,
+                "Width": 260,
+                "Height": 110,
+                "LockPosition": true,
+                "ButtonTrigger": {
+                  "Type": "ClickButtonTrigger"
+                },
+                "ButtonStyles": [
+                  {
+                    "Type": "TextButtonStyle",
+                    "TextId": "__SingleUse_GA2I",
+                    "TextRotation": "0",
+                    "ColorReleased": {
+                      "Red": 10,
+                      "Green": 10,
+                      "Blue": 10
+                    },
+                    "ColorPressed": {
+                      "Red": 10,
+                      "Green": 10,
+                      "Blue": 10
+                    }
+                  }
+                ]
+              },
+              {
+                "Type": "CustomContainerInstance",
+                "Name": "livingroomCardContainer",
+                "Y": -13,
+                "Width": 305,
+                "Height": 170,
+                "CustomContainerDefinitionName": "RoomCard"
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "kitchenButtonContainer",
+            "X": 495,
+            "Y": 40,
+            "Width": 305,
+            "Height": 140,
+            "LockPosition": true,
+            "Components": [
+              {
+                "Type": "CustomContainerInstance",
+                "Name": "kitchenCardContainer",
+                "Width": 305,
+                "Height": 170,
+                "LockPosition": true,
+                "CustomContainerDefinitionName": "RoomCard"
+              },
+              {
+                "Type": "FlexButton",
+                "Name": "kitchenCardButton",
+                "X": 15,
+                "Y": 15,
+                "Width": 260,
+                "Height": 110,
+                "LockPosition": true,
+                "ButtonTrigger": {
+                  "Type": "ClickButtonTrigger"
+                },
+                "ButtonStyles": [
+                  {
+                    "Type": "TextButtonStyle",
+                    "TextId": "__SingleUse_L4JD",
+                    "TextRotation": "0",
+                    "ColorReleased": {
+                      "Red": 10,
+                      "Green": 10,
+                      "Blue": 10
+                    },
+                    "ColorPressed": {
+                      "Red": 10,
+                      "Green": 10,
+                      "Blue": 10
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "kitchenGraphButton",
+            "X": 41,
+            "Y": 123,
+            "Width": 230,
+            "Height": 195,
+            "ButtonTrigger": {
+              "Type": "ClickButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "BoxWithBorderButtonStyle",
+                "BorderSize": 5,
+                "ColorReleased": {
+                  "Green": 102,
+                  "Blue": 153
+                },
+                "ColorPressed": {
+                  "Green": 153,
+                  "Blue": 204
+                },
+                "ColorBorderReleased": {
+                  "Green": 51,
+                  "Blue": 102
+                },
+                "ColorBorderPressed": {
+                  "Red": 51,
+                  "Green": 102,
+                  "Blue": 153
+                }
+              }
+            ]
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "livingRoomGraphButton",
+            "X": 271,
+            "Y": 40,
+            "Width": 208,
+            "Height": 243,
+            "ButtonTrigger": {
+              "Type": "ClickButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "BoxWithBorderButtonStyle",
+                "BorderSize": 5,
+                "ColorReleased": {
+                  "Green": 102,
+                  "Blue": 153
+                },
+                "ColorPressed": {
+                  "Green": 153,
+                  "Blue": 204
+                },
+                "ColorBorderReleased": {
+                  "Green": 51,
+                  "Blue": 102
+                },
+                "ColorBorderPressed": {
+                  "Red": 51,
+                  "Green": 102,
+                  "Blue": 153
+                }
+              }
+            ]
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "bedRoomGraphButton",
+            "X": 212,
+            "Y": 283,
+            "Width": 267,
+            "Height": 157,
+            "ButtonTrigger": {
+              "Type": "ClickButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "BoxWithBorderButtonStyle",
+                "BorderSize": 5,
+                "ColorReleased": {
+                  "Green": 102,
+                  "Blue": 153
+                },
+                "ColorPressed": {
+                  "Green": 153,
+                  "Blue": 204
+                },
+                "ColorBorderReleased": {
+                  "Green": 51,
+                  "Blue": 102
+                },
+                "ColorBorderPressed": {
+                  "Red": 51,
+                  "Green": 102,
+                  "Blue": 153
+                }
+              }
+            ]
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "weatherButton",
+            "Width": 261,
+            "Height": 122,
+            "ButtonTrigger": {
+              "Type": "ClickButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "ImageButtonStyle",
+                "ImageReleased": "Main\\weather_info_bg.png",
+                "ImagePressed": "Main\\weather_info_bg_selected.png"
+              }
+            ],
+            "Fadeable": true
+          },
+          {
+            "Type": "Image",
+            "Name": "weatherIcon",
+            "X": 37,
+            "Y": 37,
+            "Width": 48,
+            "Height": 48,
+            "LockPosition": true,
+            "RelativeFilename": "Weather\\w0_Clear_sky_day.png",
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "weatherTemp",
+            "X": 89,
+            "Y": 36,
+            "Width": 59,
+            "Height": 40,
+            "TextId": "__SingleUse_B2OZ",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_NTXB",
+              "UseBuffer": true,
+              "BufferSize": 4
+            },
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "weatherDegrees",
+            "X": 153,
+            "Y": 39,
+            "Width": 29,
+            "Height": 36,
+            "TextId": "celsiusUnit",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "AutoSize": true,
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "clockText",
+            "X": 699,
+            "Y": 431,
+            "Width": 78,
+            "Height": 30,
+            "LockPosition": true,
+            "TextId": "__SingleUse_E6XH",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_XHC2",
+              "UseBuffer": true,
+              "BufferSize": 3
+            },
+            "Wildcard2": {
+              "TextId": "__SingleUse_3M8G",
+              "UseBuffer": true,
+              "BufferSize": 3
+            }
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "performanceText",
+            "X": 646,
+            "Y": 17,
+            "Width": 124,
+            "Height": 17,
+            "LockPosition": true,
+            "CustomContainerDefinitionName": "PerformanceMeasure"
+          },
+          {
+            "Type": "Image",
+            "Name": "bedroomSelectedImage",
+            "X": 217,
+            "Y": 289,
+            "Width": 248,
+            "Height": 136,
+            "LockPosition": true,
+            "RelativeFilename": "Main\\bedroom_selected.png",
+            "Alpha": 0,
+            "Fadeable": true
+          },
+          {
+            "Type": "Image",
+            "Name": "kitchenSelectedImage",
+            "X": 55,
+            "Y": 137,
+            "Width": 211,
+            "Height": 174,
+            "LockPosition": true,
+            "RelativeFilename": "Main\\kitchen_selected.png",
+            "Alpha": 0,
+            "Fadeable": true
+          },
+          {
+            "Type": "Image",
+            "Name": "livingroomSelectedImage",
+            "X": 276,
+            "Y": 55,
+            "Width": 189,
+            "Height": 221,
+            "LockPosition": true,
+            "RelativeFilename": "Main\\livingroom_selected.png",
+            "Alpha": 0,
+            "Fadeable": true
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "fahrenheitToggle",
+            "X": 169,
+            "Y": 31,
+            "Width": 62,
+            "Height": 61,
+            "ButtonTrigger": {
+              "Type": "ToggleButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "ImageButtonStyle",
+                "X": 32,
+                "Y": 18,
+                "ImageReleased": "weather_temperture_select_C.png",
+                "ImagePressed": "weather_temperture_select_F.png"
+              }
+            ],
+            "Fadeable": true
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "bedRoomFan",
+            "X": 344,
+            "Y": 395,
+            "Width": 58,
+            "Height": 58,
+            "CustomContainerDefinitionName": "SpinningFanContainer"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "livingRoomFan",
+            "X": 434,
+            "Y": 100,
+            "Width": 58,
+            "Height": 58,
+            "CustomContainerDefinitionName": "SpinningFanContainer"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "kitchenFan",
+            "X": 119,
+            "Y": 279,
+            "Width": 58,
+            "Height": 58,
+            "CustomContainerDefinitionName": "SpinningFanContainer"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "setTempAndFan",
+            "X": 510,
+            "Y": 55,
+            "Width": 260,
+            "Height": 366,
+            "Visible": false,
+            "CustomContainerDefinitionName": "SetTempAndFan"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "temperatureAnimation",
+            "X": 310,
+            "Y": 315,
+            "Width": 64,
+            "Height": 72,
+            "CustomContainerDefinitionName": "TemperatureAnimation"
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "closeSettingsButton",
+            "Width": 500,
+            "Height": 480,
+            "ButtonTrigger": {
+              "Type": "ClickButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "TextButtonStyle",
+                "TextId": "__SingleUse_2DW2",
+                "TextRotation": "0",
+                "ColorReleased": {
+                  "Red": 10,
+                  "Green": 10,
+                  "Blue": 10
+                },
+                "ColorPressed": {
+                  "Red": 10,
+                  "Green": 10,
+                  "Blue": 10
+                }
+              }
+            ]
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "kitchenCardButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "kitchenCardButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "kitchenCardButtonClicked"
+            }
+          },
+          {
+            "InteractionName": "livingroomCardButtonClicked",
+            "HasCompletedTrigger": true,
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "livingroomCardButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "livingroomCardButtonClicked"
+            }
+          },
+          {
+            "InteractionName": "bedroomCardButtonClicked",
+            "HasCompletedTrigger": true,
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "bedroomCardButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "bedroomCardButtonClicked"
+            }
+          },
+          {
+            "InteractionName": "livingroomClickedMove",
+            "Trigger": {
+              "Type": "TriggerInteractionCompleted",
+              "InteractionToTriggerOn": "livingroomCardButtonClicked"
+            },
+            "Action": {
+              "Type": "ActionMove",
+              "X": 495,
+              "Y": 55,
+              "Easing": "Linear",
+              "EasingOption": "In",
+              "Duration": 125,
+              "AnimationDelay": 500,
+              "ActionComponent": "livingroomButtonContainer"
+            }
+          },
+          {
+            "InteractionName": "bedroomClickedMove",
+            "Trigger": {
+              "Type": "TriggerInteractionCompleted",
+              "InteractionToTriggerOn": "bedroomCardButtonClicked"
+            },
+            "Action": {
+              "Type": "ActionMove",
+              "X": 495,
+              "Y": 55,
+              "Easing": "Linear",
+              "EasingOption": "In",
+              "Duration": 250,
+              "AnimationDelay": 500,
+              "ActionComponent": "bedroomButtonContainer"
+            }
+          },
+          {
+            "InteractionName": "fahrenheitToggleClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "fahrenheitToggle"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fahrenheitToggleClicked"
+            }
+          },
+          {
+            "InteractionName": "closeComplete",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "SetTempAndFan closeComplete happens",
+              "TriggerComponent": "setTempAndFan"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "resetRoomCards"
+            }
+          },
+          {
+            "InteractionName": "weatherButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "weatherButton"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Weather"
+            }
+          },
+          {
+            "InteractionName": "fanSettingChanged",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "SetTempAndFan fanSettingChanged happens",
+              "TriggerComponent": "setTempAndFan"
+            },
+            "Action": {
+              "Type": "ActionCustom2",
+              "ActionCustomTypeName": "Call Main fanModeChanged",
+              "ParameterValue": "value",
+              "ActionComponent": "Main"
+            }
+          },
+          {
+            "InteractionName": "closeSetTempAndFanStarted",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "SetTempAndFan closeStarted happens",
+              "TriggerComponent": "setTempAndFan"
+            },
+            "Action": {
+              "Type": "ActionCustom2",
+              "ActionCustomTypeName": "Call Main temperatureChanged",
+              "ParameterValue": "value",
+              "ActionComponent": "Main"
+            }
+          },
+          {
+            "InteractionName": "temperatureAnimationDone",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "TemperatureAnimation temperatureAnimationDone happens",
+              "TriggerComponent": "temperatureAnimation"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "temperatureAnimationDone"
+            }
+          },
+          {
+            "InteractionName": "enableSettingsCloseButton",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "SetTempAndFan openComplete happens",
+              "TriggerComponent": "setTempAndFan"
+            },
+            "Action": {
+              "Type": "ActionExecuteCode",
+              "Code": "closeSettingsButton.setTouchable(true);"
+            }
+          },
+          {
+            "InteractionName": "closeSettingsButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "closeSettingsButton"
+            },
+            "Action": {
+              "Type": "ActionCustom2",
+              "ActionCustomTypeName": "Call SetTempAndFan closeButtonClicked",
+              "ActionComponent": "setTempAndFan"
+            }
+          },
+          {
+            "InteractionName": "kitchenGraphButton",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "kitchenGraphButton"
+            },
+            "Action": {
+              "Type": "ActionCustom2",
+              "ActionCustomTypeName": "Call Main graphButtonClicked",
+              "ParameterValue": "KITCHEN",
+              "ActionComponent": "Main"
+            }
+          },
+          {
+            "InteractionName": "livingRoomGraphButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "livingRoomGraphButton"
+            },
+            "Action": {
+              "Type": "ActionCustom2",
+              "ActionCustomTypeName": "Call Main graphButtonClicked",
+              "ParameterValue": "LIVINGROOM",
+              "ActionComponent": "Main"
+            }
+          },
+          {
+            "InteractionName": "bedRoomGraphButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "bedRoomGraphButton"
+            },
+            "Action": {
+              "Type": "ActionCustom2",
+              "ActionCustomTypeName": "Call Main graphButtonClicked",
+              "ParameterValue": "BEDROOM",
+              "ActionComponent": "Main"
+            }
+          }
+        ],
+        "CustomActions": [
+          {
+            "Name": "fanModeChanged",
+            "Description": "Is called from setTempAndFan when fan mode is changed",
+            "HasValue": true,
+            "ValueType": "HVAC_FanMode_t"
+          },
+          {
+            "Name": "temperatureChanged",
+            "Description": "Is called from setTempAndFan when temperature is changed",
+            "HasValue": true,
+            "ValueType": "float"
+          },
+          {
+            "Name": "graphButtonClicked",
+            "Description": "Is called when one of the graph buttons in the rooms are clicked.",
+            "HasValue": true,
+            "ValueType": "Rooms"
+          }
+        ]
+      },
+      {
+        "Name": "Graph",
+        "CanvasBufferSize": 12000,
+        "Components": [
+          {
+            "Type": "Image",
+            "Name": "background",
+            "Width": 800,
+            "Height": 480,
+            "LockPosition": true,
+            "RelativeFilename": "Graph\\Main_graph_bg.png"
+          },
+          {
+            "Type": "Container",
+            "Name": "radioButtons",
+            "X": 246,
+            "Y": 35,
+            "Width": 309,
+            "Height": 84,
+            "Components": [
+              {
+                "Type": "RadioButton",
+                "Name": "kitchenButton",
+                "X": 44,
+                "Width": 70,
+                "Height": 42,
+                "LockPosition": true,
+                "FileNameSelected": "Graph\\Graph_tab_selected_kitchen.png",
+                "FileNameSelectedPressed": "Graph\\Graph_tab_selected_kitchen.png",
+                "FileNameUnselected": "Graph\\Graph_tab_normal_kitchen.png",
+                "FileNameUnselectedPressed": "Graph\\Graph_tab_normal_kitchen.png",
+                "RadioButtonGroup": "roomSelection"
+              },
+              {
+                "Type": "RadioButton",
+                "Name": "livingRoomButton",
+                "X": 119,
+                "Width": 70,
+                "Height": 42,
+                "LockPosition": true,
+                "Selected": true,
+                "FileNameSelected": "Graph\\Graph_tab_selected_livingroom.png",
+                "FileNameSelectedPressed": "Graph\\Graph_tab_selected_livingroom.png",
+                "FileNameUnselected": "Graph\\Graph_tab_normal_livingroom.png",
+                "FileNameUnselectedPressed": "Graph\\Graph_tab_normal_livingroom.png",
+                "RadioButtonGroup": "roomSelection"
+              },
+              {
+                "Type": "RadioButton",
+                "Name": "bedRoomButton",
+                "X": 194,
+                "Width": 70,
+                "Height": 42,
+                "LockPosition": true,
+                "FileNameSelected": "Graph\\Graph_tab_selected_bedroom.png",
+                "FileNameSelectedPressed": "Graph\\Graph_tab_selected_bedroom.png",
+                "FileNameUnselected": "Graph\\Graph_tab_normal_bedroom.png",
+                "FileNameUnselectedPressed": "Graph\\Graph_tab_normal_bedroom.png",
+                "RadioButtonGroup": "roomSelection"
+              },
+              {
+                "Type": "RadioButton",
+                "Name": "temperatureButton",
+                "Y": 62,
+                "Width": 107,
+                "Height": 22,
+                "LockPosition": true,
+                "Selected": true,
+                "FileNameSelected": "Graph\\Graph_temperature_active.png",
+                "FileNameSelectedPressed": "Graph\\Graph_temperature_active.png",
+                "FileNameUnselected": "Graph\\Graph_temperature_normal.png",
+                "FileNameUnselectedPressed": "Graph\\Graph_temperature_normal.png",
+                "RadioButtonGroup": "unitSelection",
+                "Fadeable": true
+              },
+              {
+                "Type": "RadioButton",
+                "Name": "fanButton",
+                "X": 117,
+                "Y": 62,
+                "Width": 90,
+                "Height": 22,
+                "LockPosition": true,
+                "FileNameSelected": "Graph\\Graph_fanspeed_active.png",
+                "FileNameSelectedPressed": "Graph\\Graph_fanspeed_active.png",
+                "FileNameUnselected": "Graph\\Graph_fanspeed_normal.png",
+                "FileNameUnselectedPressed": "Graph\\Graph_fanspeed_normal.png",
+                "RadioButtonGroup": "unitSelection",
+                "Fadeable": true
+              },
+              {
+                "Type": "RadioButton",
+                "Name": "humidityButton",
+                "X": 219,
+                "Y": 62,
+                "Width": 90,
+                "Height": 22,
+                "LockPosition": true,
+                "FileNameSelected": "Graph\\Graph_humidity_active.png",
+                "FileNameSelectedPressed": "Graph\\Graph_humidity_active.png",
+                "FileNameUnselected": "Graph\\Graph_humidity_normal.png",
+                "FileNameUnselectedPressed": "Graph\\Graph_humidity_normal.png",
+                "RadioButtonGroup": "unitSelection",
+                "Fadeable": true
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "xLabels",
+            "X": 84,
+            "Y": 370,
+            "Width": 669,
+            "Height": 37,
+            "Components": [
+              {
+                "Type": "TextArea",
+                "Name": "sec60",
+                "X": 653,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_0XCW",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec55",
+                "X": 598,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_Y8VY",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec50",
+                "X": 544,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_ORM5",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec45",
+                "X": 489,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_VBLR",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec40",
+                "X": 434,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_YMU4",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec35",
+                "X": 380,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_1MWP",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec30",
+                "X": 324,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_3JMQ",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec25",
+                "X": 270,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_J1ZU",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec20",
+                "X": 215,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_0W59",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec15",
+                "X": 161,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_MVLP",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec10",
+                "X": 107,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_1ZUG",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec5",
+                "X": 56,
+                "Width": 10,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_UGLG",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "sec0",
+                "Width": 10,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_BHJK",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              },
+              {
+                "Type": "TextArea",
+                "Name": "secXLabel",
+                "X": 302,
+                "Y": 21,
+                "Width": 60,
+                "Height": 16,
+                "LockPosition": true,
+                "TextId": "__SingleUse_NDOQ",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "yTemperatureLabels",
+            "X": 29,
+            "Y": 148,
+            "Width": 44,
+            "Height": 215,
+            "Components": [
+              {
+                "Type": "TextArea",
+                "Name": "temp_10",
+                "X": 21,
+                "Y": 200,
+                "Width": 23,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_1O1S",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp0",
+                "X": 28,
+                "Y": 159,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_KVFV",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp10",
+                "X": 28,
+                "Y": 119,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_SF36",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp20",
+                "X": 28,
+                "Y": 79,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_HZA6",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp30",
+                "X": 28,
+                "Y": 39,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_7Y7X",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp40",
+                "X": 28,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_9KTF",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "tempYLabel",
+                "Y": 47,
+                "Width": 17,
+                "Height": 120,
+                "TextId": "__SingleUse_COXW",
+                "TextRotation": "270",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "yTemperatureFahrenheitLabels",
+            "X": 29,
+            "Y": 148,
+            "Width": 44,
+            "Height": 215,
+            "Visible": false,
+            "Components": [
+              {
+                "Type": "TextArea",
+                "Name": "temp14_F",
+                "X": 21,
+                "Y": 200,
+                "Width": 23,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_NY4J",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp32_F",
+                "X": 28,
+                "Y": 159,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_ETNO",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp50_F",
+                "X": 28,
+                "Y": 119,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_GK9W",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp68_F",
+                "X": 28,
+                "Y": 79,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_OAEH",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp86_F",
+                "X": 28,
+                "Y": 39,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_RLPJ",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "temp104_F",
+                "X": 17,
+                "Width": 27,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_QSDC",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "tempYLabel_F",
+                "Y": 47,
+                "Width": 17,
+                "Height": 120,
+                "TextId": "__SingleUse_G4OX",
+                "TextRotation": "270",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "yFanSpeedLabels",
+            "X": 29,
+            "Y": 148,
+            "Width": 44,
+            "Height": 215,
+            "Visible": false,
+            "Components": [
+              {
+                "Type": "TextArea",
+                "Name": "fanOff",
+                "X": 14,
+                "Y": 200,
+                "Width": 30,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_53HB",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "fanLow",
+                "X": 14,
+                "Y": 140,
+                "Width": 30,
+                "Height": 15,
+                "TextId": "__SingleUse_AWG0",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "fanMed",
+                "X": 14,
+                "Y": 79,
+                "Width": 30,
+                "Height": 15,
+                "TextId": "__SingleUse_DG7H",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "fanHigh",
+                "X": 14,
+                "Y": 21,
+                "Width": 30,
+                "Height": 15,
+                "TextId": "__SingleUse_88X7",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "fanSpeedYLabel",
+                "Y": 47,
+                "Width": 17,
+                "Height": 120,
+                "TextId": "__SingleUse_QT02",
+                "TextRotation": "270",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "yHumidityLabels",
+            "X": 29,
+            "Y": 148,
+            "Width": 44,
+            "Height": 215,
+            "Visible": false,
+            "Components": [
+              {
+                "Type": "TextArea",
+                "Name": "hum0",
+                "X": 21,
+                "Y": 200,
+                "Width": 23,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_181Y",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "hum20",
+                "X": 28,
+                "Y": 159,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_DET6",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "hum40",
+                "X": 28,
+                "Y": 119,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_V17X",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "hum60",
+                "X": 28,
+                "Y": 79,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_ET2N",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "hum80",
+                "X": 28,
+                "Y": 39,
+                "Width": 16,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_K5ZR",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "hum100",
+                "X": 21,
+                "Width": 23,
+                "Height": 15,
+                "LockPosition": true,
+                "TextId": "__SingleUse_3PL4",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                },
+                "Fadeable": true
+              },
+              {
+                "Type": "TextArea",
+                "Name": "humidityYLabel",
+                "Y": 47,
+                "Width": 17,
+                "Height": 120,
+                "TextId": "__SingleUse_ICOD",
+                "TextRotation": "270",
+                "Color": {
+                  "Red": 113,
+                  "Green": 132,
+                  "Blue": 156
+                }
+              }
+            ]
+          },
+          {
+            "Type": "Box",
+            "Name": "yFadeBox",
+            "X": 32,
+            "Y": 148,
+            "Width": 41,
+            "Height": 215,
+            "Color": {
+              "Red": 251,
+              "Green": 252,
+              "Blue": 254
+            },
+            "Alpha": 0,
+            "Fadeable": true
+          },
+          {
+            "Type": "Box",
+            "Name": "xFadeBox",
+            "X": 84,
+            "Y": 370,
+            "Width": 669,
+            "Height": 37,
+            "Color": {
+              "Red": 251,
+              "Green": 252,
+              "Blue": 254
+            },
+            "Alpha": 0,
+            "Fadeable": true
+          },
+          {
+            "Type": "Button",
+            "Name": "closeButton",
+            "X": 20,
+            "Y": 30,
+            "Width": 52,
+            "Height": 52,
+            "Pressed": "Close_pressed.png",
+            "Released": "Close_normal.png",
+            "Fadeable": true
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "fahrenheitToggle",
+            "X": 725,
+            "Y": 45,
+            "Width": 60,
+            "Height": 60,
+            "ButtonTrigger": {
+              "Type": "ToggleButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "ImageButtonStyle",
+                "X": 25,
+                "Y": 18,
+                "ImageReleased": "weather_temperture_select_C.png",
+                "ImagePressed": "weather_temperture_select_F.png"
+              }
+            ],
+            "Fadeable": true
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "performanceText",
+            "X": 646,
+            "Y": 17,
+            "Width": 124,
+            "Height": 17,
+            "LockPosition": true,
+            "CustomContainerDefinitionName": "PerformanceMeasure"
+          },
+          {
+            "Type": "TextArea",
+            "Name": "clockText",
+            "X": 699,
+            "Y": 431,
+            "Width": 78,
+            "Height": 30,
+            "LockPosition": true,
+            "TextId": "__SingleUse_PZG7",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_3KL7",
+              "UseBuffer": true,
+              "BufferSize": 3
+            },
+            "Wildcard2": {
+              "TextId": "__SingleUse_E2OQ",
+              "UseBuffer": true,
+              "BufferSize": 3
+            }
+          },
+          {
+            "Type": "DynamicGraph",
+            "Name": "humidityGraph",
+            "X": 88,
+            "Y": 146,
+            "Width": 659,
+            "Height": 224,
+            "DataSeed": -1590769685,
+            "NumberOfValues": 31,
+            "MaxY": 100.0,
+            "Precision": "0.1",
+            "LastIndex": 30,
+            "XAxisScale": 1.0,
+            "LabelSizeRight": -11,
+            "PaddingTop": 10,
+            "PaddingBottom": 10,
+            "GraphType": "GraphScroll",
+            "GraphDrawers": [
+              {
+                "Type": "LineDrawer",
+                "LineWidth": 4,
+                "FileNameImage": "",
+                "Color": {
+                  "Red": 132,
+                  "Green": 159,
+                  "Blue": 198
+                }
+              }
+            ]
+          },
+          {
+            "Type": "DynamicGraph",
+            "Name": "fanGraph",
+            "X": 88,
+            "Y": 166,
+            "Width": 657,
+            "Height": 204,
+            "DataSeed": 1463867524,
+            "NumberOfValues": 31,
+            "MaxY": 3.19,
+            "MinY": -0.19,
+            "Precision": "0.01",
+            "LastIndex": 30,
+            "XAxisScale": 1.0,
+            "LabelSizeRight": -11,
+            "GraphType": "GraphScroll",
+            "GraphDrawers": [
+              {
+                "Type": "LineDrawer",
+                "LineWidth": 4,
+                "FileNameImage": "",
+                "Color": {
+                  "Green": 72,
+                  "Blue": 255
+                }
+              }
+            ]
+          },
+          {
+            "Type": "DynamicGraph",
+            "Name": "temperatureGraph",
+            "X": 88,
+            "Y": 146,
+            "Width": 659,
+            "Height": 224,
+            "DataSeed": 1117442545,
+            "NumberOfValues": 31,
+            "MaxY": 40.0,
+            "MinY": -10.0,
+            "Precision": "0.1",
+            "LastIndex": 30,
+            "XAxisScale": 1.0,
+            "LabelSizeRight": -11,
+            "PaddingTop": 10,
+            "PaddingBottom": 10,
+            "GraphType": "GraphScroll",
+            "GraphDrawers": [
+              {
+                "Type": "LineDrawer",
+                "LineWidth": 6,
+                "FileNameImage": "",
+                "Color": {
+                  "Green": 37,
+                  "Blue": 128
+                }
+              }
+            ]
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "temperatureButtonSelected",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "temperatureButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "temperatureButtonSelected"
+            }
+          },
+          {
+            "InteractionName": "fanButtonSelected",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "fanButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fanButtonSelected"
+            }
+          },
+          {
+            "InteractionName": "humidityButtonSelected",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "humidityButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "humidityButtonSelected"
+            }
+          },
+          {
+            "InteractionName": "livingRoomButtonSelected",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "livingRoomButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "roomChanged"
+            }
+          },
+          {
+            "InteractionName": "bedRoomButtonSelected",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "bedRoomButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "roomChanged"
+            }
+          },
+          {
+            "InteractionName": "kitchenButtonSelected",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "kitchenButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "roomChanged"
+            }
+          },
+          {
+            "InteractionName": "closeButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "closeButton"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Main"
+            }
+          },
+          {
+            "InteractionName": "fahrenheitToggleClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "fahrenheitToggle"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fahrenheitToggleClicked"
+            }
+          }
+        ]
+      },
+      {
+        "Name": "Weather",
+        "Components": [
+          {
+            "Type": "Image",
+            "Name": "backgroundWeather",
+            "Width": 800,
+            "Height": 480,
+            "RelativeFilename": "Weather Big\\Weather_main_bg.png"
+          },
+          {
+            "Type": "Button",
+            "Name": "closeButton",
+            "X": 20,
+            "Y": 30,
+            "Width": 52,
+            "Height": 52,
+            "Pressed": "Close_pressed.png",
+            "Released": "Close_normal.png"
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "fahrenheitToggle",
+            "X": 725,
+            "Y": 45,
+            "Width": 60,
+            "Height": 60,
+            "ButtonTrigger": {
+              "Type": "ToggleButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "ImageButtonStyle",
+                "X": 25,
+                "Y": 18,
+                "ImageReleased": "weather_temperture_select_C.png",
+                "ImagePressed": "weather_temperture_select_F.png"
+              }
+            ],
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "screenTitle",
+            "X": 221,
+            "Y": 31,
+            "Width": 359,
+            "Height": 30,
+            "TextId": "__SingleUse_1X7S",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 167,
+              "Green": 182,
+              "Blue": 206
+            }
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "weatherDay5",
+            "X": 608,
+            "Y": 94,
+            "Width": 136,
+            "Height": 280,
+            "CustomContainerDefinitionName": "WeatherDaily"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "weatherDay4",
+            "X": 470,
+            "Y": 94,
+            "Width": 136,
+            "Height": 280,
+            "CustomContainerDefinitionName": "WeatherDaily"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "weatherDay3",
+            "X": 332,
+            "Y": 94,
+            "Width": 136,
+            "Height": 280,
+            "CustomContainerDefinitionName": "WeatherDaily"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "weatherDay2",
+            "X": 194,
+            "Y": 94,
+            "Width": 136,
+            "Height": 280,
+            "CustomContainerDefinitionName": "WeatherDaily"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "weatherDay1",
+            "X": 56,
+            "Y": 94,
+            "Width": 136,
+            "Height": 280,
+            "CustomContainerDefinitionName": "WeatherDaily"
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "closeButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "closeButton"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Main"
+            }
+          },
+          {
+            "InteractionName": "fahrenheitToggleClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "fahrenheitToggle"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fahrenheitToggleClicked"
+            }
+          }
+        ]
+      }
+    ],
+    "CustomContainerDefinitions": [
+      {
+        "Name": "RoomCard",
+        "Width": 305,
+        "Height": 170,
+        "Components": [
+          {
+            "Type": "TextureMapper",
+            "Name": "cardBackgroundMapper",
+            "Width": 305,
+            "Height": 170,
+            "RenderingAlgorithm": "Bilinear Interpolation",
+            "FileNameImage": "Main\\Main_room_button_bg_clean 1.png",
+            "LockBitmapToCenter": true,
+            "Scale": 1.0,
+            "LockOrigoToCenter": true,
+            "XOrigo": 152.5,
+            "YOrigo": 85.0,
+            "ZOrigo": 1000.0,
+            "CameraDistance": 1000.0
+          },
+          {
+            "Type": "Image",
+            "Name": "cardBackgroundImage",
+            "Width": 305,
+            "Height": 170,
+            "Visible": false,
+            "RelativeFilename": "Main\\Main_room_button_bg_clean 1.png"
+          },
+          {
+            "Type": "AnimatedImage",
+            "Name": "cornerAnimation",
+            "X": 195,
+            "Y": 45,
+            "Width": 80,
+            "Height": 80,
+            "Visible": false,
+            "FileNameFirst": "fan-corner-animation\\fan_corner_00.png",
+            "FileNameLast": "fan-corner-animation\\fan_corner_07.png",
+            "UpdateTicksInterval": 25
+          },
+          {
+            "Type": "TextArea",
+            "Name": "cardTemp",
+            "X": 32,
+            "Y": 50,
+            "Width": 116,
+            "Height": 58,
+            "TextId": "__SingleUse_ADYL",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_I9DY",
+              "UseBuffer": true,
+              "BufferSize": 5
+            }
+          },
+          {
+            "Type": "TextArea",
+            "Name": "cardDegrees",
+            "X": 147,
+            "Y": 55,
+            "Width": 29,
+            "Height": 36,
+            "TextId": "celsiusUnit",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "AutoSize": true
+          },
+          {
+            "Type": "Image",
+            "Name": "humidityDroplet",
+            "X": 148,
+            "Y": 94,
+            "Width": 9,
+            "Height": 11,
+            "RelativeFilename": "Main\\Humidity icon_filled.png"
+          },
+          {
+            "Type": "TextArea",
+            "Name": "humidityText",
+            "X": 160,
+            "Y": 90,
+            "Width": 38,
+            "Height": 15,
+            "TextId": "__SingleUse_BWMX",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_8824",
+              "UseBuffer": true,
+              "BufferSize": 4
+            }
+          },
+          {
+            "Type": "TextArea",
+            "Name": "roomNameText",
+            "X": 32,
+            "Y": 30,
+            "Width": 110,
+            "Height": 20,
+            "TextId": "s",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            }
+          },
+          {
+            "Type": "Image",
+            "Name": "fanModeImage",
+            "X": 201,
+            "Y": 30,
+            "Width": 54,
+            "Height": 20,
+            "RelativeFilename": "Main\\Icon_Auto_normal.png",
+            "Fadeable": true
+          },
+          {
+            "Type": "Image",
+            "Name": "cardFadeOverlay",
+            "X": 32,
+            "Y": 29,
+            "Width": 165,
+            "Height": 80,
+            "RelativeFilename": "Main\\room_card_overlay.png",
+            "Alpha": 0,
+            "Fadeable": true
+          }
+        ],
+        "Interactions": [],
+        "CustomActions": [
+          {
+            "Name": "flipOut",
+            "HasValue": true,
+            "ValueType": "uint16_t"
+          }
+        ]
+      },
+      {
+        "Name": "SpinningFanContainer",
+        "Width": 58,
+        "Height": 58,
+        "Components": [
+          {
+            "Type": "TextureMapper",
+            "Name": "fanTextureMapper",
+            "Width": 58,
+            "Height": 58,
+            "RenderingAlgorithm": "Bilinear Interpolation",
+            "FileNameImage": "Main\\Fan_00.png",
+            "LockBitmapToCenter": true,
+            "XBitmapPosition": 2.0,
+            "YBitmapPosition": 2.0,
+            "Scale": 1.0,
+            "XOrigo": 28.5,
+            "YOrigo": 28.5,
+            "ZOrigo": 1000.0,
+            "CameraDistance": 1000.0
           }
         ],
         "Interactions": []
+      },
+      {
+        "Name": "SetTempAndFan",
+        "Width": 260,
+        "Height": 366,
+        "Components": [
+          {
+            "Type": "Box",
+            "Name": "backgroundBox",
+            "Y": 15,
+            "Width": 260,
+            "Height": 330,
+            "Color": {
+              "Red": 244,
+              "Green": 247,
+              "Blue": 251
+            }
+          },
+          {
+            "Type": "TextArea",
+            "Name": "headerText",
+            "X": 59,
+            "Y": 16,
+            "Width": 88,
+            "Height": 16,
+            "TextId": "__SingleUse_8O5R",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 101,
+              "Green": 123,
+              "Blue": 158
+            }
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "lowFanButton",
+            "X": 20,
+            "Y": 300,
+            "Width": 72,
+            "Height": 40,
+            "FileNameSelected": "Main\\image 40.png",
+            "FileNameSelectedPressed": "Main\\image 40.png",
+            "FileNameUnselected": "Main\\image 37.png",
+            "FileNameUnselectedPressed": "Main\\image 37.png",
+            "RadioButtonGroup": "fanButtons"
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "mediumFanButton",
+            "X": 94,
+            "Y": 300,
+            "Width": 72,
+            "Height": 40,
+            "FileNameSelected": "Main\\image 39.png",
+            "FileNameSelectedPressed": "Main\\image 39.png",
+            "FileNameUnselected": "Main\\image 36.png",
+            "FileNameUnselectedPressed": "Main\\image 36.png",
+            "RadioButtonGroup": "fanButtons"
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "highFanButton",
+            "X": 168,
+            "Y": 300,
+            "Width": 72,
+            "Height": 40,
+            "FileNameSelected": "Main\\image 38.png",
+            "FileNameSelectedPressed": "Main\\image 38.png",
+            "FileNameUnselected": "Main\\image 35.png",
+            "FileNameUnselectedPressed": "Main\\image 35.png",
+            "RadioButtonGroup": "fanButtons"
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "autoFanButton",
+            "X": 186,
+            "Y": 273,
+            "Width": 54,
+            "Height": 20,
+            "Selected": true,
+            "FileNameSelected": "Main\\Icon_Auto_active.png",
+            "FileNameSelectedPressed": "Main\\Icon_Auto_active.png",
+            "FileNameUnselected": "Main\\Icon_Auto_normal.png",
+            "FileNameUnselectedPressed": "Main\\Icon_Auto_normal.png",
+            "RadioButtonGroup": "fanButtons"
+          },
+          {
+            "Type": "Image",
+            "Name": "fanImage",
+            "X": 20,
+            "Y": 270,
+            "Width": 20,
+            "Height": 20,
+            "RelativeFilename": "Main\\Small_fan_icon.png"
+          },
+          {
+            "Type": "FlexButton",
+            "Name": "graphButton",
+            "X": 209,
+            "Y": 1,
+            "Width": 50,
+            "Height": 50,
+            "ButtonTrigger": {
+              "Type": "ClickButtonTrigger"
+            },
+            "ButtonStyles": [
+              {
+                "Type": "ImageButtonStyle",
+                "X": 14,
+                "Y": 14,
+                "ImageReleased": "Main\\Show_graph.png",
+                "ImagePressed": "Main\\Show_graph.png"
+              }
+            ]
+          },
+          {
+            "Type": "TextArea",
+            "Name": "fanSpeedText",
+            "X": 48,
+            "Y": 270,
+            "Width": 73,
+            "Height": 16,
+            "TextId": "__SingleUse_IGEU",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 101,
+              "Green": 123,
+              "Blue": 158
+            },
+            "AutoSize": true
+          },
+          {
+            "Type": "Image",
+            "Name": "headerImage",
+            "X": 20,
+            "Y": 15,
+            "Width": 30,
+            "Height": 22,
+            "RelativeFilename": "Main\\Icon_livingroom.png"
+          },
+          {
+            "Type": "Image",
+            "Name": "bottomImage",
+            "Y": 345,
+            "Width": 260,
+            "Height": 15,
+            "RelativeFilename": "Main\\Set_temp_buttom.png"
+          },
+          {
+            "Type": "Image",
+            "Name": "topImage",
+            "Width": 260,
+            "Height": 15,
+            "RelativeFilename": "Main\\Set_temp_top.png"
+          },
+          {
+            "Type": "CustomContainerInstance",
+            "Name": "scrollWheel1",
+            "X": 20,
+            "Y": 57,
+            "Width": 220,
+            "Height": 199,
+            "CustomContainerDefinitionName": "ScrollWheelContainer"
+          },
+          {
+            "Type": "Box",
+            "Name": "faderBox",
+            "X": 20,
+            "Y": 15,
+            "Width": 226,
+            "Height": 325,
+            "Color": {
+              "Red": 244,
+              "Green": 247,
+              "Blue": 251
+            },
+            "Alpha": 0,
+            "Fadeable": true
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "graphButtonClicked",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "graphButton"
+            },
+            "Action": {
+              "Type": "ActionGotoScreen",
+              "ScreenTransitionType": "ScreenTransitionNone",
+              "ActionComponent": "Graph"
+            }
+          },
+          {
+            "InteractionName": "autoFanButtonClicked",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "autoFanButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fanModeChanged"
+            }
+          },
+          {
+            "InteractionName": "lowFanButtonClicked",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "lowFanButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fanModeChanged"
+            }
+          },
+          {
+            "InteractionName": "mediumFanButtonClicked",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "mediumFanButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fanModeChanged"
+            }
+          },
+          {
+            "InteractionName": "highFanButtonClicked",
+            "Trigger": {
+              "Type": "TriggerRadioButtonSelected",
+              "TriggerComponent": "highFanButton"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "fanModeChanged"
+            }
+          },
+          {
+            "InteractionName": "tempUpdated",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "ScrollWheelContainer tempUpdated happens",
+              "TriggerComponent": "scrollWheel1"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "tempUpdated"
+            }
+          },
+          {
+            "InteractionName": "scrollWheelIsAnimating",
+            "Trigger": {
+              "Type": "TriggerCustom",
+              "TriggerCustomTypeName": "ScrollWheelContainer isAnimating happens",
+              "TriggerComponent": "scrollWheel1"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "scrollWheelIsAnimating"
+            }
+          }
+        ],
+        "CustomTriggers": [
+          {
+            "Name": "closeComplete"
+          },
+          {
+            "Name": "fanSettingChanged",
+            "Description": "Called when fan setting is changed",
+            "HasValue": true,
+            "ValueType": "HVAC_FanMode_t"
+          },
+          {
+            "Name": "openComplete",
+            "Description": ""
+          },
+          {
+            "Name": "closeStarted",
+            "Description": "Is called when closing of the container starts. Returns the selected temperature.",
+            "HasValue": true,
+            "ValueType": "float"
+          }
+        ],
+        "CustomActions": [
+          {
+            "Name": "closeButtonClicked",
+            "Description": "Triggers when the close button is clicked"
+          }
+        ]
+      },
+      {
+        "Name": "WeatherDaily",
+        "Width": 136,
+        "Height": 280,
+        "Components": [
+          {
+            "Type": "TextArea",
+            "Name": "minTemp",
+            "X": 8,
+            "Y": 57,
+            "Width": 120,
+            "Height": 45,
+            "TextId": "__SingleUse_B8XB",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 131,
+              "Green": 156,
+              "Blue": 193
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_3NYY",
+              "UseBuffer": true,
+              "BufferSize": 4
+            },
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "maxTemp",
+            "X": 8,
+            "Y": 211,
+            "Width": 120,
+            "Height": 58,
+            "TextId": "__SingleUse_3MWN",
+            "TextRotation": "0",
+            "Color": {
+              "Green": 37,
+              "Blue": 128
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_RZSJ",
+              "UseBuffer": true,
+              "BufferSize": 4
+            },
+            "Fadeable": true
+          },
+          {
+            "Type": "TextureMapper",
+            "Name": "weatherLogo",
+            "Y": 94,
+            "Width": 136,
+            "Height": 136,
+            "UseAnimation": true,
+            "RenderingAlgorithm": "Bilinear Interpolation",
+            "FileNameImage": "Weather Big\\w51_Drizzle_Light_big.png",
+            "LockBitmapToCenter": true,
+            "XBitmapPosition": 20.0,
+            "YBitmapPosition": 20.0,
+            "Scale": 1.0,
+            "LockOrigoToCenter": true,
+            "XOrigo": 68.0,
+            "YOrigo": 68.0,
+            "ZOrigo": 1000.0,
+            "CameraDistance": 1000.0
+          },
+          {
+            "Type": "TextArea",
+            "Name": "weatherText",
+            "Y": 30,
+            "Width": 136,
+            "Height": 35,
+            "TextId": "__SingleUse_AEVP",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 131,
+              "Green": 156,
+              "Blue": 193
+            },
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "dayText",
+            "Width": 136,
+            "Height": 30,
+            "TextId": "__SingleUse_NEDU",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 101,
+              "Green": 123,
+              "Blue": 158
+            },
+            "Fadeable": true
+          }
+        ],
+        "Interactions": []
+      },
+      {
+        "Name": "MenuElementSelected",
+        "Width": 220,
+        "Height": 70,
+        "Components": [
+          {
+            "Type": "TextArea",
+            "Name": "tempValueText",
+            "Y": -4,
+            "Width": 220,
+            "Height": 58,
+            "LockPosition": true,
+            "TextId": "__SingleUse_8AE6",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 4,
+              "Green": 72,
+              "Blue": 245
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_3G6Q",
+              "UseBuffer": true,
+              "BufferSize": 5
+            }
+          }
+        ],
+        "Interactions": []
+      },
+      {
+        "Name": "MenuElement",
+        "Width": 220,
+        "Height": 70,
+        "Components": [
+          {
+            "Type": "TextArea",
+            "Name": "tempValueText",
+            "Y": 3,
+            "Width": 220,
+            "Height": 50,
+            "LockPosition": true,
+            "TextId": "__SingleUse_M2X9",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_6IQY",
+              "UseBuffer": true,
+              "BufferSize": 5
+            }
+          }
+        ],
+        "Interactions": []
+      },
+      {
+        "Name": "ScrollWheelContainer",
+        "Width": 220,
+        "Height": 199,
+        "Components": [
+          {
+            "Type": "Image",
+            "Name": "setTempBackground",
+            "Width": 220,
+            "Height": 199,
+            "RelativeFilename": "Main\\Set_temp_gradient_main.png"
+          },
+          {
+            "Type": "ScrollWheel",
+            "Name": "scrollWheel1",
+            "Y": -1,
+            "Width": 220,
+            "Height": 200,
+            "SelectedItemOffset": 65,
+            "UseSelectedStyle": true,
+            "SelectedItemTemplateName": "MenuElementSelected",
+            "ItemTemplateName": "MenuElement",
+            "NumberofItems": 60,
+            "InitialElement": 5,
+            "Easing": "Back",
+            "EasingOption": "Out",
+            "SwipeAcceleration": 1.0,
+            "DragAcceleration": 1.0,
+            "OverShootPercentage": 75
+          },
+          {
+            "Type": "Image",
+            "Name": "unselectedGradientImage",
+            "Width": 220,
+            "Height": 200,
+            "RelativeFilename": "Main\\Temp_gradient_small_numbers.png"
+          },
+          {
+            "Type": "Image",
+            "Name": "selectedGradientImage",
+            "Y": 65,
+            "Width": 220,
+            "Height": 70,
+            "RelativeFilename": "Main\\Set_temp_gradient.png"
+          }
+        ],
+        "Interactions": [],
+        "CustomTriggers": [
+          {
+            "Name": "tempUpdated",
+            "Description": "The temperature is updated",
+            "HasValue": true,
+            "ValueType": "float"
+          },
+          {
+            "Name": "isAnimating",
+            "Description": "Indicates whether the scrool wheel is animating",
+            "HasValue": true,
+            "ValueType": "bool"
+          }
+        ]
+      },
+      {
+        "Name": "PerformanceMeasure",
+        "Width": 124,
+        "Height": 17,
+        "Components": [
+          {
+            "Type": "TextArea",
+            "Name": "mcuLoadPctText",
+            "Width": 66,
+            "Height": 17,
+            "TextId": "__SingleUse_ZPTY",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_HCJU",
+              "UseBuffer": true,
+              "BufferSize": 4
+            }
+          },
+          {
+            "Type": "TextArea",
+            "Name": "dashText",
+            "X": 69,
+            "Width": 6,
+            "Height": 17,
+            "TextId": "__SingleUse_JO3C",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            }
+          },
+          {
+            "Type": "TextArea",
+            "Name": "framerateText",
+            "X": 78,
+            "Width": 46,
+            "Height": 17,
+            "TextId": "__SingleUse_IKR5",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_MPIS",
+              "UseBuffer": true,
+              "BufferSize": 3
+            }
+          }
+        ],
+        "Interactions": []
+      },
+      {
+        "Name": "TemperatureAnimation",
+        "Width": 64,
+        "Height": 72,
+        "Components": [
+          {
+            "Type": "AnimatedImage",
+            "Name": "temperatureUpAnimation",
+            "Width": 64,
+            "Height": 64,
+            "FileNameFirst": "TemperatureAnimation\\TemperatureUp\\Temp_up_00.png",
+            "FileNameLast": "TemperatureAnimation\\TemperatureUp\\Temp_up_21.png",
+            "UpdateTicksInterval": 50,
+            "Alpha": 0,
+            "LoopEnabled": true,
+            "Fadeable": true
+          },
+          {
+            "Type": "AnimatedImage",
+            "Name": "temperatureDownAnimation",
+            "Width": 64,
+            "Height": 64,
+            "FileNameFirst": "TemperatureAnimation\\TemperatureDown\\temp_down_00.png",
+            "FileNameLast": "TemperatureAnimation\\TemperatureDown\\temp_down_21.png",
+            "UpdateTicksInterval": 50,
+            "Alpha": 0,
+            "LoopEnabled": true,
+            "Fadeable": true
+          },
+          {
+            "Type": "TextArea",
+            "Name": "temperatureText",
+            "Y": 56,
+            "Width": 64,
+            "Height": 16,
+            "TextId": "tempAnimationC",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "Alpha": 0,
+            "Wildcard1": {
+              "TextId": "__SingleUse_0988",
+              "UseBuffer": true,
+              "BufferSize": 10
+            },
+            "Fadeable": true
+          }
+        ],
+        "Interactions": [],
+        "CustomTriggers": [
+          {
+            "Name": "temperatureAnimationDone",
+            "Description": "Is called when the specified animation time has elapsed"
+          }
+        ]
       }
     ],
-    "CustomContainerDefinitions": [],
     "Name": "HomePanel_test",
     "Resolution": {
       "Width": 800,
       "Height": 480
     },
     "SelectedColorDepth": 32,
-    "StartupScreenName": "screen",
+    "StartupScreenName": "Main",
     "SelectedStartupLanguage": "GB",
     "TouchGfxPath": "../Middlewares/ST/touchgfx",
     "UIPath": ".",

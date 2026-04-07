@@ -151,17 +151,17 @@ inline uint32_t STM32DMA::getChromARTOutputFormat(Bitmap::BitmapFormat format)
 
 BlitOperations STM32DMA::getBlitCaps()
 {
-    return static_cast<BlitOperations>(BLIT_OP_FILL
-                                       | BLIT_OP_FILL_16BIT
-                                       | BLIT_OP_FILL_WITH_ALPHA
-                                       | BLIT_OP_COPY
-                                       | BLIT_OP_COPY_L8
-                                       | BLIT_OP_COPY_16BIT
+    return static_cast<BlitOperations>(BLIT_OP_COPY
+                                       | BLIT_OP_FILL
                                        | BLIT_OP_COPY_WITH_ALPHA
+                                       | BLIT_OP_FILL_WITH_ALPHA
                                        | BLIT_OP_COPY_ARGB8888
                                        | BLIT_OP_COPY_ARGB8888_WITH_ALPHA
+                                       | BLIT_OP_COPY_L8
                                        | BLIT_OP_COPY_A4
-                                       | BLIT_OP_COPY_A8);
+                                       | BLIT_OP_COPY_A8
+                                       | BLIT_OP_COPY_16BIT
+                                       | BLIT_OP_FILL_16BIT);
 }
 
 /*

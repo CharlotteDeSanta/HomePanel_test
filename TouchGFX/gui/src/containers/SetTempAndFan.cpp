@@ -1,0 +1,273 @@
+#include <gui/containers/SetTempAndFan.hpp>
+#include <texts/TextKeysAndLanguages.hpp>
+#include <images/BitmapDatabase.hpp>
+
+SetTempAndFan::SetTempAndFan() :
+    startupAnimationFlag(false),
+    closeAnimationFlag(false),
+    showFlag(false),
+    showDelay(0),
+    closeDelay(0),
+    openRoom(KITCHEN),
+    idleTime(0),
+    moveRate(8),
+    isInitialized(false),
+    newTemp(0)
+{
+
+}
+
+void SetTempAndFan::initialize()
+{
+    Application::getInstance()->registerTimerWidget(this);
+    SetTempAndFanBase::initialize();
+}
+
+void SetTempAndFan::startupAnimation()
+{
+    // Hide all elements and move to minimal size
+    headerImage.setAlpha(0);
+    graphButton.setAlpha(0);
+    fanSpeedText.setAlpha(0);
+    fanImage.setAlpha(0);
+    autoFanButton.setAlpha(0);
+    highFanButton.setAlpha(0);
+    mediumFanButton.setAlpha(0);
+    lowFanButton.setAlpha(0);
+    headerText.setAlpha(0);
+    scrollWheel1.setVisible(false);
+
+    // Move into position
+    bottomImage.setY(110 - 15);
+    backgroundBox.setHeight(bottomImage.getY() - backgroundBox.getY());
+
+    // Set the animation
+    startupAnimationFlag = true;
+}
+
+void SetTempAndFan::handleTickEvent()
+{
+    if (showFlag)
+    {
+        if (showDelay == 0)
+        {
+            setVisible(true);
+            startupAnimation();
+            invalidate();
+            showFlag = false;
+        }
+        showDelay--;
+    }
+
+    if (startupAnimationFlag)
+    {
+        if (bottomImage.getY() < (getHeight() - bottomImage.getHeight()))
+        {
+            bottomImage.moveRelative(0, moveRate);
+            backgroundBox.setHeight(bottomImage.getY() - backgroundBox.getY());
+        }
+        else
+        {
+            invalidate();
+            startupAnimationFlag = false;
+            fadeIn();
+            emitOpenCompleteCallback();
+        }
+    }
+
+    if (closeAnimationFlag)
+    {
+        if (closeDelay > 0)
+        {
+            closeDelay--;
+        }
+        if (closeDelay == 0)
+        {
+            headerImage.setAlpha(0);
+            graphButton.setAlpha(0);
+            fanSpeedText.setAlpha(0);
+            fanImage.setAlpha(0);
+            autoFanButton.setAlpha(0);
+            highFanButton.setAlpha(0);
+            mediumFanButton.setAlpha(0);
+            lowFanButton.setAlpha(0);
+            headerText.setAlpha(0);
+            scrollWheel1.setVisible(false);
+            faderBox.setAlpha(0);
+
+            faderBox.invalidate();
+
+            // Make this happen only once
+            closeDelay = -1;
+        }
+        if (bottomImage.getY() > 110 && closeDelay == -1)
+        {
+            bottomImage.moveRelative(0, -moveRate);
+            backgroundBox.setHeight(bottomImage.getY() - backgroundBox.getY());
+        }
+        else if (bottomImage.getY() <= 110)
+        {
+            closeAnimationFlag = false;
+            setVisible(false);
+            invalidate();
+            emitCloseCompleteCallback();
+        }
+    }
+
+    if (isVisible())
+    {
+        idleTime++;
+    }
+
+    if (idleTime > 400)
+    {
+        idleTime = 0;
+        close();
+    }
+}
+
+void SetTempAndFan::scrollWheelIsAnimating(bool value)
+{
+    if (value == true)
+    {
+        idleTime = 0;
+    }
+}
+
+void SetTempAndFan::showContainer(Rooms roomID, HVAC_FanMode_t fanMode, float temperature, bool isFahrenheit)
+{
+    openRoom = roomID;
+    idleTime = 0;
+    isInitialized = false;
+
+    scrollWheel1.setTempValue(temperature, isFahrenheit);
+
+    switch (roomID)
+    {
+    case KITCHEN:
+        showDelay = 30;
+        headerText.setTypedText(T_KITCHENTEXTSMALL);
+        headerImage.setBitmap(BITMAP_ICON_KITCHEN_ID);
+        break;
+    case LIVINGROOM:
+        showDelay = 39;
+        headerText.setTypedText(T_LIVINGROOMTEXTSMALL);
+        headerImage.setBitmap(BITMAP_ICON_LIVINGROOM_ID);
+        break;
+    case BEDROOM:
+        showDelay = 47;
+        headerText.setTypedText(T_BEDROOMTEXTSMALL);
+        headerImage.setBitmap(BITMAP_ICON_BEDROOM_ID);
+        break;
+    default:
+        break;
+    }
+    headerText.invalidate();
+    headerImage.invalidate();
+
+    showFlag = true;
+
+    // Set selected fan button
+    switch (fanMode)
+    {
+    case HVAC_FAN_LOW:
+        fanButtons.setSelected(lowFanButton);
+        break;
+    case HVAC_FAN_MED:
+        fanButtons.setSelected(mediumFanButton);
+        break;
+    case HVAC_FAN_HIGH:
+        fanButtons.setSelected(highFanButton);
+        break;
+    default:    // Set as auto if other
+        fanButtons.setSelected(autoFanButton);
+        break;
+    }
+
+    isInitialized = true;
+}
+
+void SetTempAndFan::closeButtonClicked()
+{
+    close();
+}
+
+void SetTempAndFan::close()
+{
+    emitCloseStartedCallback(newTemp);
+    switch (openRoom)
+    {
+    case KITCHEN:
+        showDelay = 30;
+        break;
+
+    case LIVINGROOM:
+        showDelay = 60;
+        break;
+
+    case BEDROOM:
+        showDelay = 90;
+        break;
+
+    default:
+        break;
+    }
+    fadeOut();
+    closeDelay = 31;
+    closeAnimationFlag = true;
+}
+
+void SetTempAndFan::fadeIn()
+{
+    faderBox.setAlpha(255);
+    headerImage.setAlpha(255);
+    graphButton.setAlpha(255);
+    fanSpeedText.setAlpha(255);
+    fanImage.setAlpha(255);
+    autoFanButton.setAlpha(255);
+    highFanButton.setAlpha(255);
+    mediumFanButton.setAlpha(255);
+    lowFanButton.setAlpha(255);
+    headerText.setAlpha(255);
+    scrollWheel1.setVisible(true);
+    faderBox.startFadeAnimation(0, 30, EasingEquations::quadEaseIn);
+}
+
+void SetTempAndFan::fadeOut()
+{
+    faderBox.startFadeAnimation(255, 30, EasingEquations::quadEaseIn);
+}
+
+void SetTempAndFan::fanModeChanged()
+{
+    if (isInitialized)
+    {
+        idleTime = 0;
+        emitFanSettingChangedCallback(getSelectedFanButton());
+    }
+}
+
+void SetTempAndFan::tempUpdated(float value)
+{
+    idleTime = 0;
+    newTemp = value;
+}
+
+HVAC_FanMode_t SetTempAndFan::getSelectedFanButton()
+{
+    switch (fanButtons.getSelectedRadioButtonIndex())
+    {
+    case 0:
+        return HVAC_FAN_LOW;
+        break;
+    case 1:
+        return HVAC_FAN_MED;
+        break;
+    case 2:
+        return HVAC_FAN_HIGH;
+        break;
+    default:
+        return HVAC_FAN_AUTO;
+        break;
+    }
+}

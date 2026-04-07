@@ -1,0 +1,322 @@
+#include <gui/main_screen/MainView.hpp>
+#include <texts/TextKeysAndLanguages.hpp>
+
+MainView::MainView() :
+    tickCount(0),
+    waitingToFlip(false)
+{
+
+}
+
+void MainView::setupScreen()
+{
+    MainViewBase::setupScreen();
+
+    closeSettingsButton.setTouchable(false);
+
+    // Setup with values from model
+    updateClock(presenter->getClockHour(), presenter->getClockMinute());
+    updateCurrentWeather(presenter->getWeatherData(), presenter->getIsFahrenheit());
+    setTemperatures();
+    updateRoomHumidity(KITCHEN, presenter->getRoomHumidity(KITCHEN));
+    updateRoomHumidity(LIVINGROOM, presenter->getRoomHumidity(LIVINGROOM));
+    updateRoomHumidity(BEDROOM, presenter->getRoomHumidity(BEDROOM));
+    kitchenFan.setFanMode(presenter->getRoomFanMode(KITCHEN));
+    livingRoomFan.setFanMode(presenter->getRoomFanMode(LIVINGROOM));
+    bedRoomFan.setFanMode(presenter->getRoomFanMode(BEDROOM));
+    kitchenCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(KITCHEN));
+    livingroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(LIVINGROOM));
+    bedroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(BEDROOM));
+    if (presenter->getIsFahrenheit())
+    {
+        fahrenheitToggle.forceState(true);
+    }
+
+    // Setup start animations
+    startupAnimation(weatherButton, FADE_DURATION, 0);
+    startupAnimation(weatherIcon, FADE_DURATION, 0);
+    startupAnimation(weatherTemp, FADE_DURATION, 0);
+    startupAnimation(weatherDegrees, FADE_DURATION, 0);
+    startupAnimation(fahrenheitToggle, FADE_DURATION, 0);
+    kitchenCardContainer.startupAnimation(FADE_DURATION, 1, TypedText(T_KITCHENTEXT));
+    livingroomCardContainer.startupAnimation(FADE_DURATION, 2, TypedText(T_LIVINGROOMTEXT));
+    bedroomCardContainer.startupAnimation(FADE_DURATION, 3, TypedText(T_BEDROOMTEXT));
+
+    // Disable room card buttons until animation is done
+    kitchenCardButton.setTouchable(false);
+    livingroomCardButton.setTouchable(false);
+    bedroomCardButton.setTouchable(false);
+}
+
+void MainView::tearDownScreen()
+{
+    MainViewBase::tearDownScreen();
+}
+
+void MainView::handleTickEvent()
+{
+    tickCount++;
+
+    // Enable room card buttons when animation is done
+    if (tickCount == FADE_DURATION * 4)
+    {
+        kitchenCardButton.setTouchable(true);
+        livingroomCardButton.setTouchable(true);
+        bedroomCardButton.setTouchable(true);
+    }
+
+    // Setup room card start animations when returning from setTempAndFan
+    if (waitingToFlip && !(livingroomButtonContainer.isMoveAnimationRunning() || bedroomButtonContainer.isMoveAnimationRunning()))
+    {
+        waitingToFlip = false;
+
+        switch (presenter->getSelectedRoom())
+        {
+        case KITCHEN:
+            livingroomCardContainer.startupAnimation(FADE_DURATION, 1, TypedText(T_LIVINGROOMTEXT));
+            bedroomCardContainer.startupAnimation(FADE_DURATION, 2, TypedText(T_BEDROOMTEXT));
+            break;
+        case LIVINGROOM:
+            kitchenCardContainer.startupAnimation(FADE_DURATION, 1, TypedText(T_KITCHENTEXT));
+            bedroomCardContainer.startupAnimation(FADE_DURATION, 2, TypedText(T_BEDROOMTEXT));
+            break;
+        case BEDROOM:
+            kitchenCardContainer.startupAnimation(FADE_DURATION, 1, TypedText(T_KITCHENTEXT));
+            livingroomCardContainer.startupAnimation(FADE_DURATION, 2, TypedText(T_LIVINGROOMTEXT));
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Update performance text
+    performanceText.updateMCULoad();
+    performanceText.countTheFrames();
+}
+
+void MainView::kitchenCardButtonClicked()
+{
+    livingroomCardContainer.flipOut(FLIP_DURATION);
+    bedroomCardContainer.flipOut(FLIP_DURATION);
+    setTempAndFan.showContainer(KITCHEN, presenter->getRoomFanSetPoint(KITCHEN), presenter->getRoomTempSetPoint(KITCHEN), presenter->getIsFahrenheit());
+
+    setSelectedRoom(KITCHEN);
+}
+
+void MainView::livingroomCardButtonClicked()
+{
+    kitchenCardContainer.flipOut(FLIP_DURATION);
+    bedroomCardContainer.flipOut(FLIP_DURATION);
+    setTempAndFan.showContainer(LIVINGROOM, presenter->getRoomFanSetPoint(LIVINGROOM), presenter->getRoomTempSetPoint(LIVINGROOM), presenter->getIsFahrenheit());
+
+    setSelectedRoom(LIVINGROOM);
+}
+
+void MainView::bedroomCardButtonClicked()
+{
+    kitchenCardContainer.flipOut(FLIP_DURATION);
+    livingroomCardContainer.flipOut(FLIP_DURATION);
+    setTempAndFan.showContainer(BEDROOM, presenter->getRoomFanSetPoint(BEDROOM), presenter->getRoomTempSetPoint(BEDROOM), presenter->getIsFahrenheit());
+
+    setSelectedRoom(BEDROOM);
+}
+
+void MainView::fahrenheitToggleClicked()
+{
+    presenter->setIsFahrenheit(!presenter->getIsFahrenheit());
+
+    setTemperatures();
+}
+
+void MainView::resetRoomCards()
+{
+    kitchenCardButton.setTouchable(false);
+    livingroomCardButton.setTouchable(false);
+    bedroomCardButton.setTouchable(false);
+    tickCount = 0;
+
+    switch (presenter->getSelectedRoom())
+    {
+    case LIVINGROOM:
+        livingroomButtonContainer.setMoveAnimationDelay(0);
+        livingroomButtonContainer.startMoveAnimation(CARD_X, LIVINGROOM_Y, 8);
+        break;
+    case BEDROOM:
+        bedroomButtonContainer.setMoveAnimationDelay(0);
+        bedroomButtonContainer.startMoveAnimation(CARD_X, BEDROOM_Y, 16);
+        break;
+    default:
+        break;
+    }
+
+    waitingToFlip = true;
+
+    temperatureAnimation.startAnimation(presenter->getSelectedRoom(), presenter->getRoomTempSetPoint(presenter->getSelectedRoom()), presenter->getRoomTemperature(presenter->getSelectedRoom()), presenter->getIsFahrenheit());
+}
+
+void MainView::fanModeChanged(HVAC_FanMode_t fanMode)
+{
+    presenter->setRoomFanSetPoint(presenter->getSelectedRoom(), fanMode);
+
+    switch (presenter->getSelectedRoom())
+    {
+    case KITCHEN:
+        kitchenCardContainer.setFanSetPoint(fanMode);
+        break;
+    case LIVINGROOM:
+        livingroomCardContainer.setFanSetPoint(fanMode);
+        break;
+    case BEDROOM:
+        bedroomCardContainer.setFanSetPoint(fanMode);
+        break;
+    default:
+        break;
+    }
+}
+
+void MainView::temperatureChanged(float temperature)
+{
+    presenter->setRoomTempSetPoint(presenter->getSelectedRoom(), temperature);
+    closeSettingsButton.setTouchable(false);
+}
+
+void MainView::temperatureAnimationDone()
+{
+    kitchenSelectedImage.startFadeAnimation(0, FADE_DURATION);
+    livingroomSelectedImage.startFadeAnimation(0, FADE_DURATION);
+    bedroomSelectedImage.startFadeAnimation(0, FADE_DURATION);
+}
+
+void MainView::graphButtonClicked(Rooms room)
+{
+    presenter->setSelectedRoom(room);
+    application().gotoGraphScreenNoTransition();
+}
+
+void MainView::updateRoomTemperature(Rooms roomId, float temperature)
+{
+    switch (roomId)
+    {
+    case KITCHEN:
+        kitchenCardContainer.setTemperature(temperature, presenter->getIsFahrenheit());
+        break;
+    case LIVINGROOM:
+        livingroomCardContainer.setTemperature(temperature, presenter->getIsFahrenheit());
+        break;
+    case BEDROOM:
+        bedroomCardContainer.setTemperature(temperature, presenter->getIsFahrenheit());
+        break;
+    default:
+        break;
+    }
+}
+
+void MainView::updateRoomHumidity(Rooms roomId, float humidity)
+{
+    switch (roomId)
+    {
+    case KITCHEN:
+        kitchenCardContainer.setHumidity(humidity);
+        break;
+    case LIVINGROOM:
+        livingroomCardContainer.setHumidity(humidity);
+        break;
+    case BEDROOM:
+        bedroomCardContainer.setHumidity(humidity);
+        break;
+    default:
+        break;
+    }
+}
+
+void MainView::updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
+{
+    switch (roomId)
+    {
+    case KITCHEN:
+        kitchenFan.setFanMode(fanMode);
+        break;
+    case LIVINGROOM:
+        livingRoomFan.setFanMode(fanMode);
+        break;
+    case BEDROOM:
+        bedRoomFan.setFanMode(fanMode);
+        break;
+    default:
+        break;
+    }
+}
+
+void MainView::updateClock(uint8_t hour, uint8_t minute)
+{
+    Unicode::snprintf(clockTextBuffer1, CLOCKTEXTBUFFER1_SIZE, "%02d", hour);
+    Unicode::snprintf(clockTextBuffer2, CLOCKTEXTBUFFER2_SIZE, "%02d", minute);
+    clockText.invalidate();
+}
+
+void MainView::updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit)
+{
+    Unicode::snprintf(weatherTempBuffer, WEATHERTEMP_SIZE, "%d",
+                      (int)(isUnitFahrenheit ? weatherData.weatherInfo.current_temp * 1.8f + 32 : weatherData.weatherInfo.current_temp));
+
+    weatherDegrees.invalidate();
+    weatherTemp.invalidate();
+
+    weatherIcon.setBitmap(weatherData.currentWeatherBmp);
+    weatherIcon.invalidate();
+}
+
+void MainView::setTemperatures()
+{
+    // Set temperatures in correct unit
+    kitchenCardContainer.setTemperature(presenter->getRoomTemperature(KITCHEN), presenter->getIsFahrenheit());
+    livingroomCardContainer.setTemperature(presenter->getRoomTemperature(LIVINGROOM), presenter->getIsFahrenheit());
+    bedroomCardContainer.setTemperature(presenter->getRoomTemperature(BEDROOM), presenter->getIsFahrenheit());
+
+    temperatureAnimation.setTemperature(presenter->getRoomTempSetPoint(presenter->getSelectedRoom()), presenter->getIsFahrenheit());
+
+    weatherDegrees.setTypedText(TypedText(presenter->getIsFahrenheit() ? T_FAHRENHEITUNIT : T_CELSIUSUNIT));
+    Unicode::snprintf(weatherTempBuffer, WEATHERTEMP_SIZE, "%d",
+                      (int)(presenter->getIsFahrenheit() ? presenter->getWeatherData().weatherInfo.current_temp * 1.8f + 32 : presenter->getWeatherData().weatherInfo.current_temp));
+    weatherDegrees.invalidate();
+    weatherTemp.invalidate();
+}
+
+void MainView::setSelectedRoom(Rooms room)
+{
+    temperatureAnimationDone();
+
+    // Update model
+    presenter->setSelectedRoom(room);
+
+    // Stop animations already running
+    if (kitchenSelectedImage.getAlpha() || livingroomSelectedImage.getAlpha() || bedroomSelectedImage.getAlpha())
+    {
+        kitchenSelectedImage.startFadeAnimation(0, FADE_DURATION);
+        livingroomSelectedImage.startFadeAnimation(0, FADE_DURATION);
+        bedroomSelectedImage.startFadeAnimation(0, FADE_DURATION);
+
+        temperatureAnimation.stopAnimation();
+    }
+
+    // Set highlight on selected room
+    switch (room)
+    {
+    case KITCHEN:
+        kitchenSelectedImage.startFadeAnimation(255, FADE_DURATION);
+        break;
+    case LIVINGROOM:
+        livingroomSelectedImage.startFadeAnimation(255, FADE_DURATION);
+        break;
+    case BEDROOM:
+        bedroomSelectedImage.startFadeAnimation(255, FADE_DURATION);
+        break;
+    default:
+        break;
+    }
+
+    // Disable card buttons
+    kitchenCardButton.setTouchable(false);
+    livingroomCardButton.setTouchable(false);
+    bedroomCardButton.setTouchable(false);
+}

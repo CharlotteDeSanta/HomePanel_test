@@ -12,8 +12,12 @@
 #include <gui/common/FrontendApplication.hpp>
 #include <gui/model/Model.hpp>
 
-#include <gui/screen_screen/screenView.hpp>
-#include <gui/screen_screen/screenPresenter.hpp>
+#include <gui/main_screen/MainView.hpp>
+#include <gui/main_screen/MainPresenter.hpp>
+#include <gui/graph_screen/GraphView.hpp>
+#include <gui/graph_screen/GraphPresenter.hpp>
+#include <gui/weather_screen/WeatherView.hpp>
+#include <gui/weather_screen/WeatherPresenter.hpp>
 
 
 /**
@@ -36,8 +40,10 @@ public:
      * A list of all view types. Must end with meta::Nil.
      * @note All view types used in the application MUST be added to this list!
      */
-    typedef touchgfx::meta::TypeList< screenView,
-            touchgfx::meta::Nil
+    typedef touchgfx::meta::TypeList< MainView,
+            touchgfx::meta::TypeList< GraphView,
+            touchgfx::meta::TypeList< WeatherView,
+            touchgfx::meta::Nil > >
             > GeneratedViewTypes;
 
     /**
@@ -49,8 +55,10 @@ public:
      * A list of all presenter types. Must end with meta::Nil.
      * @note All presenter types used in the application MUST be added to this list!
      */
-    typedef touchgfx::meta::TypeList< screenPresenter,
-            touchgfx::meta::Nil
+    typedef touchgfx::meta::TypeList< MainPresenter,
+            touchgfx::meta::TypeList< GraphPresenter,
+            touchgfx::meta::TypeList< WeatherPresenter,
+            touchgfx::meta::Nil > >
             > GeneratedPresenterTypes;
 
     /**
@@ -73,7 +81,7 @@ public:
 
     virtual void gotoStartScreen(FrontendApplication& app)
     {
-        app.gotoscreenScreenNoTransition();
+        app.gotoMainScreenNoTransition();
     }
 protected:
     FrontendHeapBase(touchgfx::AbstractPartition& presenters, touchgfx::AbstractPartition& views, touchgfx::AbstractPartition& transitions, FrontendApplication& app)

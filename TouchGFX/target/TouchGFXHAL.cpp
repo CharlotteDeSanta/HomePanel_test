@@ -26,6 +26,7 @@
 
 extern "C"
 {
+#include "bsp_config.h"
 #include "ltdc.h"
 }
 
@@ -33,15 +34,30 @@ extern "C"
 
 using namespace touchgfx;
 
+namespace
+{
+uint32_t getActiveAreaStartLine()
+{
+    return (LTDC->BPCR & LTDC_BPCR_AVBP_Msk) + 1U;
+}
+
+uint32_t getFrontPorchStartLine()
+{
+    return (LTDC->AWCR & LTDC_AWCR_AAH_Msk) + 1U;
+}
+} // namespace
+
 void TouchGFXHAL::initialize()
 {
-    // Calling parent implementation of initialize().
-    //
-    // To overwrite the generated implementation, omit the call to the parent function
-    // and implement the needed functionality here.
-    // Please note, HAL::initialize() must be called to initialize the framework.
-
     TouchGFXGeneratedHAL::initialize();
+
+    /*
+     * Use a second full-size SDRAM framebuffer so TouchGFX can render off-screen
+     * and only swap the LTDC base address during VSync.
+     */
+    setFrameBufferStartAddresses((void*)BSP_DISPLAY_FRAMEBUFFER_ADDR,
+                                 (void*)BSP_DISPLAY_FRAMEBUFFER1_ADDR,
+                                 (void*)0);
 }
 
 /**
@@ -51,12 +67,7 @@ void TouchGFXHAL::initialize()
  */
 uint16_t* TouchGFXHAL::getTFTFrameBuffer() const
 {
-    // Calling parent implementation of getTFTFrameBuffer().
-    //
-    // To overwrite the generated implementation, omit the call to the parent function
-    // and implement the needed functionality here.
-
-    return TouchGFXGeneratedHAL::getTFTFrameBuffer();
+    return reinterpret_cast<uint16_t*>(LTDC_Layer1->CFBAR);
 }
 
 /**
@@ -66,12 +77,13 @@ uint16_t* TouchGFXHAL::getTFTFrameBuffer() const
  */
 void TouchGFXHAL::setTFTFrameBuffer(uint16_t* address)
 {
-    // Calling parent implementation of setTFTFrameBuffer(uint16_t* address).
-    //
-    // To overwrite the generated implementation, omit the call to the parent function
-    // and implement the needed functionality here.
-
-    TouchGFXGeneratedHAL::setTFTFrameBuffer(address);
+    /*
+     * The address swap is requested from the LTDC line-event callback exactly
+     * at the frame boundary, so an immediate reload applies the new buffer to
+     * the frame that is about to start.
+     */
+    HAL_LTDC_SetAddress_NoReload(&hltdc, reinterpret_cast<uint32_t>(address), 0);
+    HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_IMMEDIATE);
 }
 
 /**
@@ -147,7 +159,7 @@ void TouchGFXHAL::disableInterrupts()
  */
 void TouchGFXHAL::enableLCDControllerInterrupt()
 {
-    HAL_LTDC_ProgramLineEvent(&hltdc, 0);
+    HAL_LTDC_ProgramLineEvent(&hltdc, getActiveAreaStartLine());
 }
 
 bool TouchGFXHAL::beginFrame()
@@ -162,11 +174,22 @@ void TouchGFXHAL::endFrame()
 
 extern "C" void HAL_LTDC_LineEventCallback(LTDC_HandleTypeDef* hltdcHandle)
 {
-    if (hltdcHandle->Instance == LTDC)
+    if (hltdcHandle->Instance != LTDC || !HAL::getInstance())
     {
+        return;
+    }
+
+    if (LTDC->LIPCR == getActiveAreaStartLine())
+    {
+        HAL_LTDC_ProgramLineEvent(hltdcHandle, getFrontPorchStartLine());
         HAL::getInstance()->vSync();
         OSWrappers::signalVSync();
-        HAL_LTDC_ProgramLineEvent(hltdcHandle, 0);
+        HAL::getInstance()->swapFrameBuffers();
+    }
+    else
+    {
+        HAL_LTDC_ProgramLineEvent(hltdcHandle, getActiveAreaStartLine());
+        HAL::getInstance()->frontPorchEntered();
     }
 }
 

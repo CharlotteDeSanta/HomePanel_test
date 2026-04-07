@@ -28,12 +28,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bsp_board.h"
-#include "bsp_display.h"
+#include "bsp_qspi_flash.h"
 #include "bsp_sdram.h"
-#include "fmc.h"
-#include "gpio.h"
-#include "ltdc.h"
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +56,7 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
+static void CPU_CACHE_Enable(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -101,9 +98,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  CPU_CACHE_Enable();
   MX_FMC_Init();
-  /* Verify SDRAM before the display stack starts using it. */
-  BSP_SDRAM_Test();
+  if (BSP_QSPI_Init() != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (BSP_QSPI_EnableMemoryMappedMode() != HAL_OK)
+  {
+    Error_Handler();
+  }
   MX_LTDC_Init();
   MX_CRC_Init();
   MX_DMA2D_Init();
@@ -118,8 +122,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
-  MX_TouchGFX_Process();
+    MX_TouchGFX_Process();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -184,6 +187,18 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+static void CPU_CACHE_Enable(void)
+{
+  if ((SCB->CCR & SCB_CCR_IC_Msk) == 0U)
+  {
+    SCB_EnableICache();
+  }
+
+  if ((SCB->CCR & SCB_CCR_DC_Msk) == 0U)
+  {
+    SCB_EnableDCache();
+  }
+}
 /* USER CODE END 4 */
 
  /* MPU Configuration */

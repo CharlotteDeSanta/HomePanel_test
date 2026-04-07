@@ -4,11 +4,417 @@
     <Language Id="GB" />
   </Languages>
   <Texts>
-    <TextGroup Id="Group1" />
+    <TextGroup Id="TemperatureAnimation">
+      <Text Id="__SingleUse_0988" Alignment="Left" TypographyId="Semibold16">
+        <Translation Language="GB">20</Translation>
+      </Text>
+      <Text Id="tempAnimationC" Alignment="Center" TypographyId="Semibold16">
+        <Translation Language="GB">&lt;value&gt; °C</Translation>
+      </Text>
+      <Text Id="tempAnimationF" Alignment="Center" TypographyId="Semibold16">
+        <Translation Language="GB">&lt;value&gt; °F</Translation>
+      </Text>
+    </TextGroup>
+    <TextGroup Id="PerformanceMeasure">
+      <Text Id="__SingleUse_JO3C" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">-</Translation>
+      </Text>
+      <Text Id="__SingleUse_ZPTY" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">CPU: &lt;cpu&gt;%</Translation>
+      </Text>
+      <Text Id="__SingleUse_HCJU" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">100</Translation>
+      </Text>
+      <Text Id="__SingleUse_IKR5" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">FPS: &lt;fps&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_MPIS" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">60</Translation>
+      </Text>
+    </TextGroup>
+    <TextGroup Id="Graph">
+      <Text Id="__SingleUse_BHJK" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">0&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_0W59" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">20</Translation>
+      </Text>
+      <Text Id="__SingleUse_MVLP" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">15</Translation>
+      </Text>
+      <Text Id="__SingleUse_1ZUG" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">10&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_UGLG" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">5</Translation>
+      </Text>
+      <Text Id="__SingleUse_3JMQ" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">30&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_J1ZU" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">25</Translation>
+      </Text>
+      <Text Id="__SingleUse_1MWP" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">35</Translation>
+      </Text>
+      <Text Id="__SingleUse_YMU4" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">40</Translation>
+      </Text>
+      <Text Id="__SingleUse_VBLR" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">45</Translation>
+      </Text>
+      <Text Id="__SingleUse_ORM5" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">50</Translation>
+      </Text>
+      <Text Id="__SingleUse_Y8VY" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">55</Translation>
+      </Text>
+      <Text Id="__SingleUse_0XCW" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">60</Translation>
+      </Text>
+      <Text Id="__SingleUse_E2OQ" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">00</Translation>
+      </Text>
+      <Text Id="__SingleUse_3KL7" Alignment="Left" TypographyId="Medium30">
+        <Translation Language="GB">09</Translation>
+      </Text>
+      <Text Id="__SingleUse_PZG7" Alignment="Center" TypographyId="Medium30">
+        <Translation Language="GB">&lt;hour&gt;:&lt;minute&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_ICOD" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">HUMIDITY (%)&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_QT02" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">FAN SPEED&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_COXW" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">TEMPERATURE (°C)&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_NDOQ" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SECONDS&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_G4OX" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">TEMPERATURE (°F)&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_QSDC" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">104&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_RLPJ" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">86&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_OAEH" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">68&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_GK9W" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">50&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_ETNO" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">32</Translation>
+      </Text>
+      <Text Id="__SingleUse_NY4J" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">14&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_K5ZR" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">80&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_3PL4" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">100&#10;&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_ET2N" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">60&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_V17X" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">40&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_DET6" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">20&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_181Y" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">0&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_88X7" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">HIGH&#10;&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_DG7H" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">MED&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_AWG0" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">LOW&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_53HB" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">OFF&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_9KTF" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">40&#10;&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_7Y7X" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">30&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_HZA6" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">20&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_SF36" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">10&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_KVFV" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">0&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_1O1S" Alignment="Right" TypographyId="Semibold14">
+        <Translation Language="GB">-10&#10;</Translation>
+      </Text>
+    </TextGroup>
+    <TextGroup Id="WeatherForecast">
+      <Text Id="__SingleUse_1X7S" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">5 DAY - WEATHER FORECAST</Translation>
+      </Text>
+      <Text Id="__SingleUse_NEDU" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">WEDNESDAY</Translation>
+      </Text>
+      <Text Id="__SingleUse_AEVP" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MODERATE RAIN</Translation>
+      </Text>
+      <Text Id="__SingleUse_3MWN" Alignment="Center" TypographyId="Semibold58">
+        <Translation Language="GB">&lt;value&gt;°</Translation>
+      </Text>
+      <Text Id="__SingleUse_RZSJ" Alignment="Left" TypographyId="Semibold58">
+        <Translation Language="GB">20</Translation>
+      </Text>
+      <Text Id="__SingleUse_B8XB" Alignment="Center" TypographyId="Semibold40">
+        <Translation Language="GB">&lt;value&gt;°</Translation>
+      </Text>
+      <Text Id="__SingleUse_3NYY" Alignment="Left" TypographyId="Semibold40">
+        <Translation Language="GB">9</Translation>
+      </Text>
+      <Text Id="SUNDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">SUNDAY</Translation>
+      </Text>
+      <Text Id="MONDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">MONDAY</Translation>
+      </Text>
+      <Text Id="TUESDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">TUESDAY</Translation>
+      </Text>
+      <Text Id="WEDNESDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">WEDNESDAY</Translation>
+      </Text>
+      <Text Id="THURSDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">THURSDAY</Translation>
+      </Text>
+      <Text Id="FRIDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">FRIDAY</Translation>
+      </Text>
+      <Text Id="SATURDAYTEXT" Alignment="Center" TypographyId="Semibold20">
+        <Translation Language="GB">SATURDAY</Translation>
+      </Text>
+      <Text Id="CLEAR_SKYDAYTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">CLEAR SKY</Translation>
+      </Text>
+      <Text Id="MAINLY_CLEARTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MAINLY CLEAR</Translation>
+      </Text>
+      <Text Id="PARTLY_CLOUDYTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">PARTLY CLOUDY</Translation>
+      </Text>
+      <Text Id="OVERCASTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">OVERCAST</Translation>
+      </Text>
+      <Text Id="FOGTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">FOG</Translation>
+      </Text>
+      <Text Id="RIME_FOGTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">DEPOSITING RIME FOG</Translation>
+      </Text>
+      <Text Id="DRIZZLE_LIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">LIGHT DRIZZLE</Translation>
+      </Text>
+      <Text Id="DRIZZLE_MODERATETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MODERATE DRIZZLE</Translation>
+      </Text>
+      <Text Id="DRIZZLE_DENSETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">DENSE DRIZZLE</Translation>
+      </Text>
+      <Text Id="FREEZING_DRIZZLE_LIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">LIGHT FREEZING&#10;RIZZLE</Translation>
+      </Text>
+      <Text Id="FREEZING_DRIZZLE_DENSETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">DENSE FREEZING&#10;RIZZLE</Translation>
+      </Text>
+      <Text Id="RAIN_SLIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SLIGHT RAIN</Translation>
+      </Text>
+      <Text Id="RAIN_MODERATETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MODERATE RAIN</Translation>
+      </Text>
+      <Text Id="RAIN_DENSETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">DENSE RAIN</Translation>
+      </Text>
+      <Text Id="FREEZING_RAIN_LIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">LIGHT&#10;FREEZING RAIN</Translation>
+      </Text>
+      <Text Id="FREEZING_RAIN_HEAVYTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">HEAVY&#10;FREEZING RAIN</Translation>
+      </Text>
+      <Text Id="SNOW_FALL_SLIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SLIGHT&#10;SNOW FALL</Translation>
+      </Text>
+      <Text Id="SNOW_FALL_MODERATETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MODERATE&#10;SNOW FALL</Translation>
+      </Text>
+      <Text Id="SNOW_FALL_HEAVYTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">HEAVY&#10;SNOW FALL</Translation>
+      </Text>
+      <Text Id="SNOW_GRAINSTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SNOW GRAINS</Translation>
+      </Text>
+      <Text Id="RAIN_SHOWER_SLIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SLIGHT&#10;RAIN SHOWERS</Translation>
+      </Text>
+      <Text Id="RAIN_SHOWER_MODERATETEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MODERATE&#10;RAIN SHOWERS</Translation>
+      </Text>
+      <Text Id="RAIN_SHOWER_VIOLENTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">VIOLENT&#10;RAIN SHOWER</Translation>
+      </Text>
+      <Text Id="SNOW_SHOWER_SLIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SLIGHT&#10;SNOW SHOWERS</Translation>
+      </Text>
+      <Text Id="SNOW_SHOWER_HEAVYTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">HEAVY&#10;SNOW SHOWER</Translation>
+      </Text>
+      <Text Id="THUNDERSTORMTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">MODERATE THUNDER</Translation>
+      </Text>
+      <Text Id="THUNDER_SLIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SLIGHT THUNDER</Translation>
+      </Text>
+      <Text Id="THUNDERSTORM_HAIL_SLIGHTTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">SLIGHT&#10;THUNDERSTORM</Translation>
+      </Text>
+      <Text Id="THUNDERSTORM_HAIL_HEAVYTEXT" Alignment="Center" TypographyId="Semibold14">
+        <Translation Language="GB">HEAVY HAIL&#10;THUNDERSTORM</Translation>
+      </Text>
+    </TextGroup>
+    <TextGroup Id="Unsorted">
+      <Text Id="__SingleUse_CC9U" Alignment="Left" TypographyId="Semibold22">
+        <Translation Language="GB">23.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_3GT7" Alignment="Left" TypographyId="Semibold22">
+        <Translation Language="GB">22.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_2K9T" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">20.0&#10;</Translation>
+      </Text>
+      <Text Id="__SingleUse_2DW2" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_3G6Q" Alignment="Left" TypographyId="Semibold58">
+        <Translation Language="GB">20.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_8AE6" Alignment="Center" TypographyId="Semibold58">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_6IQY" Alignment="Left" TypographyId="medium48">
+        <Translation Language="GB">20.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_M2X9" Alignment="Center" TypographyId="medium48">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_3M8G" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">00</Translation>
+      </Text>
+      <Text Id="__SingleUse_IGEU" Alignment="Left" TypographyId="Semibold16">
+        <Translation Language="GB">FAN SPEED</Translation>
+      </Text>
+      <Text Id="__SingleUse_H8R0" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">60</Translation>
+      </Text>
+      <Text Id="__SingleUse_XT56" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">100</Translation>
+      </Text>
+      <Text Id="__SingleUse_L3XI" Alignment="Right" TypographyId="Semibold30">
+        <Translation Language="GB">&lt;&gt;jj</Translation>
+      </Text>
+      <Text Id="bedroomText" Alignment="Left" TypographyId="Semibold20">
+        <Translation Language="GB">BEDROOM</Translation>
+      </Text>
+      <Text Id="livingRoomText" Alignment="Left" TypographyId="Semibold20">
+        <Translation Language="GB">LIVING ROOM</Translation>
+      </Text>
+      <Text Id="kitchenText" Alignment="Left" TypographyId="Semibold20">
+        <Translation Language="GB">KITCHEN</Translation>
+      </Text>
+      <Text Id="s" Alignment="Left" TypographyId="Semibold20">
+        <Translation Language="GB">ROOM NAME</Translation>
+      </Text>
+      <Text Id="__SingleUse_8824" Alignment="Left" TypographyId="Semibold15">
+        <Translation Language="GB">--</Translation>
+      </Text>
+      <Text Id="__SingleUse_BWMX" Alignment="Left" TypographyId="Semibold15">
+        <Translation Language="GB">&lt;value&gt;%</Translation>
+      </Text>
+      <Text Id="__SingleUse_340Z" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">60</Translation>
+      </Text>
+      <Text Id="__SingleUse_Y6UT" Alignment="Left" TypographyId="Semibold14">
+        <Translation Language="GB">100</Translation>
+      </Text>
+      <Text Id="__SingleUse_XHC2" Alignment="Left" TypographyId="Medium30">
+        <Translation Language="GB">09</Translation>
+      </Text>
+      <Text Id="__SingleUse_E6XH" Alignment="Center" TypographyId="Medium30">
+        <Translation Language="GB">&lt;hour&gt;:&lt;minute&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_NTXB" Alignment="Left" TypographyId="Semibold40">
+        <Translation Language="GB">13</Translation>
+      </Text>
+      <Text Id="__SingleUse_B2OZ" Alignment="Right" TypographyId="Semibold40">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_I9DY" Alignment="Left" TypographyId="Semibold58">
+        <Translation Language="GB">--.-</Translation>
+      </Text>
+      <Text Id="__SingleUse_ADYL" Alignment="Left" TypographyId="Semibold58">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="celsiusUnit" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">°C</Translation>
+      </Text>
+      <Text Id="fahrenheitUnit" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">°F</Translation>
+      </Text>
+      <Text Id="__SingleUse_TWMD" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_L4JD" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_GA2I" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_8O5R" Alignment="Left" TypographyId="Semibold16">
+        <Translation Language="GB">ROOM NAME</Translation>
+      </Text>
+      <Text Id="bedroomTextSmall" Alignment="Left" TypographyId="Semibold16">
+        <Translation Language="GB">BEDROOM</Translation>
+      </Text>
+      <Text Id="livingroomTextSmall" Alignment="Left" TypographyId="Semibold16">
+        <Translation Language="GB">LIVING ROOM</Translation>
+      </Text>
+      <Text Id="kitchenTextSmall" Alignment="Left" TypographyId="Semibold16">
+        <Translation Language="GB">KITCHEN</Translation>
+      </Text>
+    </TextGroup>
   </Texts>
   <Typographies>
-    <Typography Id="Default" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
-    <Typography Id="Large" Font="verdana.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
-    <Typography Id="Small" Font="verdana.ttf" Size="10" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Semibold30" Font="GeogrotesqueCyr-SemiBold.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="CF" WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold58" Font="GeogrotesqueCyr-SemiBold.ttf" Size="58" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters=".-" WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold14" Font="GeogrotesqueCyr-SemiBold.ttf" Size="14" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold20" Font="GeogrotesqueCyr-SemiBold.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="CF" WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold40" Font="GeogrotesqueCyr-SemiBold.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="-.," WildcardCharacterRanges="0-9" />
+    <Typography Id="Medium30" Font="GeogrotesqueCyr-Medium.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="CF" WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold15" Font="GeogrotesqueCyr-SemiBold.ttf" Size="15" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold16" Font="GeogrotesqueCyr-SemiBold.ttf" Size="16" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
+    <Typography Id="medium48" Font="GeogrotesqueCyr-Medium.ttf" Size="48" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="-." WildcardCharacterRanges="0-9" />
+    <Typography Id="Semibold22" Font="GeogrotesqueCyr-SemiBold.ttf" Size="22" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
   </Typographies>
 </TextDatabase>

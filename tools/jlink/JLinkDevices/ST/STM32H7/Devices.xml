@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Database>
+  <Device>
+    <ChipInfo
+      Vendor="ST"
+      Name="STM32H743XI"
+      Core="JLINK_CORE_CORTEX_M7"
+      JLinkScriptFile="Devices/ST/STM32H7/ST_STM32H7xx.pex" />
+    <FlashBankInfo
+      Name="QSPI Flash"
+      BaseAddr="0x90000000"
+      AlwaysPresent="0">
+      <LoaderInfo
+        Name="PB2_PG6_PF8_PF9_PF7_PF6_SingleFlash"
+        MaxSize="0x02000000"
+        Loader="loaders/ST_STM32H753I_EVAL_QSPI.elf"
+        LoaderType="FLASH_ALGO_TYPE_OPEN" />
+    </FlashBankInfo>
+  </Device>
+</Database>

@@ -13,17 +13,31 @@ class FlashDataReader;
 
 struct Typography
 {
-    static const touchgfx::FontId DEFAULT = 0;
-    static const touchgfx::FontId LARGE = 1;
-    static const touchgfx::FontId SMALL = 2;
+    static const touchgfx::FontId SEMIBOLD30 = 0;
+    static const touchgfx::FontId SEMIBOLD58 = 1;
+    static const touchgfx::FontId SEMIBOLD14 = 2;
+    static const touchgfx::FontId SEMIBOLD20 = 3;
+    static const touchgfx::FontId SEMIBOLD40 = 4;
+    static const touchgfx::FontId MEDIUM30 = 5;
+    static const touchgfx::FontId SEMIBOLD15 = 6;
+    static const touchgfx::FontId SEMIBOLD16 = 7;
+    static const touchgfx::FontId MEDIUM48 = 8;
+    static const touchgfx::FontId SEMIBOLD22 = 9;
 };
 
 struct TypographyFontIndex
 {
-    static const touchgfx::FontId DEFAULT = 0; // verdana_20_4bpp
-    static const touchgfx::FontId LARGE = 1;   // verdana_40_4bpp
-    static const touchgfx::FontId SMALL = 2;   // verdana_10_4bpp
-    static const uint16_t NUMBER_OF_FONTS = 3;
+    static const touchgfx::FontId SEMIBOLD30 = 0; // GeogrotesqueCyr_SemiBold_30_4bpp
+    static const touchgfx::FontId SEMIBOLD58 = 1; // GeogrotesqueCyr_SemiBold_58_4bpp
+    static const touchgfx::FontId SEMIBOLD14 = 2; // GeogrotesqueCyr_SemiBold_14_4bpp
+    static const touchgfx::FontId SEMIBOLD20 = 3; // GeogrotesqueCyr_SemiBold_20_4bpp
+    static const touchgfx::FontId SEMIBOLD40 = 4; // GeogrotesqueCyr_SemiBold_40_4bpp
+    static const touchgfx::FontId MEDIUM30 = 5;   // GeogrotesqueCyr_Medium_30_4bpp
+    static const touchgfx::FontId SEMIBOLD15 = 6; // GeogrotesqueCyr_SemiBold_15_4bpp
+    static const touchgfx::FontId SEMIBOLD16 = 7; // GeogrotesqueCyr_SemiBold_16_4bpp
+    static const touchgfx::FontId MEDIUM48 = 8;   // GeogrotesqueCyr_Medium_48_4bpp
+    static const touchgfx::FontId SEMIBOLD22 = 9; // GeogrotesqueCyr_SemiBold_22_4bpp
+    static const uint16_t NUMBER_OF_FONTS = 10;
 };
 
 class ApplicationFontProvider : public touchgfx::FontProvider

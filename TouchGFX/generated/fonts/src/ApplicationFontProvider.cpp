@@ -9,15 +9,36 @@ touchgfx::Font* ApplicationFontProvider::getFont(touchgfx::FontId typography)
 {
     switch (typography)
     {
-    case Typography::DEFAULT:
-        // verdana_20_4bpp
+    case Typography::SEMIBOLD30:
+        // GeogrotesqueCyr_SemiBold_30_4bpp
         return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[0]);
-    case Typography::LARGE:
-        // verdana_40_4bpp
+    case Typography::SEMIBOLD58:
+        // GeogrotesqueCyr_SemiBold_58_4bpp
         return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[1]);
-    case Typography::SMALL:
-        // verdana_10_4bpp
+    case Typography::SEMIBOLD14:
+        // GeogrotesqueCyr_SemiBold_14_4bpp
         return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[2]);
+    case Typography::SEMIBOLD20:
+        // GeogrotesqueCyr_SemiBold_20_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[3]);
+    case Typography::SEMIBOLD40:
+        // GeogrotesqueCyr_SemiBold_40_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[4]);
+    case Typography::MEDIUM30:
+        // GeogrotesqueCyr_Medium_30_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[5]);
+    case Typography::SEMIBOLD15:
+        // GeogrotesqueCyr_SemiBold_15_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[6]);
+    case Typography::SEMIBOLD16:
+        // GeogrotesqueCyr_SemiBold_16_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[7]);
+    case Typography::MEDIUM48:
+        // GeogrotesqueCyr_Medium_48_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[8]);
+    case Typography::SEMIBOLD22:
+        // GeogrotesqueCyr_SemiBold_22_4bpp
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[9]);
     default:
         return 0;
     }

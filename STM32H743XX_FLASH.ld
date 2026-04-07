@@ -61,6 +61,7 @@ RAM_D2 (xrw)      : ORIGIN = 0x30000000, LENGTH = 288K
 RAM_D3 (xrw)      : ORIGIN = 0x38000000, LENGTH = 64K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
 FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 2048K
+EXTFLASH (rx)   : ORIGIN = 0x90000000, LENGTH = 32M
 }
 
 /* Highest address of the user mode stack */
@@ -106,6 +107,14 @@ SECTIONS
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >FLASH
+
+  ExtFlashSection :
+  {
+    . = ALIGN(4);
+    KEEP(*(ExtFlashSection))
+    KEEP(*(ExtFlashSection*))
+    . = ALIGN(4);
+  } >EXTFLASH
 
   .ARM.extab (READONLY) : /* The "READONLY" keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
