@@ -21,6 +21,8 @@
 #include "crc.h"
 #include "dma2d.h"
 #include "ltdc.h"
+#include "quadspi.h"
+#include "rtc.h"
 #include "gpio.h"
 #include "fmc.h"
 #include "app_touchgfx.h"
@@ -57,8 +59,8 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
-static void CPU_CACHE_Enable(void);
 /* USER CODE BEGIN PFP */
+static void CPU_CACHE_Enable(void);
 
 /* USER CODE END PFP */
 
@@ -113,6 +115,7 @@ int main(void)
   MX_LTDC_Init();
   MX_CRC_Init();
   MX_DMA2D_Init();
+  MX_RTC_Init();
   MX_TouchGFX_Init();
   /* USER CODE BEGIN 2 */
   BSP_Board_SetStatusLed(1U, 1U, 1U);
@@ -124,7 +127,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    MX_TouchGFX_Process();
+
+  MX_TouchGFX_Process();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -149,11 +153,17 @@ void SystemClock_Config(void)
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
+  /** Configure LSE Drive Capability
+  */
+  HAL_PWR_EnableBkUpAccess();
+  __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 5;

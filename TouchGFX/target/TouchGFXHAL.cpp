@@ -21,16 +21,12 @@
 /* USER CODE END Header */
 
 #include <TouchGFXHAL.hpp>
-#include <touchgfx/hal/HAL.hpp>
-#include <touchgfx/hal/OSWrappers.hpp>
-
-extern "C"
-{
-#include "bsp_config.h"
-#include "ltdc.h"
-}
 
 /* USER CODE BEGIN TouchGFXHAL.cpp */
+#include <touchgfx/hal/OSWrappers.hpp>
+
+#include "bsp_config.h"
+#include "ltdc.h"
 
 using namespace touchgfx;
 
