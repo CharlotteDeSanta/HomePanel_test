@@ -98,7 +98,7 @@ private:
     uint16_t getBitmapFromWeatherCode(uint16_t weatherCode, bool iconIsSmall);
     uint16_t getTextFromWeatherCode(uint16_t weatherCode);
     void insertBufferSample(BufferSample buffer[], uint8_t& bufferCount, const BufferSample& sample);
-    bool incrementClockMinute();
+    void syncClockFromRtc(bool forceNotify);
 
     float kitchenTemperature;
     float kitchenHumidity;

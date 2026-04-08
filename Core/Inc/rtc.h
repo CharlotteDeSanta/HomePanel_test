@@ -34,6 +34,17 @@ extern "C" {
 
 extern RTC_HandleTypeDef hrtc;
 
+typedef struct
+{
+  uint16_t year;
+  uint8_t month;
+  uint8_t day;
+  uint8_t weekday;
+  uint8_t hour;
+  uint8_t minute;
+  uint8_t second;
+} APP_RTC_DateTime_t;
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
@@ -41,6 +52,8 @@ extern RTC_HandleTypeDef hrtc;
 void MX_RTC_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+uint8_t APP_RTC_GetDateTime(APP_RTC_DateTime_t* dateTime);
+uint8_t APP_RTC_SetDateTime(const APP_RTC_DateTime_t* dateTime);
 
 /* USER CODE END Prototypes */
 

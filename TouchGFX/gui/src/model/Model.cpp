@@ -3,6 +3,7 @@
 #include <images/BitmapDatabase.hpp>
 #include <texts/TextKeysAndLanguages.hpp>
 #include <algorithm>
+#include <rtc.h>
 #include <stm32h7xx_hal.h>
 
 namespace
@@ -61,28 +62,6 @@ uint16_t parseBuildYear()
     return static_cast<uint16_t>((date[7] - '0') * 1000 + (date[8] - '0') * 100 + (date[9] - '0') * 10 + (date[10] - '0'));
 }
 
-bool isLeapYear(uint16_t year)
-{
-    return ((year % 4U) == 0U && (year % 100U) != 0U) || ((year % 400U) == 0U);
-}
-
-uint8_t daysInMonth(uint16_t year, uint8_t month)
-{
-    static const uint8_t daysPerMonth[] = { 31U, 28U, 31U, 30U, 31U, 30U, 31U, 31U, 30U, 31U, 30U, 31U };
-
-    if (month == 2U && isLeapYear(year))
-    {
-        return 29U;
-    }
-
-    if (month < 1U || month > 12U)
-    {
-        return 31U;
-    }
-
-    return daysPerMonth[month - 1U];
-}
-
 uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
 {
     static const uint8_t monthOffsets[] = { 0U, 3U, 2U, 5U, 0U, 3U, 5U, 1U, 4U, 6U, 2U, 4U };
@@ -90,7 +69,7 @@ uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
     return static_cast<uint8_t>((year + year / 4U - year / 100U + year / 400U + monthOffsets[month - 1U] + day) % 7U);
 }
 
-const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 60000U;
+const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 1000U;
 const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
 const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
 }
@@ -141,6 +120,17 @@ Model::Model() :
         weatherData.dailyWeatherBmp[i] = getBitmapFromWeatherCode(incomingEvent.weather.daily_code[i], false);
         weatherData.dailyWeatherText[i] = getTextFromWeatherCode(incomingEvent.weather.daily_code[i]);
     }
+
+    APP_RTC_DateTime_t rtcDateTime = {};
+    if (APP_RTC_GetDateTime(&rtcDateTime) != 0U)
+    {
+        clockYear = rtcDateTime.year;
+        clockMonth = rtcDateTime.month;
+        clockDay = rtcDateTime.day;
+        clockWeekday = rtcDateTime.weekday;
+        clockHour = rtcDateTime.hour;
+        clockMinute = rtcDateTime.minute;
+    }
 }
 
 void Model::tick()
@@ -153,20 +143,13 @@ void Model::tick()
         lastIncomingDataPollMs = nowMs - MODEL_CONTROLLER_POLL_PERIOD_MS;
         lastGraphSampleMs = nowMs - MODEL_GRAPH_SAMPLE_PERIOD_MS;
         runtimeTimingInitialized = true;
+        syncClockFromRtc(true);
     }
 
     while ((uint32_t)(nowMs - lastClockUpdateMs) >= MODEL_CLOCK_UPDATE_PERIOD_MS)
     {
         lastClockUpdateMs += MODEL_CLOCK_UPDATE_PERIOD_MS;
-        const bool dateChanged = incrementClockMinute();
-        if (modelListener)
-        {
-            modelListener->updateClock(clockHour, clockMinute);
-            if (dateChanged)
-            {
-                modelListener->updateDate(clockYear, clockMonth, clockDay, clockWeekday);
-            }
-        }
+        syncClockFromRtc(false);
     }
 
     if ((uint32_t)(nowMs - lastIncomingDataPollMs) >= MODEL_CONTROLLER_POLL_PERIOD_MS)
@@ -458,43 +441,42 @@ void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& retu
     }
 }
 
-bool Model::incrementClockMinute()
+void Model::syncClockFromRtc(bool forceNotify)
 {
-    clockMinute++;
-
-    if (clockMinute < 60U)
+    APP_RTC_DateTime_t rtcDateTime = {};
+    if (APP_RTC_GetDateTime(&rtcDateTime) == 0U)
     {
-        return false;
+        return;
     }
 
-    clockMinute = 0U;
-    clockHour++;
+    const bool dateChanged = forceNotify ||
+                             (clockYear != rtcDateTime.year) ||
+                             (clockMonth != rtcDateTime.month) ||
+                             (clockDay != rtcDateTime.day) ||
+                             (clockWeekday != rtcDateTime.weekday);
+    const bool timeChanged = forceNotify ||
+                             (clockHour != rtcDateTime.hour) ||
+                             (clockMinute != rtcDateTime.minute);
 
-    if (clockHour < 24U)
+    clockYear = rtcDateTime.year;
+    clockMonth = rtcDateTime.month;
+    clockDay = rtcDateTime.day;
+    clockWeekday = rtcDateTime.weekday;
+    clockHour = rtcDateTime.hour;
+    clockMinute = rtcDateTime.minute;
+
+    if (modelListener)
     {
-        return false;
+        if (dateChanged)
+        {
+            modelListener->updateDate(clockYear, clockMonth, clockDay, clockWeekday);
+        }
+
+        if (timeChanged)
+        {
+            modelListener->updateClock(clockHour, clockMinute);
+        }
     }
-
-    clockHour = 0U;
-    clockDay++;
-    clockWeekday = static_cast<uint8_t>((clockWeekday + 1U) % 7U);
-
-    if (clockDay <= daysInMonth(clockYear, clockMonth))
-    {
-        return true;
-    }
-
-    clockDay = 1U;
-    clockMonth++;
-
-    if (clockMonth <= 12U)
-    {
-        return true;
-    }
-
-    clockMonth = 1U;
-    clockYear++;
-    return true;
 }
 
 void Model::checkForIncomingData()
