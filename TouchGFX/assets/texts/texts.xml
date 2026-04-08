@@ -359,7 +359,7 @@
         <Translation Language="GB">100</Translation>
       </Text>
       <Text Id="__SingleUse_XHC2" Alignment="Left" TypographyId="Medium30">
-        <Translation Language="GB">09</Translation>
+        <Translation Language="GB">00/00/0000 00</Translation>
       </Text>
       <Text Id="__SingleUse_E6XH" Alignment="Center" TypographyId="Medium30">
         <Translation Language="GB">&lt;hour&gt;:&lt;minute&gt;</Translation>

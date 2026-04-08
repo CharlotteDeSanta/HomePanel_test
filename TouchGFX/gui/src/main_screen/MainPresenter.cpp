@@ -37,6 +37,11 @@ void MainPresenter::updateClock(uint8_t clockHour, uint8_t clockMinute)
     view.updateClock(clockHour, clockMinute);
 }
 
+void MainPresenter::updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday)
+{
+    view.updateDate(year, month, day, weekday);
+}
+
 void MainPresenter::updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit)
 {
     view.updateCurrentWeather(weatherData, isUnitFahrenheit);
@@ -110,4 +115,24 @@ uint8_t MainPresenter::getClockHour()
 uint8_t MainPresenter::getClockMinute()
 {
     return model->getClockMinute();
+}
+
+uint16_t MainPresenter::getClockYear()
+{
+    return model->getClockYear();
+}
+
+uint8_t MainPresenter::getClockMonth()
+{
+    return model->getClockMonth();
+}
+
+uint8_t MainPresenter::getClockDay()
+{
+    return model->getClockDay();
+}
+
+uint8_t MainPresenter::getClockWeekday()
+{
+    return model->getClockWeekday();
 }

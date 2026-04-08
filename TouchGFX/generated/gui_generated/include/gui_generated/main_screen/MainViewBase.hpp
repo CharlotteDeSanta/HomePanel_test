@@ -120,7 +120,7 @@ protected:
      */
     static const uint16_t WEATHERTEMP_SIZE = 4;
     touchgfx::Unicode::UnicodeChar weatherTempBuffer[WEATHERTEMP_SIZE];
-    static const uint16_t CLOCKTEXTBUFFER1_SIZE = 3;
+    static const uint16_t CLOCKTEXTBUFFER1_SIZE = 14;
     touchgfx::Unicode::UnicodeChar clockTextBuffer1[CLOCKTEXTBUFFER1_SIZE];
     static const uint16_t CLOCKTEXTBUFFER2_SIZE = 3;
     touchgfx::Unicode::UnicodeChar clockTextBuffer2[CLOCKTEXTBUFFER2_SIZE];

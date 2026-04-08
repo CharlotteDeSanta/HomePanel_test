@@ -3,6 +3,97 @@
 #include <images/BitmapDatabase.hpp>
 #include <texts/TextKeysAndLanguages.hpp>
 #include <algorithm>
+#include <stm32h7xx_hal.h>
+
+namespace
+{
+uint8_t parseTimeComponent(const char* digits)
+{
+    if (digits == 0 || digits[0] < '0' || digits[0] > '9' || digits[1] < '0' || digits[1] > '9')
+    {
+        return 0U;
+    }
+
+    return static_cast<uint8_t>((digits[0] - '0') * 10 + (digits[1] - '0'));
+}
+
+uint8_t parseBuildMonth()
+{
+    const char* month = __DATE__;
+    switch (month[0])
+    {
+    case 'J':
+        if (month[1] == 'a')
+        {
+            return 1U;
+        }
+        return (month[2] == 'n') ? 6U : 7U;
+    case 'F':
+        return 2U;
+    case 'M':
+        return (month[2] == 'r') ? 3U : 5U;
+    case 'A':
+        return (month[1] == 'p') ? 4U : 8U;
+    case 'S':
+        return 9U;
+    case 'O':
+        return 10U;
+    case 'N':
+        return 11U;
+    case 'D':
+        return 12U;
+    default:
+        return 1U;
+    }
+}
+
+uint8_t parseBuildDay()
+{
+    const char* date = __DATE__;
+    const uint8_t tens = (date[4] >= '0' && date[4] <= '9') ? static_cast<uint8_t>(date[4] - '0') : 0U;
+    const uint8_t units = (date[5] >= '0' && date[5] <= '9') ? static_cast<uint8_t>(date[5] - '0') : 1U;
+    return static_cast<uint8_t>(tens * 10U + units);
+}
+
+uint16_t parseBuildYear()
+{
+    const char* date = __DATE__;
+    return static_cast<uint16_t>((date[7] - '0') * 1000 + (date[8] - '0') * 100 + (date[9] - '0') * 10 + (date[10] - '0'));
+}
+
+bool isLeapYear(uint16_t year)
+{
+    return ((year % 4U) == 0U && (year % 100U) != 0U) || ((year % 400U) == 0U);
+}
+
+uint8_t daysInMonth(uint16_t year, uint8_t month)
+{
+    static const uint8_t daysPerMonth[] = { 31U, 28U, 31U, 30U, 31U, 30U, 31U, 31U, 30U, 31U, 30U, 31U };
+
+    if (month == 2U && isLeapYear(year))
+    {
+        return 29U;
+    }
+
+    if (month < 1U || month > 12U)
+    {
+        return 31U;
+    }
+
+    return daysPerMonth[month - 1U];
+}
+
+uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
+{
+    static const uint8_t monthOffsets[] = { 0U, 3U, 2U, 5U, 0U, 3U, 5U, 1U, 4U, 6U, 2U, 4U };
+    year -= (month < 3U) ? 1U : 0U;
+    return static_cast<uint8_t>((year + year / 4U - year / 100U + year / 400U + monthOffsets[month - 1U] + day) % 7U);
+}
+
+const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 60000U;
+const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
+const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
+}
 
 Model::Model() :
     kitchenTemperature(-20.0f),
@@ -22,8 +113,16 @@ Model::Model() :
     kitchenFanSetPoint(HVAC_FAN_AUTO),
     livingRoomFanSetPoint(HVAC_FAN_AUTO),
     bedRoomFanSetPoint(HVAC_FAN_AUTO),
-    clockHour(9),
-    clockMinute(0),
+    clockYear(parseBuildYear()),
+    clockMonth(parseBuildMonth()),
+    clockDay(parseBuildDay()),
+    clockWeekday(calculateWeekday(parseBuildYear(), parseBuildMonth(), parseBuildDay())),
+    clockHour(parseTimeComponent(__TIME__)),
+    clockMinute(parseTimeComponent(__TIME__ + 3)),
+    lastClockUpdateMs(0U),
+    lastIncomingDataPollMs(0U),
+    lastGraphSampleMs(0U),
+    runtimeTimingInitialized(false),
     weatherData{},
     bufferSample{},
     kitchenBufferCount(0),
@@ -46,44 +145,46 @@ Model::Model() :
 
 void Model::tick()
 {
-    static int tickCount = 0;
+    const uint32_t nowMs = HAL_GetTick();
 
-    // Simulate data every second
-    if (!(tickCount % 60))
+    if (!runtimeTimingInitialized)
     {
+        lastClockUpdateMs = nowMs;
+        lastIncomingDataPollMs = nowMs - MODEL_CONTROLLER_POLL_PERIOD_MS;
+        lastGraphSampleMs = nowMs - MODEL_GRAPH_SAMPLE_PERIOD_MS;
+        runtimeTimingInitialized = true;
+    }
+
+    while ((uint32_t)(nowMs - lastClockUpdateMs) >= MODEL_CLOCK_UPDATE_PERIOD_MS)
+    {
+        lastClockUpdateMs += MODEL_CLOCK_UPDATE_PERIOD_MS;
+        const bool dateChanged = incrementClockMinute();
+        if (modelListener)
+        {
+            modelListener->updateClock(clockHour, clockMinute);
+            if (dateChanged)
+            {
+                modelListener->updateDate(clockYear, clockMonth, clockDay, clockWeekday);
+            }
+        }
+    }
+
+    if ((uint32_t)(nowMs - lastIncomingDataPollMs) >= MODEL_CONTROLLER_POLL_PERIOD_MS)
+    {
+        lastIncomingDataPollMs += MODEL_CONTROLLER_POLL_PERIOD_MS;
         checkForIncomingData();
     }
 
-    tickCount++;
-
-    // Increment clock
-    if (!(tickCount % (60 * 60)))   // Increment minute variable
+    if ((uint32_t)(nowMs - lastGraphSampleMs) >= MODEL_GRAPH_SAMPLE_PERIOD_MS)
     {
-        clockMinute++;
+        lastGraphSampleMs += MODEL_GRAPH_SAMPLE_PERIOD_MS;
 
-        if (clockMinute >= 60)
-        {
-            clockMinute = 0;
-            clockHour++;
-
-            if (clockHour >= 24)
-            {
-                clockHour = 0;
-            }
-        }
-
-        modelListener->updateClock(clockHour, clockMinute);
-    }
-
-    // Sample graph data every other second
-    if (!(tickCount % 120))
-    {
         // Save data for kitchen
         bufferSample.temperature = kitchenTemperature;
         bufferSample.humidity = kitchenHumidity;
         bufferSample.fanMode = kitchenFanMode;
         insertBufferSample(kitchenBuffer, kitchenBufferCount, bufferSample);
-        if (selectedRoom == KITCHEN)
+        if (selectedRoom == KITCHEN && modelListener)
         {
             modelListener->sampleGraphData(bufferSample);
         }
@@ -93,7 +194,7 @@ void Model::tick()
         bufferSample.humidity = livingRoomHumidity;
         bufferSample.fanMode = livingRoomFanMode;
         insertBufferSample(livingroomBuffer, livingroomBufferCount, bufferSample);
-        if (selectedRoom == LIVINGROOM)
+        if (selectedRoom == LIVINGROOM && modelListener)
         {
             modelListener->sampleGraphData(bufferSample);
         }
@@ -103,7 +204,7 @@ void Model::tick()
         bufferSample.humidity = bedRoomHumidity;
         bufferSample.fanMode = bedRoomFanMode;
         insertBufferSample(bedroomBuffer, bedroomBufferCount, bufferSample);
-        if (selectedRoom == BEDROOM)
+        if (selectedRoom == BEDROOM && modelListener)
         {
             modelListener->sampleGraphData(bufferSample);
         }
@@ -316,6 +417,26 @@ uint8_t Model::getClockMinute()
     return clockMinute;
 }
 
+uint16_t Model::getClockYear()
+{
+    return clockYear;
+}
+
+uint8_t Model::getClockMonth()
+{
+    return clockMonth;
+}
+
+uint8_t Model::getClockDay()
+{
+    return clockDay;
+}
+
+uint8_t Model::getClockWeekday()
+{
+    return clockWeekday;
+}
+
 void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& returnBufferSize)
 {
     returnBufferSize = 0;
@@ -335,6 +456,45 @@ void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& retu
         std::copy(bedroomBuffer, bedroomBuffer + returnBufferSize, returnBuffer);
         break;
     }
+}
+
+bool Model::incrementClockMinute()
+{
+    clockMinute++;
+
+    if (clockMinute < 60U)
+    {
+        return false;
+    }
+
+    clockMinute = 0U;
+    clockHour++;
+
+    if (clockHour < 24U)
+    {
+        return false;
+    }
+
+    clockHour = 0U;
+    clockDay++;
+    clockWeekday = static_cast<uint8_t>((clockWeekday + 1U) % 7U);
+
+    if (clockDay <= daysInMonth(clockYear, clockMonth))
+    {
+        return true;
+    }
+
+    clockDay = 1U;
+    clockMonth++;
+
+    if (clockMonth <= 12U)
+    {
+        return true;
+    }
+
+    clockMonth = 1U;
+    clockYear++;
+    return true;
 }
 
 void Model::checkForIncomingData()

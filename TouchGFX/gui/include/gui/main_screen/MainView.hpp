@@ -27,6 +27,7 @@ public:
     void updateRoomHumidity(Rooms roomId, float hum);
     void updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode);
     void updateClock(uint8_t hour, uint8_t minute);
+    void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday);
     void updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit);
 
 private:

@@ -249,9 +249,23 @@ void MainView::updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
 
 void MainView::updateClock(uint8_t hour, uint8_t minute)
 {
-    Unicode::snprintf(clockTextBuffer1, CLOCKTEXTBUFFER1_SIZE, "%02d", hour);
+    Unicode::snprintf(clockTextBuffer1, CLOCKTEXTBUFFER1_SIZE, "%02d/%02d/%04d %02d",
+                      presenter->getClockMonth(),
+                      presenter->getClockDay(),
+                      presenter->getClockYear(),
+                      hour);
     Unicode::snprintf(clockTextBuffer2, CLOCKTEXTBUFFER2_SIZE, "%02d", minute);
     clockText.invalidate();
+}
+
+void MainView::updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday)
+{
+    (void)year;
+    (void)month;
+    (void)day;
+    (void)weekday;
+
+    updateClock(presenter->getClockHour(), presenter->getClockMinute());
 }
 
 void MainView::updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit)

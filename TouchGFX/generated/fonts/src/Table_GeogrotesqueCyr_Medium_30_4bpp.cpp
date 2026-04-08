@@ -4,20 +4,22 @@
 
 FONT_TABLE_LOCATION_FLASH_PRAGMA
 KEEP extern const touchgfx::GlyphNode glyphs_GeogrotesqueCyr_Medium_30_4bpp[] FONT_TABLE_LOCATION_FLASH_ATTRIBUTE = {
-    {     0, 0x0030,  14,  20,  20,   2,  18,   0,   0, 0x00 }, // zero
-    {   140, 0x0031,  14,  21,  21,   1,  15,   0,   0, 0x00 }, // one
-    {   287, 0x0032,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // two
-    {   427, 0x0033,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // three
-    {   567, 0x0034,  14,  20,  20,   1,  17,   0,   1, 0x00 }, // four
-    {   707, 0x0035,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // five
-    {   847, 0x0036,  14,  20,  20,   2,  17,   0,   0, 0x00 }, // six
-    {   987, 0x0037,  15,  20,  20,   0,  15,   1,   1, 0x00 }, // seven
-    {  1147, 0x0038,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // eight
-    {  1287, 0x0039,  14,  20,  20,   1,  17,   0,   0, 0x00 }, // nine
-    {  1427, 0x003A,   3,  15,  15,   2,   7,   0,   0, 0x00 }, // colon
-    {  1457, 0x003F,  14,  20,  20,   1,  15,   0,   0, 0x00 }, // question
-    {  1597, 0x0043,  14,  20,  20,   2,  17,   0,   0, 0x00 }, // C
-    {  1737, 0x0046,  13,  20,  20,   2,  16,   0,   0, 0x00 }  // F
+    {     0, 0x0020,   0,   0,   0,   0,   6,   0,   0, 0x00 }, // space
+    {     0, 0x002F,  11,  25,  21,   0,  11,   0,   3, 0x00 }, // slash
+    {   150, 0x0030,  14,  20,  20,   2,  18,   0,   0, 0x00 }, // zero
+    {   290, 0x0031,  14,  21,  21,   1,  15,   0,   0, 0x00 }, // one
+    {   437, 0x0032,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // two
+    {   577, 0x0033,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // three
+    {   717, 0x0034,  14,  20,  20,   1,  17,   3,   1, 0x00 }, // four
+    {   857, 0x0035,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // five
+    {   997, 0x0036,  14,  20,  20,   2,  17,   0,   0, 0x00 }, // six
+    {  1137, 0x0037,  15,  20,  20,   0,  15,   4,   1, 0x00 }, // seven
+    {  1297, 0x0038,  14,  20,  20,   1,  16,   0,   0, 0x00 }, // eight
+    {  1437, 0x0039,  14,  20,  20,   1,  17,   0,   0, 0x00 }, // nine
+    {  1577, 0x003A,   3,  15,  15,   2,   7,   0,   0, 0x00 }, // colon
+    {  1607, 0x003F,  14,  20,  20,   1,  15,   0,   0, 0x00 }, // question
+    {  1747, 0x0043,  14,  20,  20,   2,  17,   0,   0, 0x00 }, // C
+    {  1887, 0x0046,  13,  20,  20,   2,  16,   0,   0, 0x00 }  // F
 };
 
 // GeogrotesqueCyr_Medium_30_4bpp
@@ -35,6 +37,6 @@ touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_Medium_30_4bpp();
 
 touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_Medium_30_4bpp()
 {
-    static touchgfx::GeneratedFont GeogrotesqueCyr_Medium_30_4bpp(glyphs_GeogrotesqueCyr_Medium_30_4bpp, 14, 30, 30, 0, 0, 4, 1, 0, 0, unicodes_GeogrotesqueCyr_Medium_30_4bpp, kerning_GeogrotesqueCyr_Medium_30_4bpp, 63, 0, 0, 0);
+    static touchgfx::GeneratedFont GeogrotesqueCyr_Medium_30_4bpp(glyphs_GeogrotesqueCyr_Medium_30_4bpp, 16, 34, 30, 0, 0, 4, 1, 0, 0, unicodes_GeogrotesqueCyr_Medium_30_4bpp, kerning_GeogrotesqueCyr_Medium_30_4bpp, 63, 0, 0, 0);
     return GeogrotesqueCyr_Medium_30_4bpp;
 }

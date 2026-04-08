@@ -20,6 +20,7 @@ public:
     virtual void updateFanMode(Rooms roomId, HVAC_FanMode_t fanMode) {}
     virtual void transmissionIsDone() {}
     virtual void updateClock(uint8_t clockHour, uint8_t clockMinute) {}
+    virtual void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday) {}
     virtual void updateTempSetPoint(Rooms roomId, float temperature) {}
     virtual void updateFanSetPoint(Rooms roomId, HVAC_FanMode_t fanSetPoint) {}
     virtual void updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit) {}

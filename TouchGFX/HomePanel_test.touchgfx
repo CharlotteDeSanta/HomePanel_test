@@ -325,10 +325,10 @@
           {
             "Type": "TextArea",
             "Name": "clockText",
-            "X": 699,
-            "Y": 431,
-            "Width": 78,
-            "Height": 30,
+            "X": 522,
+            "Y": 436,
+            "Width": 251,
+            "Height": 34,
             "LockPosition": true,
             "TextId": "__SingleUse_E6XH",
             "TextRotation": "0",
@@ -336,10 +336,11 @@
               "Green": 37,
               "Blue": 128
             },
+            "AutoSize": true,
             "Wildcard1": {
               "TextId": "__SingleUse_XHC2",
               "UseBuffer": true,
-              "BufferSize": 3
+              "BufferSize": 14
             },
             "Wildcard2": {
               "TextId": "__SingleUse_3M8G",

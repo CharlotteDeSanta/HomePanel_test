@@ -87,6 +87,10 @@ public:
     WeatherData getWeatherData();
     uint8_t getClockHour();
     uint8_t getClockMinute();
+    uint16_t getClockYear();
+    uint8_t getClockMonth();
+    uint8_t getClockDay();
+    uint8_t getClockWeekday();
     void getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& returnBufferSize);
 
 private:
@@ -94,6 +98,7 @@ private:
     uint16_t getBitmapFromWeatherCode(uint16_t weatherCode, bool iconIsSmall);
     uint16_t getTextFromWeatherCode(uint16_t weatherCode);
     void insertBufferSample(BufferSample buffer[], uint8_t& bufferCount, const BufferSample& sample);
+    bool incrementClockMinute();
 
     float kitchenTemperature;
     float kitchenHumidity;
@@ -112,8 +117,16 @@ private:
     HVAC_FanMode_t kitchenFanSetPoint;
     HVAC_FanMode_t livingRoomFanSetPoint;
     HVAC_FanMode_t bedRoomFanSetPoint;
+    uint16_t clockYear;
+    uint8_t clockMonth;
+    uint8_t clockDay;
+    uint8_t clockWeekday;
     uint8_t clockHour;
     uint8_t clockMinute;
+    uint32_t lastClockUpdateMs;
+    uint32_t lastIncomingDataPollMs;
+    uint32_t lastGraphSampleMs;
+    bool runtimeTimingInitialized;
     WeatherData weatherData;
     BufferSample bufferSample;
 

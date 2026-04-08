@@ -106,13 +106,14 @@ MainViewBase::MainViewBase() :
     weatherDegrees.setTypedText(touchgfx::TypedText(T_CELSIUSUNIT));
     add(weatherDegrees);
 
-    clockText.setPosition(699, 431, 78, 30);
+    clockText.setXY(522, 436);
     clockText.setColor(touchgfx::Color::getColorFromRGB(0, 37, 128));
     clockText.setLinespacing(0);
     touchgfx::Unicode::snprintf(clockTextBuffer1, CLOCKTEXTBUFFER1_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_XHC2).getText());
     clockText.setWildcard1(clockTextBuffer1);
     touchgfx::Unicode::snprintf(clockTextBuffer2, CLOCKTEXTBUFFER2_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_3M8G).getText());
     clockText.setWildcard2(clockTextBuffer2);
+    clockText.resizeToCurrentText();
     clockText.setTypedText(touchgfx::TypedText(T___SINGLEUSE_E6XH));
     add(clockText);
 

@@ -31,6 +31,7 @@ public:
     virtual void updateHumidity(Rooms roomId, float humidity);
     virtual void updateFanMode(Rooms roomId, HVAC_FanMode_t fanMode);
     virtual void updateClock(uint8_t clockHour, uint8_t clockMinute);
+    virtual void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday);
     virtual void updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit);
 
     float getRoomTemperature(Rooms roomId);
@@ -47,6 +48,10 @@ public:
     WeatherData getWeatherData();
     uint8_t getClockHour();
     uint8_t getClockMinute();
+    uint16_t getClockYear();
+    uint8_t getClockMonth();
+    uint8_t getClockDay();
+    uint8_t getClockWeekday();
 
 private:
     MainPresenter();
