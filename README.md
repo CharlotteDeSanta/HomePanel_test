@@ -1,79 +1,122 @@
 # HomePanel Test
 
-基于 `STM32H743` 的家庭控制面板实验工程。
+基于 `STM32H743` 的家庭控制面板实验工程，当前已经完成显示、外部资源、TouchGFX 和 GT911 触摸的基础适配，可以作为后续界面与业务功能开发的工作底座。
 
-当前仓库已经完成了外部 `SDRAM`、`LTDC` 与 `800x480 RGB` 屏幕的基础打通，并在此基础上整理出一套相对稳定的 `BSP + CubeMX` 协作结构，作为后续移植 `TouchGFX` 和实现毕业设计界面的开发基线。
+## 当前状态
 
-## 项目状态
+当前代码已验证通过的内容：
 
-当前版本已经验证通过的内容：
+- `800x480 RGB` 屏幕可稳定显示完整 TouchGFX 界面
+- `SDRAM + LTDC` 双帧缓冲工作正常
+- 外部 `QSPI Flash` 图片资源可正常读取和显示
+- `GT911` 触摸已接通，TouchGFX 可正常响应点击
+- 主界面帧率稳定，重动画场景也已做过一轮性能优化
 
-- `FMC + SDRAM` 初始化完成，基础读写测试通过
-- `LTDC` 已经可以正常从外部显存读取 framebuffer
-- 屏幕可以稳定显示测试图案
-- `CubeMX .ioc` 已同步到当前可运行配置
-- 板级配置已迁移到 `BSP/`，降低了后续重新生成代码时的覆盖风险
+当前结论：
 
-上电后的当前行为：
+- 外部资源方案按 **单片 `W25Q256`** 工作，不是双闪
+- 原生 `STM32Cube` VS Code 调试/下载在当前环境已验证可用
+- 自定义 `J-Link` 配置仍保留，作为显式、可复现的备用方案
 
-1. 初始化系统时钟、板级 GPIO、外部 SDRAM 和 LTDC
-2. 对 SDRAM 做基础读写测试
-3. 在 LCD 上显示测试彩条
-4. 点亮板载 RGB LED 白灯，表示初始化完成
+## 硬件适配摘要
+
+### 显示
+
+- 分辨率：`800 x 480`
+- 像素格式：`ARGB8888`
+- 主帧缓冲地址：`0xD0000000`
+- 第二帧缓冲地址：`0xD0177000`
+- 帧缓冲位于外部 `SDRAM`
+
+相关定义见：
+
+- [bsp_config.h](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Inc/bsp_config.h)
+- [TouchGFXHAL.cpp](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/TouchGFX/target/TouchGFXHAL.cpp)
+
+### SDRAM
+
+- 基地址：`0xD0000000`
+- 容量：`64 MB`
+
+### QSPI 外部资源
+
+- 基地址：`0x90000000`
+- 容量：`32 MB`
+- 当前按 **单片 `W25Q256`** 配置
+- TouchGFX 图片资源通过 `memory-mapped` 模式读取
+
+相关实现见：
+
+- [bsp_qspi_flash.c](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Src/bsp_qspi_flash.c)
+- [STM32H743XX_FLASH.ld](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/STM32H743XX_FLASH.ld)
+
+### GT911 触摸
+
+- 芯片：`GT911`
+- 当前探测地址：`0xBA`
+- 软件 I2C 引脚：
+  - `PH4` -> `SCL`
+  - `PH5` -> `SDA`
+- 控制引脚：
+  - `PG7` -> `RST`
+  - `PG3` -> `INT`
+
+相关实现见：
+
+- [bsp_touch_gt911.h](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Inc/bsp_touch_gt911.h)
+- [bsp_touch_gt911.c](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Src/bsp_touch_gt911.c)
+- [STM32TouchController.cpp](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/TouchGFX/target/STM32TouchController.cpp)
 
 ## 工程结构
 
 - `BSP/`
-  板级支持包。当前项目中真正生效的显示、SDRAM、板级 GPIO 与时钟相关实现都在这里。
+  - 板级驱动与适配层，包含显示、SDRAM、QSPI、触摸等实现
 - `Core/`
-  STM32CubeMX 生成的基础工程文件与应用入口。
-- `Drivers/`
-  STM32 HAL 与 CMSIS 驱动。
-- `cmake/`
-  CMake 工具链和 STM32CubeMX 生成的构建支持文件。
+  - CubeMX 生成的基础工程与应用入口
+- `TouchGFX/`
+  - TouchGFX 界面代码、生成代码与目标层对接
 - `Docs/`
-  开发过程中使用的原理图、手册、屏幕资料等本地参考文档。
-- `HomePanel_test.ioc`
-  STM32CubeMX 工程配置文件。
+  - 项目开发中使用的手册、数据手册和参考资料
+- `Examples/`
+  - 参考例程，包括 QSPI 和触摸相关工程
+- `tools/`
+  - 调试辅助脚本和 J-Link 相关配置
 
-## BSP 设计说明
+## 关键实现说明
 
-当前工程采用了“`CubeMX 负责生成基础框架，BSP 负责板级实现`”的组织方式。
+### 双帧缓冲
 
-主要板级模块：
+当前显示链路使用 SDRAM 双帧缓冲，LTDC 在合适的行事件时机切换地址，避免了早期的闪烁和撕裂问题。
 
-- `BSP/Inc/bsp_board.h` / `BSP/Src/bsp_board.c`
-  负责系统时钟封装、LED、背光、LCD 复位、MPU 等板级初始化。
-- `BSP/Inc/bsp_sdram.h` / `BSP/Src/bsp_sdram.c`
-  负责 SDRAM 配置、初始化序列、GPIO 映射与读写测试。
-- `BSP/Inc/bsp_display.h` / `BSP/Src/bsp_display.c`
-  负责 LTDC 配置、framebuffer 地址、测试图填充等显示相关功能。
-- `BSP/Inc/bsp_config.h`
-  集中管理分辨率、framebuffer 地址、像素格式等板级常量。
+核心文件：
 
-这样做的目的，是把最容易被 CubeMX 重新生成覆盖的内容从 `Core/Src/gpio.c`、`Core/Src/fmc.c`、`Core/Src/ltdc.c` 中抽离出来，方便后续继续添加 `FreeRTOS`、`DMA2D`、`CRC`、`TouchGFX` 等功能。
+- [TouchGFXHAL.cpp](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/TouchGFX/target/TouchGFXHAL.cpp)
 
-## 当前显示基线
+### QSPI 稳定配置
 
-当前工程使用的核心显示参数如下：
+当前稳定版本的 QSPI 关键点：
 
-- 分辨率：`800 x 480`
-- 显存地址：`0xD0000000`
-- Layer 像素格式：`ARGB8888`
-- LTDC 像素时钟：约 `27 MHz`
-- 外部 SDRAM：`BANK2 / 32-bit / 9 column / 13 row`
+- 单片 `W25Q256`
+- `memory-mapped` 使用四线高速读取
+- 已验证当前参数可以兼顾稳定性和动画性能
 
-这些参数已经同步到了当前 `.ioc` 文件中，后续可继续以 CubeMX 作为外设和中间件配置入口。
+核心文件：
+
+- [bsp_qspi_flash.c](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Src/bsp_qspi_flash.c)
+
+### 触摸适配
+
+GT911 当前采用软件 I2C + 轮询方案，已经加入了轻量轮询节流，减少空闲时对 UI 帧率的影响。
 
 ## 构建方式
 
-本项目当前使用：
+项目当前使用：
 
 - `CMake`
 - `Ninja`
 - `gcc-arm-none-eabi`
 
-Debug 构建：
+配置与构建：
 
 ```powershell
 cmake --preset Debug
@@ -87,24 +130,64 @@ cmake --preset Release
 cmake --build --preset Release
 ```
 
-构建输出默认位于 `build/` 目录，该目录已经被 `.gitignore` 忽略。
+预设定义见：
 
-## 使用 CubeMX 的约定
+- [CMakePresets.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/CMakePresets.json)
 
-后续继续在 CubeMX 中添加功能时，建议遵循以下原则：
+## 调试与下载
 
-- `CRC`、`DMA2D`、`FreeRTOS`、`TouchGFX` 等新增外设或中间件，优先在 CubeMX 中启用
-- 板级相关逻辑继续保留在 `BSP/`
-- 生成代码后，优先检查 `.ioc`、编译结果和 BSP 接口是否仍然一致
-- 不建议再把显示、SDRAM、背光、复位等板级细节重新写回生成文件作为主实现
+### 原生 STM32Cube 配置
 
-## 后续计划
+当前环境下，VS Code 中的原生调试配置已经验证可用：
 
-- 在当前硬件基线上移植 `TouchGFX`
-- 引入 `DMA2D`、`CRC` 等图形相关外设支持
-- 接入触摸功能
-- 在示例工程基础上实现毕业设计界面与业务逻辑
+- `STM32Cube: Launch JLink GDB Server`
 
-## 仓库说明
+配置位置：
 
-这是我的毕业设计项目，请不要严肃阅读（纰漏很多）。毕业答辩通过后，我会把所有硬件设计公开。
+- [launch.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/.vscode/launch.json)
+
+### 自定义 J-Link 备用配置
+
+仓库中仍保留了自定义 `J-Link` 配置，用于以下场景：
+
+- 新环境首次排障
+- 需要显式指定外部 QSPI loader
+- 原生下载行为不清晰时做对照验证
+
+相关文件：
+
+- [launch.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/.vscode/launch.json)
+- [tools/jlink/README.md](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/tools/jlink/README.md)
+
+## 内存占用查看
+
+`CMake Tools` 的 `Build Analyzer` 对这种 MCU 工程的 `FLASH / EXTFLASH / RAM` 归类不够准确，项目里额外提供了一个更可靠的统计脚本。
+
+VS Code 任务：
+
+- `Memory Report (Debug)`
+
+相关文件：
+
+- [tasks.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/.vscode/tasks.json)
+- [report-memory-usage.ps1](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/tools/report-memory-usage.ps1)
+
+## 参考资料
+
+开发中主要参考这些本地资料：
+
+- `Docs/` 中的芯片、屏幕、触摸相关手册
+- `Examples/` 中的 QSPI 和 GT911 参考工程
+
+## 后续建议
+
+比较适合继续推进的方向：
+
+- 完善触摸交互细节
+- 增加多点触控或手势支持
+- 接入实际传感器/联网数据
+- 继续打磨界面动画和业务逻辑
+
+## 备注
+
+这个仓库是毕业设计过程中的实验工程，当前更重视“可运行、可验证、可继续开发”的工程状态，而不是把所有实现都打磨成最终产品形态。
