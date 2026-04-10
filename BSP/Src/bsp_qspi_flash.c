@@ -45,12 +45,15 @@ static HAL_StatusTypeDef BSP_QSPI_Configure(uint32_t flash_id, uint32_t dual_fla
 
   hqspi.Instance = QUADSPI;
   /*
-   * The single-flash path is now stable, so raise QSPI bandwidth to improve
-   * texture-heavy animations. PLL2_R is 240 MHz in the current clock tree.
-   * Prescaler 2 gives 80 MHz, which is more aggressive but still within the
-   * range commonly used by W25Q256 quad-read examples.
+   * The project now runs the single W25Q256 path with the most aggressive
+   * stable timing validated on this board. PLL2_R is 240 MHz in the current
+   * clock tree, so Prescaler 1 yields about 120 MHz QSPI. Both Debug and
+   * Release builds have been verified with this setting, while several
+   * intermediate "safer" combinations actually reduced FPS or produced worse
+   * read stability. Keep this as the baseline unless a future hardware change
+   * proves otherwise.
    */
-  hqspi.Init.ClockPrescaler = 2;
+  hqspi.Init.ClockPrescaler = 1;
   /*
    * The single-flash reference example uses a deeper FIFO threshold, 6-cycle CS
    * high time, clock mode 3, and FSIZE=24 for a 32 MiB W25Q256. Keeping the
@@ -110,9 +113,12 @@ HAL_StatusTypeDef BSP_QSPI_EnableMemoryMappedMode(void)
   command.InstructionMode = QSPI_INSTRUCTION_1_LINE;
   /*
    * Command-mode reads are already verified to be correct in single-flash mode.
-   * Switch memory-mapped access back to the vendor example's fast 4-4-4 read
-   * sequence, because HAL_QSPI_MemoryMapped() does not come up reliably here
-   * with the slow 1-1-1 configuration.
+   * Keep memory-mapped access on the vendor-style fast 4-4-4 read sequence.
+   * The currently validated stable pair on this board is:
+   *   - ClockPrescaler = 1  (about 120 MHz)
+   *   - DummyCycles    = 6
+   * Higher dummy-cycle experiments caused visible color corruption, while
+   * lower-throughput fallback modes hurt animation performance noticeably.
    */
   command.Instruction = BSP_QSPI_CMD_QUAD_IO_READ_4BYTE;
   command.AddressMode = QSPI_ADDRESS_4_LINES;
