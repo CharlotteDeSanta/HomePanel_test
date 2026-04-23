@@ -137,12 +137,14 @@ RTC_HandleTypeDef hrtc;
 /* RTC init function */
 void MX_RTC_Init(void)
 {
+  uint8_t rtcNeedsInit = 0U;
 
   /* USER CODE BEGIN RTC_Init 0 */
 
   /* USER CODE END RTC_Init 0 */
 
-  APP_RTC_DateTime_t buildDateTime = {0};
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
 
   /* USER CODE BEGIN RTC_Init 1 */
 
@@ -164,23 +166,35 @@ void MX_RTC_Init(void)
   }
 
   /* USER CODE BEGIN Check_RTC_BKUP */
+  rtcNeedsInit = (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != APP_RTC_BKP_MAGIC) ? 1U : 0U;
 
   /* USER CODE END Check_RTC_BKUP */
 
-  if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != APP_RTC_BKP_MAGIC)
+  /** Initialize RTC and set the Time and Date
+  */
+  if (rtcNeedsInit != 0U)
   {
-    buildDateTime.year = parseBuildYear();
-    buildDateTime.month = parseBuildMonth();
-    buildDateTime.day = parseBuildDay();
-    buildDateTime.weekday = calculateWeekday(buildDateTime.year, buildDateTime.month, buildDateTime.day);
-    buildDateTime.hour = parseBuildTimeComponent(__TIME__);
-    buildDateTime.minute = parseBuildTimeComponent(__TIME__ + 3);
-    buildDateTime.second = parseBuildTimeComponent(__TIME__ + 6);
-
-    if (APP_RTC_SetDateTime(&buildDateTime) == 0U)
+    sTime.Hours = parseBuildTimeComponent(__TIME__ + 0);
+    sTime.Minutes = parseBuildTimeComponent(__TIME__ + 3);
+    sTime.Seconds = parseBuildTimeComponent(__TIME__ + 6);
+    sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+    sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+    if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
     {
       Error_Handler();
     }
+
+    sDate.WeekDay = modelWeekdayToRtc(calculateWeekday(parseBuildYear(), parseBuildMonth(), parseBuildDay()));
+    sDate.Month = parseBuildMonth();
+    sDate.Date = parseBuildDay();
+    sDate.Year = (uint8_t)(parseBuildYear() % 100U);
+
+    if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0, APP_RTC_BKP_MAGIC);
   }
   /* USER CODE BEGIN RTC_Init 2 */
 

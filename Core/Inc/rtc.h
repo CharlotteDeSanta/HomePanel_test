@@ -29,11 +29,6 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-extern RTC_HandleTypeDef hrtc;
-
 typedef struct
 {
   uint16_t year;
@@ -44,6 +39,10 @@ typedef struct
   uint8_t minute;
   uint8_t second;
 } APP_RTC_DateTime_t;
+
+/* USER CODE END Includes */
+
+extern RTC_HandleTypeDef hrtc;
 
 /* USER CODE BEGIN Private defines */
 
