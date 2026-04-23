@@ -20,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "app_touchgfx.h"
+#include <stdint.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -40,6 +41,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+static uint8_t touchgfxInitialized = 0U;
 
 /* USER CODE END PV */
 
@@ -49,6 +51,7 @@ void touchgfx_components_init(void);
 void touchgfx_taskEntry(void);
 
 /* USER CODE BEGIN PFP */
+static void TouchGFX_EnsureInitialized(void);
 
 /* USER CODE END PFP */
 
@@ -64,9 +67,7 @@ void MX_TouchGFX_PreOSInit(void)
  */
 void MX_TouchGFX_Init(void)
 {
-    // Calling forward to touchgfx_init in C++ domain
-    touchgfx_components_init();
-    touchgfx_init();
+    TouchGFX_EnsureInitialized();
 }
 
 /**
@@ -74,6 +75,7 @@ void MX_TouchGFX_Init(void)
  */
 void MX_TouchGFX_Process(void)
 {
+    TouchGFX_EnsureInitialized();
     // Calling forward to touchgfx_taskEntry in C++ domain
     touchgfx_taskEntry();
 }
@@ -83,8 +85,23 @@ void MX_TouchGFX_Process(void)
  */
 void TouchGFX_Task(void* argument)
 {
+    (void)argument;
+    TouchGFX_EnsureInitialized();
     // Calling forward to touchgfx_taskEntry in C++ domain
     touchgfx_taskEntry();
 }
+
+/* USER CODE BEGIN 1 */
+static void TouchGFX_EnsureInitialized(void)
+{
+    if (touchgfxInitialized == 0U)
+    {
+        // Calling forward to touchgfx_init in C++ domain
+        touchgfx_components_init();
+        touchgfx_init();
+        touchgfxInitialized = 1U;
+    }
+}
+/* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

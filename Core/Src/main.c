@@ -122,7 +122,6 @@ int main(void)
   MX_CRC_Init();
   MX_DMA2D_Init();
   MX_RTC_Init();
-  MX_TouchGFX_Init();
   /* Call PreOsInit function */
   MX_TouchGFX_PreOSInit();
   /* USER CODE BEGIN 2 */
