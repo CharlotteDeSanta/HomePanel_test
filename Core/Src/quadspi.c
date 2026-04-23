@@ -56,7 +56,7 @@ void MX_QUADSPI_Init(void)
 
 }
 
-void HAL_QSPI_MspInit(QSPI_HandleTypeDef* qspiHandle)
+__weak void HAL_QSPI_MspInit(QSPI_HandleTypeDef* qspiHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -124,7 +124,7 @@ void HAL_QSPI_MspInit(QSPI_HandleTypeDef* qspiHandle)
   }
 }
 
-void HAL_QSPI_MspDeInit(QSPI_HandleTypeDef* qspiHandle)
+__weak void HAL_QSPI_MspDeInit(QSPI_HandleTypeDef* qspiHandle)
 {
 
   if(qspiHandle->Instance==QUADSPI)
