@@ -37,6 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define GUI_TASK_STACK_BYTES (4096U * 4U)
 
 /* USER CODE END PD */
 
@@ -49,11 +50,11 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 4096 * 4,
+/* Definitions for guiTask */
+osThreadId_t guiTaskHandle;
+const osThreadAttr_t guiTask_attributes = {
+  .name = "guiTask",
+  .stack_size = GUI_TASK_STACK_BYTES,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -62,7 +63,7 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void *argument);
+void StartGUITask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -93,9 +94,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-  if (defaultTaskHandle == NULL)
+  /* creation of guiTask */
+  guiTaskHandle = osThreadNew(StartGUITask, NULL, &guiTask_attributes);
+  if (guiTaskHandle == NULL)
   {
     Error_Handler();
   }
@@ -110,18 +111,24 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartGUITask */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the guiTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartGUITask */
+void StartGUITask(void *argument)
 {
-  /* USER CODE BEGIN StartDefaultTask */
+  /* USER CODE BEGIN StartGUITask */
+  /*
+   * TouchGFX owns the UI thread. Keep all direct view/presenter/model updates
+   * inside this task, and let future communication tasks exchange data through
+   * queues instead of touching the UI directly.
+   */
   TouchGFX_Task(argument);
-  /* USER CODE END StartDefaultTask */
+  Error_Handler();
+  /* USER CODE END StartGUITask */
 }
 
 /* Private application code --------------------------------------------------*/

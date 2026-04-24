@@ -153,7 +153,13 @@ void BSP_Display_MspInit(void)
                       | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
   HAL_GPIO_Init(GPIOK, &GPIO_InitStruct);
 
-  HAL_NVIC_SetPriority(LTDC_IRQn, 0, 0);
+  /*
+   * The LTDC line-event callback signals TouchGFX through CMSIS-RTOS objects.
+   * Under FreeRTOS this IRQ must therefore run at or below the maximum
+   * syscall interrupt priority. Keep it aligned with the TouchGFX/DMA2D
+   * interrupt band instead of using the old bare-metal priority 0.
+   */
+  HAL_NVIC_SetPriority(LTDC_IRQn, 9, 0);
   HAL_NVIC_EnableIRQ(LTDC_IRQn);
 
   bsp_ltdc_msp_initialized = 1U;
