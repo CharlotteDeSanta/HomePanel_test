@@ -6,11 +6,15 @@
 #include "stm32h7xx_ll_sdmmc.h"
 
 #define APP_WIFI_SDIO_ENUM_TIMEOUT_MS 500U
+#define APP_WIFI_SDIO_FN1_ENABLE_TIMEOUT_MS 500U
 #define APP_WIFI_SDIO_FN0             0U
 #define APP_WIFI_SDIO_CCCR_REV        0x00U
 #define APP_WIFI_SDIO_CCCR_SDREV      0x01U
+#define APP_WIFI_SDIO_CCCR_IOEN       0x02U
 #define APP_WIFI_SDIO_CCCR_IORDY      0x03U
 #define APP_WIFI_SDIO_CCCR_CAPS       0x08U
+#define APP_WIFI_SDIO_FUNC_ENABLE_1   0x02U
+#define APP_WIFI_SDIO_FUNC_READY_1    0x02U
 
 static volatile uint32_t g_wifiSdioInterruptCount = 0U;
 static volatile uint32_t g_wifiLastSdioStatus = 0U;
@@ -19,6 +23,7 @@ static volatile uint32_t g_wifiSdioOcr = 0U;
 static volatile uint16_t g_wifiSdioRca = 0U;
 static volatile uint32_t g_wifiSdioHostInitialized = 0U;
 static volatile uint32_t g_wifiSdioEnumerated = 0U;
+static volatile uint8_t g_wifiCccrIoEnable = 0U;
 static volatile uint8_t g_wifiCccrRevision = 0U;
 static volatile uint8_t g_wifiCccrSdRevision = 0U;
 static volatile uint8_t g_wifiCccrIoReady = 0U;
@@ -58,6 +63,7 @@ void APP_WiFi_Platform_Init(void)
   g_wifiSdioRca = 0U;
   g_wifiSdioHostInitialized = 0U;
   g_wifiSdioEnumerated = 0U;
+  g_wifiCccrIoEnable = 0U;
   g_wifiCccrRevision = 0U;
   g_wifiCccrSdRevision = 0U;
   g_wifiCccrIoReady = 0U;
@@ -247,6 +253,12 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void)
   }
   g_wifiCccrSdRevision = value;
 
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrIoEnable = value;
+
   if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IORDY, &value) != HAL_OK)
   {
     return HAL_ERROR;
@@ -260,6 +272,64 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void)
   g_wifiCccrCapabilities = value;
 
   return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction1(void)
+{
+  uint32_t attempt = 0U;
+  uint8_t ioEnable = 0U;
+  uint8_t ioReady = 0U;
+
+  if (g_wifiSdioEnumerated == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  for (attempt = 0U; attempt < APP_WIFI_SDIO_FN1_ENABLE_TIMEOUT_MS; ++attempt)
+  {
+    if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, &ioEnable) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    ioEnable = (uint8_t)(ioEnable | APP_WIFI_SDIO_FUNC_ENABLE_1);
+    if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, ioEnable) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, &ioEnable) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+    g_wifiCccrIoEnable = ioEnable;
+
+    if ((ioEnable & APP_WIFI_SDIO_FUNC_ENABLE_1) == 0U)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IORDY, &ioReady) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+    g_wifiCccrIoReady = ioReady;
+
+    if ((ioReady & APP_WIFI_SDIO_FUNC_READY_1) != 0U)
+    {
+      return HAL_OK;
+    }
+
+    osDelay(1U);
+  }
+
+  g_wifiLastSdioError = SDMMC_ERROR_TIMEOUT;
+  return HAL_TIMEOUT;
 }
 
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
@@ -285,6 +355,11 @@ uint32_t APP_WiFi_Platform_GetSdioOcr(void)
 uint16_t APP_WiFi_Platform_GetSdioRca(void)
 {
   return g_wifiSdioRca;
+}
+
+uint8_t APP_WiFi_Platform_GetCccrIoEnable(void)
+{
+  return g_wifiCccrIoEnable;
 }
 
 uint8_t APP_WiFi_Platform_GetCccrRevision(void)

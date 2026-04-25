@@ -149,6 +149,24 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_CCCR_READY:
+        if (APP_WiFi_Platform_EnableFunction1() == HAL_OK)
+        {
+          /*
+           * At this point the SDIO backplane function is not only enabled in
+           * IOEN, but also reports ready in IORDY. The next steps can safely
+           * build on top of a live Function 1 endpoint.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_FUNCTION1_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_FUNCTION1_READY:
       case APP_WIFI_STATE_READY:
       case APP_WIFI_STATE_ERROR:
       default:
