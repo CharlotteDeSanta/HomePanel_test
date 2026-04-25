@@ -17,12 +17,14 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Read(uint8_t functionNumber, uint32_t a
 HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Write(uint8_t functionNumber, uint32_t address, uint8_t value);
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void);
 HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction1(void);
+HAL_StatusTypeDef APP_WiFi_Platform_ConfigureBus(void);
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void);
 uint32_t APP_WiFi_Platform_GetLastSdioStatus(void);
 uint32_t APP_WiFi_Platform_GetLastSdioError(void);
 uint32_t APP_WiFi_Platform_GetSdioOcr(void);
 uint16_t APP_WiFi_Platform_GetSdioRca(void);
 uint8_t APP_WiFi_Platform_GetCccrIoEnable(void);
+uint8_t APP_WiFi_Platform_GetCccrBusControl(void);
 uint8_t APP_WiFi_Platform_GetCccrRevision(void);
 uint8_t APP_WiFi_Platform_GetCccrSdRevision(void);
 uint8_t APP_WiFi_Platform_GetCccrIoReady(void);

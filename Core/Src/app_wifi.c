@@ -167,6 +167,24 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_FUNCTION1_READY:
+        if (APP_WiFi_Platform_ConfigureBus() == HAL_OK)
+        {
+          /*
+           * Card-side CCCR block size and bus width are now configured, and the
+           * local SDMMC host has been switched to match. This is the last
+           * lightweight setup step before we start touching CMD53 transfers.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_BUS_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_BUS_READY:
       case APP_WIFI_STATE_READY:
       case APP_WIFI_STATE_ERROR:
       default:

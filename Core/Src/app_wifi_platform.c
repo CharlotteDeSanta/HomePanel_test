@@ -12,9 +12,17 @@
 #define APP_WIFI_SDIO_CCCR_SDREV      0x01U
 #define APP_WIFI_SDIO_CCCR_IOEN       0x02U
 #define APP_WIFI_SDIO_CCCR_IORDY      0x03U
+#define APP_WIFI_SDIO_CCCR_BICTRL     0x07U
 #define APP_WIFI_SDIO_CCCR_CAPS       0x08U
+#define APP_WIFI_SDIO_CCCR_BLKSIZE_0  0x10U
+#define APP_WIFI_SDIO_CCCR_BLKSIZE_1  0x11U
+#define APP_WIFI_SDIO_CCCR_F1BLKSIZE_0 0x110U
+#define APP_WIFI_SDIO_CCCR_F1BLKSIZE_1 0x111U
+#define APP_WIFI_SDIO_BLOCK_SIZE      64U
 #define APP_WIFI_SDIO_FUNC_ENABLE_1   0x02U
 #define APP_WIFI_SDIO_FUNC_READY_1    0x02U
+#define APP_WIFI_SDIO_BUS_WIDTH_MASK  0x03U
+#define APP_WIFI_SDIO_BUS_WIDTH_4BIT  0x02U
 
 static volatile uint32_t g_wifiSdioInterruptCount = 0U;
 static volatile uint32_t g_wifiLastSdioStatus = 0U;
@@ -23,13 +31,16 @@ static volatile uint32_t g_wifiSdioOcr = 0U;
 static volatile uint16_t g_wifiSdioRca = 0U;
 static volatile uint32_t g_wifiSdioHostInitialized = 0U;
 static volatile uint32_t g_wifiSdioEnumerated = 0U;
+static volatile uint32_t g_wifiSdioBusConfigured = 0U;
 static volatile uint8_t g_wifiCccrIoEnable = 0U;
+static volatile uint8_t g_wifiCccrBusControl = 0U;
 static volatile uint8_t g_wifiCccrRevision = 0U;
 static volatile uint8_t g_wifiCccrSdRevision = 0U;
 static volatile uint8_t g_wifiCccrIoReady = 0U;
 static volatile uint8_t g_wifiCccrCapabilities = 0U;
 
 static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error);
+static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide);
 static uint32_t APP_WiFi_Platform_BuildCmd52Argument(uint8_t rwFlag,
                                                      uint8_t functionNumber,
                                                      uint32_t address,
@@ -63,7 +74,9 @@ void APP_WiFi_Platform_Init(void)
   g_wifiSdioRca = 0U;
   g_wifiSdioHostInitialized = 0U;
   g_wifiSdioEnumerated = 0U;
+  g_wifiSdioBusConfigured = 0U;
   g_wifiCccrIoEnable = 0U;
+  g_wifiCccrBusControl = 0U;
   g_wifiCccrRevision = 0U;
   g_wifiCccrSdRevision = 0U;
   g_wifiCccrIoReady = 0U;
@@ -78,8 +91,6 @@ void APP_WiFi_Platform_SetResetPin(GPIO_PinState pinState)
 
 HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void)
 {
-  SDMMC_InitTypeDef sdioInit = {0};
-
   if (g_wifiSdioHostInitialized != 0U)
   {
     return HAL_OK;
@@ -98,34 +109,11 @@ HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void)
   SDMMC1->MASK = 0U;
   SDMMC1->ICR = 0xFFFFFFFFU;
 
-  /*
-   * Match the official AP6181 bring-up strategy:
-   * start from a very slow 1-bit SDIO clock, then move to wider/faster modes
-   * only after the device is enumerated by the future WWD bus layer.
-   */
-  sdioInit.ClockDiv = SDMMC_INIT_CLK_DIV;
-  sdioInit.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
-  sdioInit.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
-  sdioInit.BusWide = SDMMC_BUS_WIDE_1B;
-  sdioInit.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
-
-  if (SDMMC_Init(SDMMC1, sdioInit) != HAL_OK)
+  if (APP_WiFi_Platform_ApplyHostBusWidth(SDMMC_BUS_WIDE_1B) != HAL_OK)
   {
     return HAL_ERROR;
   }
 
-  if (SDMMC_PowerState_ON(SDMMC1) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  if (SDMMC_SetSDMMCReadWaitMode(SDMMC1, SDMMC_READ_WAIT_MODE_CLK) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  g_wifiLastSdioStatus = SDMMC1->STA;
-  g_wifiLastSdioError = SDMMC_ERROR_NONE;
   g_wifiSdioHostInitialized = 1U;
 
   return HAL_OK;
@@ -265,6 +253,12 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void)
   }
   g_wifiCccrIoReady = value;
 
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BICTRL, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrBusControl = value;
+
   if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_CAPS, &value) != HAL_OK)
   {
     return HAL_ERROR;
@@ -332,6 +326,66 @@ HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction1(void)
   return HAL_TIMEOUT;
 }
 
+HAL_StatusTypeDef APP_WiFi_Platform_ConfigureBus(void)
+{
+  uint8_t value = 0U;
+
+  if (g_wifiSdioEnumerated == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  if (g_wifiSdioBusConfigured != 0U)
+  {
+    return HAL_OK;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BLKSIZE_0, APP_WIFI_SDIO_BLOCK_SIZE) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BLKSIZE_1, 0U) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_F1BLKSIZE_0, APP_WIFI_SDIO_BLOCK_SIZE) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_F1BLKSIZE_1, 0U) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BICTRL, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  value = (uint8_t)((value & (uint8_t)(~APP_WIFI_SDIO_BUS_WIDTH_MASK)) | APP_WIFI_SDIO_BUS_WIDTH_4BIT);
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BICTRL, value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BICTRL, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrBusControl = value;
+
+  if (APP_WiFi_Platform_ApplyHostBusWidth(SDMMC_BUS_WIDE_4B) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiSdioBusConfigured = 1U;
+  return HAL_OK;
+}
+
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
 {
   return g_wifiSdioInterruptCount;
@@ -360,6 +414,11 @@ uint16_t APP_WiFi_Platform_GetSdioRca(void)
 uint8_t APP_WiFi_Platform_GetCccrIoEnable(void)
 {
   return g_wifiCccrIoEnable;
+}
+
+uint8_t APP_WiFi_Platform_GetCccrBusControl(void)
+{
+  return g_wifiCccrBusControl;
 }
 
 uint8_t APP_WiFi_Platform_GetCccrRevision(void)
@@ -418,6 +477,41 @@ static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error)
   }
 
   return HAL_ERROR;
+}
+
+static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide)
+{
+  SDMMC_InitTypeDef sdioInit = {0};
+
+  /*
+   * Keep the host configuration minimal and deterministic:
+   * start in slow 1-bit mode, then reuse the same settings when switching
+   * to 4-bit after the card-side CCCR/BUS interface control is updated.
+   */
+  sdioInit.ClockDiv = SDMMC_INIT_CLK_DIV;
+  sdioInit.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+  sdioInit.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+  sdioInit.BusWide = busWide;
+  sdioInit.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+
+  if (SDMMC_Init(SDMMC1, sdioInit) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (SDMMC_PowerState_ON(SDMMC1) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (SDMMC_SetSDMMCReadWaitMode(SDMMC1, SDMMC_READ_WAIT_MODE_CLK) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiLastSdioStatus = SDMMC1->STA;
+  g_wifiLastSdioError = SDMMC_ERROR_NONE;
+  return HAL_OK;
 }
 
 static uint32_t APP_WiFi_Platform_BuildCmd52Argument(uint8_t rwFlag,
