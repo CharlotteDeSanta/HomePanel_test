@@ -202,6 +202,24 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_CMD53_READY:
+        if (APP_WiFi_Platform_RequestAlpClock() == HAL_OK)
+        {
+          /*
+           * The module now acknowledges the ALP clock request through the
+           * Function 1 clock CSR path. That gives us a solid base for the
+           * upcoming backplane-window and higher-level WWD bring-up steps.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_CLOCK_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_CLOCK_READY:
       case APP_WIFI_STATE_READY:
       case APP_WIFI_STATE_ERROR:
       default:
