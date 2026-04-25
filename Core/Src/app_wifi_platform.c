@@ -15,24 +15,37 @@
 #define APP_WIFI_SDIO_CCCR_SDREV      0x01U
 #define APP_WIFI_SDIO_CCCR_IOEN       0x02U
 #define APP_WIFI_SDIO_CCCR_IORDY      0x03U
+#define APP_WIFI_SDIO_CCCR_INTEN      0x04U
 #define APP_WIFI_SDIO_CCCR_BICTRL     0x07U
 #define APP_WIFI_SDIO_CCCR_CAPS       0x08U
+#define APP_WIFI_SDIO_SEP_INT_CTL     0xF2U
 #define APP_WIFI_SDIO_CCCR_BLKSIZE_0  0x10U
 #define APP_WIFI_SDIO_CCCR_BLKSIZE_1  0x11U
 #define APP_WIFI_SDIO_CCCR_F1BLKSIZE_0 0x110U
 #define APP_WIFI_SDIO_CCCR_F1BLKSIZE_1 0x111U
 #define APP_WIFI_SDIO_BLOCK_SIZE      64U
 #define APP_WIFI_SDIO_FUNC_ENABLE_1   0x02U
+#define APP_WIFI_SDIO_FUNC_ENABLE_2   0x04U
 #define APP_WIFI_SDIO_FUNC_READY_1    0x02U
+#define APP_WIFI_SDIO_FUNC_READY_2    0x04U
 #define APP_WIFI_SDIO_BUS_WIDTH_MASK  0x03U
 #define APP_WIFI_SDIO_BUS_WIDTH_4BIT  0x02U
+#define APP_WIFI_SDIO_INTERRUPT_MASTER_EN 0x01U
+#define APP_WIFI_SDIO_INTERRUPT_FUNC1_EN  0x02U
+#define APP_WIFI_SDIO_INTERRUPT_FUNC2_EN  0x04U
+#define APP_WIFI_SDIO_SEP_INTR_MASK       0x01U
+#define APP_WIFI_SDIO_SEP_INTR_EN         0x02U
+#define APP_WIFI_SDIO_SEP_INTR_POL        0x04U
+#define APP_WIFI_SDIO_FUNCTION2_WATERMARK 0x10008U
 #define APP_WIFI_SDIO_BACKPLANE_ADDRESS_LOW  0x1000AU
 #define APP_WIFI_SDIO_BACKPLANE_ADDRESS_MID  0x1000BU
 #define APP_WIFI_SDIO_BACKPLANE_ADDRESS_HIGH 0x1000CU
 #define APP_WIFI_SDIO_CHIP_CLOCK_CSR  0x1000EU
+#define APP_WIFI_SDIO_PULL_UP         0x1000FU
 #define APP_WIFI_SDIO_CMD53_SMOKE_LEN 4U
 #define APP_WIFI_SDIO_ALP_TIMEOUT_MS  500U
 #define APP_WIFI_SDIO_HT_TIMEOUT_MS   500U
+#define APP_WIFI_SDIO_FN2_ENABLE_TIMEOUT_MS 1000U
 #define APP_WIFI_SDIO_FORCE_ALP       0x01U
 #define APP_WIFI_SDIO_FORCE_HT        0x02U
 #define APP_WIFI_SDIO_ALP_AVAIL_REQ   0x08U
@@ -58,6 +71,8 @@ static volatile uint32_t g_wifiLastCmd53Word = 0U;
 static volatile uint32_t g_wifiLastBackplaneWord = 0U;
 static volatile uint32_t g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
 static volatile uint8_t g_wifiChipClockCsr = 0U;
+static volatile uint8_t g_wifiCccrInterruptEnable = 0U;
+static volatile uint8_t g_wifiSepInterruptControl = 0U;
 static volatile uint8_t g_wifiCccrIoEnable = 0U;
 static volatile uint8_t g_wifiCccrBusControl = 0U;
 static volatile uint8_t g_wifiCccrRevision = 0U;
@@ -116,6 +131,8 @@ void APP_WiFi_Platform_Init(void)
   g_wifiLastBackplaneWord = 0U;
   g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
   g_wifiChipClockCsr = 0U;
+  g_wifiCccrInterruptEnable = 0U;
+  g_wifiSepInterruptControl = 0U;
   g_wifiCccrIoEnable = 0U;
   g_wifiCccrBusControl = 0U;
   g_wifiCccrRevision = 0U;
@@ -706,6 +723,101 @@ HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void)
   return HAL_TIMEOUT;
 }
 
+HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction2(void)
+{
+  uint32_t attempt = 0U;
+  uint8_t ioEnable = 0U;
+  uint8_t ioReady = 0U;
+
+  if (g_wifiSdioEnumerated == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  for (attempt = 0U; attempt < APP_WIFI_SDIO_FN2_ENABLE_TIMEOUT_MS; ++attempt)
+  {
+    if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, &ioEnable) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    ioEnable = (uint8_t)(ioEnable | APP_WIFI_SDIO_FUNC_ENABLE_1 | APP_WIFI_SDIO_FUNC_ENABLE_2);
+    if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, ioEnable) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IOEN, &ioEnable) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+    g_wifiCccrIoEnable = ioEnable;
+
+    if ((ioEnable & APP_WIFI_SDIO_FUNC_ENABLE_2) == 0U)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IORDY, &ioReady) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+    g_wifiCccrIoReady = ioReady;
+
+    if ((ioReady & APP_WIFI_SDIO_FUNC_READY_2) != 0U)
+    {
+      return HAL_OK;
+    }
+
+    osDelay(1U);
+  }
+
+  g_wifiLastSdioError = SDMMC_ERROR_TIMEOUT;
+  return HAL_TIMEOUT;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void)
+{
+  uint8_t cccrIntEn = 0U;
+  uint8_t sepIntCtl = 0U;
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_PULL_UP, 0U) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  sepIntCtl = (uint8_t)(APP_WIFI_SDIO_SEP_INTR_MASK | APP_WIFI_SDIO_SEP_INTR_EN | APP_WIFI_SDIO_SEP_INTR_POL);
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_SEP_INT_CTL, sepIntCtl) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiSepInterruptControl = sepIntCtl;
+
+  cccrIntEn = (uint8_t)(APP_WIFI_SDIO_INTERRUPT_MASTER_EN | APP_WIFI_SDIO_INTERRUPT_FUNC2_EN);
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_INTEN, cccrIntEn) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_INTEN, &cccrIntEn) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrInterruptEnable = cccrIntEn;
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_FUNCTION2_WATERMARK, 8U) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
+}
+
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
 {
   return g_wifiSdioInterruptCount;
@@ -749,6 +861,16 @@ uint32_t APP_WiFi_Platform_GetBackplaneWindowBase(void)
 uint8_t APP_WiFi_Platform_GetChipClockCsr(void)
 {
   return g_wifiChipClockCsr;
+}
+
+uint8_t APP_WiFi_Platform_GetCccrInterruptEnable(void)
+{
+  return g_wifiCccrInterruptEnable;
+}
+
+uint8_t APP_WiFi_Platform_GetSepInterruptControl(void)
+{
+  return g_wifiSepInterruptControl;
 }
 
 uint8_t APP_WiFi_Platform_GetCccrIoEnable(void)

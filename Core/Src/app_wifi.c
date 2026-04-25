@@ -276,6 +276,42 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_READY:
+        if (APP_WiFi_Platform_EnableFunction2() == HAL_OK)
+        {
+          /*
+           * Function 2 is the WLAN data/mailbox endpoint. Once it reports
+           * ready, we can move on to CCCR/OOB interrupt setup without still
+           * being blocked on SDIO function readiness.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_FUNCTION2_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_FUNCTION2_READY:
+        if (APP_WiFi_Platform_ConfigureInterruptPath() == HAL_OK)
+        {
+          /*
+           * CCCR interrupt enables, separate OOB control, and the basic
+           * backplane-side interrupt support registers are now programmed.
+           * This is a good stable checkpoint before firmware/NVRAM work.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_INTERRUPTS_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_INTERRUPTS_READY:
       case APP_WIFI_STATE_ERROR:
       default:
         osDelay(APP_WIFI_POLL_MS);

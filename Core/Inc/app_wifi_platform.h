@@ -31,6 +31,8 @@ HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite32(uint32_t address, uint32_t 
 HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneSmokeTest(void);
 HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneWriteSmokeTest(void);
 HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void);
+HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction2(void);
+HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void);
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void);
 uint32_t APP_WiFi_Platform_GetLastSdioStatus(void);
 uint32_t APP_WiFi_Platform_GetLastSdioError(void);
@@ -40,6 +42,8 @@ uint32_t APP_WiFi_Platform_GetLastCmd53Word(void);
 uint32_t APP_WiFi_Platform_GetLastBackplaneWord(void);
 uint32_t APP_WiFi_Platform_GetBackplaneWindowBase(void);
 uint8_t APP_WiFi_Platform_GetChipClockCsr(void);
+uint8_t APP_WiFi_Platform_GetCccrInterruptEnable(void);
+uint8_t APP_WiFi_Platform_GetSepInterruptControl(void);
 uint8_t APP_WiFi_Platform_GetCccrIoEnable(void);
 uint8_t APP_WiFi_Platform_GetCccrBusControl(void);
 uint8_t APP_WiFi_Platform_GetCccrRevision(void);
