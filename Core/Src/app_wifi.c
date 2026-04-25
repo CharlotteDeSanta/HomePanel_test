@@ -1,5 +1,6 @@
 #include "app_wifi.h"
 
+#include "app_wifi_resources.h"
 #include "app_wifi_platform.h"
 #include "main.h"
 
@@ -20,6 +21,7 @@ static void APP_WiFi_SetState(APP_WiFiState_t nextState)
 void APP_WiFi_Init(void)
 {
   g_wifiOobInterruptCount = 0U;
+  APP_WiFi_Resources_Init();
   APP_WiFi_Platform_Init();
   APP_WiFi_SetState(APP_WIFI_STATE_IDLE);
 }
@@ -312,6 +314,24 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_INTERRUPTS_READY:
+        if (APP_WiFi_Platform_ProbeFirmwareResources() == HAL_OK)
+        {
+          /*
+           * Firmware and NVRAM resources are now visible from the application
+           * build, and their basic RAM staging layout has been computed. That
+           * gives us a clean hand-off point into the actual download logic.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_RESOURCES_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_RESOURCES_READY:
       case APP_WIFI_STATE_ERROR:
       default:
         osDelay(APP_WIFI_POLL_MS);

@@ -33,6 +33,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneWriteSmokeTest(void);
 HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void);
 HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction2(void);
 HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void);
+HAL_StatusTypeDef APP_WiFi_Platform_ProbeFirmwareResources(void);
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void);
 uint32_t APP_WiFi_Platform_GetLastSdioStatus(void);
 uint32_t APP_WiFi_Platform_GetLastSdioError(void);
@@ -50,6 +51,13 @@ uint8_t APP_WiFi_Platform_GetCccrRevision(void);
 uint8_t APP_WiFi_Platform_GetCccrSdRevision(void);
 uint8_t APP_WiFi_Platform_GetCccrIoReady(void);
 uint8_t APP_WiFi_Platform_GetCccrCapabilities(void);
+uint32_t APP_WiFi_Platform_GetHostInterruptMask(void);
+uint32_t APP_WiFi_Platform_GetFunctionInterruptMask(void);
+uint32_t APP_WiFi_Platform_GetFirmwareSize(void);
+uint32_t APP_WiFi_Platform_GetFirmwareEntryWord(void);
+uint32_t APP_WiFi_Platform_GetNvramSize(void);
+uint32_t APP_WiFi_Platform_GetNvramStagingAddress(void);
+uint32_t APP_WiFi_Platform_GetNvramTrailerWord(void);
 void APP_WiFi_Platform_SDMMC_IRQHandler(void);
 
 #ifdef __cplusplus

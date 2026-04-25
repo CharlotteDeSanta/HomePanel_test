@@ -1,5 +1,6 @@
 #include "app_wifi_platform.h"
 
+#include "app_wifi_resources.h"
 #include "cmsis_os2.h"
 #include <string.h>
 #include "main.h"
@@ -58,6 +59,13 @@
 #define APP_WIFI_BACKPLANE_WINDOW_INVALID 0xFFFFFFFFU
 #define APP_WIFI_CHIPCOMMON_BASE_ADDRESS 0x18000000U
 #define APP_WIFI_CHIPCOMMON_GPIO_CONTROL (APP_WIFI_CHIPCOMMON_BASE_ADDRESS + 0x6CU)
+#define APP_WIFI_SDIO_INT_HOST_MASK_ADDRESS   0x18002024U
+#define APP_WIFI_SDIO_FUNCTION_INT_MASK_ADDRESS 0x18002034U
+#define APP_WIFI_HOST_INT_MASK_VALUE 0x000000F0U
+#define APP_WIFI_FUNCTION_INT_MASK_VALUE 0x03U
+#define APP_WIFI_43362_RAM_BASE 0x00000000U
+#define APP_WIFI_43362_RAM_SIZE 0x0003C000U
+#define APP_WIFI_NVRAM_TRAILER_SIZE 4U
 
 static volatile uint32_t g_wifiSdioInterruptCount = 0U;
 static volatile uint32_t g_wifiLastSdioStatus = 0U;
@@ -70,6 +78,13 @@ static volatile uint32_t g_wifiSdioBusConfigured = 0U;
 static volatile uint32_t g_wifiLastCmd53Word = 0U;
 static volatile uint32_t g_wifiLastBackplaneWord = 0U;
 static volatile uint32_t g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
+static volatile uint32_t g_wifiHostInterruptMask = 0U;
+static volatile uint32_t g_wifiFunctionInterruptMask = 0U;
+static volatile uint32_t g_wifiFirmwareSize = 0U;
+static volatile uint32_t g_wifiFirmwareEntryWord = 0U;
+static volatile uint32_t g_wifiNvramSize = 0U;
+static volatile uint32_t g_wifiNvramStagingAddress = 0U;
+static volatile uint32_t g_wifiNvramTrailerWord = 0U;
 static volatile uint8_t g_wifiChipClockCsr = 0U;
 static volatile uint8_t g_wifiCccrInterruptEnable = 0U;
 static volatile uint8_t g_wifiSepInterruptControl = 0U;
@@ -130,6 +145,13 @@ void APP_WiFi_Platform_Init(void)
   g_wifiLastCmd53Word = 0U;
   g_wifiLastBackplaneWord = 0U;
   g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
+  g_wifiHostInterruptMask = 0U;
+  g_wifiFunctionInterruptMask = 0U;
+  g_wifiFirmwareSize = 0U;
+  g_wifiFirmwareEntryWord = 0U;
+  g_wifiNvramSize = 0U;
+  g_wifiNvramStagingAddress = 0U;
+  g_wifiNvramTrailerWord = 0U;
   g_wifiChipClockCsr = 0U;
   g_wifiCccrInterruptEnable = 0U;
   g_wifiSepInterruptControl = 0U;
@@ -785,6 +807,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void)
 {
   uint8_t cccrIntEn = 0U;
   uint8_t sepIntCtl = 0U;
+  const uint8_t functionIntMask = APP_WIFI_FUNCTION_INT_MASK_VALUE;
 
   if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_PULL_UP, 0U) != HAL_OK)
   {
@@ -814,6 +837,64 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void)
   {
     return HAL_ERROR;
   }
+
+  if (APP_WiFi_Platform_BackplaneWrite32(APP_WIFI_SDIO_INT_HOST_MASK_ADDRESS, APP_WIFI_HOST_INT_MASK_VALUE) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiHostInterruptMask = APP_WIFI_HOST_INT_MASK_VALUE;
+
+  if (APP_WiFi_Platform_BackplaneWrite(APP_WIFI_SDIO_FUNCTION_INT_MASK_ADDRESS, &functionIntMask, 1U) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiFunctionInterruptMask = functionIntMask;
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_ProbeFirmwareResources(void)
+{
+  const uint8_t *firmwareData = NULL;
+  const uint8_t *nvramData = NULL;
+  uint32_t firmwareSize = 0U;
+  uint32_t nvramSize = 0U;
+  uint32_t roundedNvramSize = 0U;
+  uint32_t nvramWordCount = 0U;
+
+  if (APP_WiFi_Resources_GetFirmware(&firmwareData, &firmwareSize) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if ((firmwareData == NULL) || (firmwareSize < sizeof(uint32_t)) || (firmwareSize > APP_WIFI_43362_RAM_SIZE))
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Resources_GetNvram(&nvramData, &nvramSize) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if ((nvramData == NULL) || (nvramSize == 0U))
+  {
+    return HAL_ERROR;
+  }
+
+  roundedNvramSize = (nvramSize + 3U) & ~0x3U;
+  if ((roundedNvramSize + APP_WIFI_NVRAM_TRAILER_SIZE) > APP_WIFI_43362_RAM_SIZE)
+  {
+    return HAL_ERROR;
+  }
+
+  memcpy((void *)&g_wifiFirmwareEntryWord, firmwareData, sizeof(g_wifiFirmwareEntryWord));
+  g_wifiFirmwareSize = firmwareSize;
+  g_wifiNvramSize = nvramSize;
+  g_wifiNvramStagingAddress = (APP_WIFI_43362_RAM_BASE + APP_WIFI_43362_RAM_SIZE - APP_WIFI_NVRAM_TRAILER_SIZE) - roundedNvramSize;
+
+  nvramWordCount = roundedNvramSize / sizeof(uint32_t);
+  g_wifiNvramTrailerWord = ((~nvramWordCount) << 16U) | (nvramWordCount & 0x0000FFFFU);
 
   return HAL_OK;
 }
@@ -901,6 +982,41 @@ uint8_t APP_WiFi_Platform_GetCccrIoReady(void)
 uint8_t APP_WiFi_Platform_GetCccrCapabilities(void)
 {
   return g_wifiCccrCapabilities;
+}
+
+uint32_t APP_WiFi_Platform_GetHostInterruptMask(void)
+{
+  return g_wifiHostInterruptMask;
+}
+
+uint32_t APP_WiFi_Platform_GetFunctionInterruptMask(void)
+{
+  return g_wifiFunctionInterruptMask;
+}
+
+uint32_t APP_WiFi_Platform_GetFirmwareSize(void)
+{
+  return g_wifiFirmwareSize;
+}
+
+uint32_t APP_WiFi_Platform_GetFirmwareEntryWord(void)
+{
+  return g_wifiFirmwareEntryWord;
+}
+
+uint32_t APP_WiFi_Platform_GetNvramSize(void)
+{
+  return g_wifiNvramSize;
+}
+
+uint32_t APP_WiFi_Platform_GetNvramStagingAddress(void)
+{
+  return g_wifiNvramStagingAddress;
+}
+
+uint32_t APP_WiFi_Platform_GetNvramTrailerWord(void)
+{
+  return g_wifiNvramTrailerWord;
 }
 
 void APP_WiFi_Platform_SDMMC_IRQHandler(void)
