@@ -5,14 +5,18 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
 #include "cmsis_os2.h"
 
 typedef enum
 {
   APP_WIFI_STATE_IDLE = 0,
   APP_WIFI_STATE_WAIT_STACK,
-  APP_WIFI_STATE_PREPARE_MODULE,
+  APP_WIFI_STATE_RESET_ASSERT,
+  APP_WIFI_STATE_RESET_RELEASE,
+  APP_WIFI_STATE_MODULE_SETTLE,
   APP_WIFI_STATE_BRINGUP_PENDING,
+  APP_WIFI_STATE_SDIO_HOST_READY,
   APP_WIFI_STATE_READY,
   APP_WIFI_STATE_ERROR
 } APP_WiFiState_t;
@@ -20,6 +24,8 @@ typedef enum
 void APP_WiFi_Init(void);
 void APP_WiFi_Task(void *argument);
 APP_WiFiState_t APP_WiFi_GetState(void);
+uint32_t APP_WiFi_GetOobInterruptCount(void);
+void APP_WiFi_HandleOobInterrupt(uint16_t gpioPin);
 
 #ifdef __cplusplus
 }
