@@ -6,6 +6,11 @@
 #include "stm32h7xx_ll_sdmmc.h"
 
 #define APP_WIFI_SDIO_ENUM_TIMEOUT_MS 500U
+#define APP_WIFI_SDIO_FN0             0U
+#define APP_WIFI_SDIO_CCCR_REV        0x00U
+#define APP_WIFI_SDIO_CCCR_SDREV      0x01U
+#define APP_WIFI_SDIO_CCCR_IORDY      0x03U
+#define APP_WIFI_SDIO_CCCR_CAPS       0x08U
 
 static volatile uint32_t g_wifiSdioInterruptCount = 0U;
 static volatile uint32_t g_wifiLastSdioStatus = 0U;
@@ -14,6 +19,17 @@ static volatile uint32_t g_wifiSdioOcr = 0U;
 static volatile uint16_t g_wifiSdioRca = 0U;
 static volatile uint32_t g_wifiSdioHostInitialized = 0U;
 static volatile uint32_t g_wifiSdioEnumerated = 0U;
+static volatile uint8_t g_wifiCccrRevision = 0U;
+static volatile uint8_t g_wifiCccrSdRevision = 0U;
+static volatile uint8_t g_wifiCccrIoReady = 0U;
+static volatile uint8_t g_wifiCccrCapabilities = 0U;
+
+static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error);
+static uint32_t APP_WiFi_Platform_BuildCmd52Argument(uint8_t rwFlag,
+                                                     uint8_t functionNumber,
+                                                     uint32_t address,
+                                                     uint8_t rawFlag,
+                                                     uint8_t value);
 
 static void APP_WiFi_Platform_SdioGpioInit(void)
 {
@@ -42,6 +58,10 @@ void APP_WiFi_Platform_Init(void)
   g_wifiSdioRca = 0U;
   g_wifiSdioHostInitialized = 0U;
   g_wifiSdioEnumerated = 0U;
+  g_wifiCccrRevision = 0U;
+  g_wifiCccrSdRevision = 0U;
+  g_wifiCccrIoReady = 0U;
+  g_wifiCccrCapabilities = 0U;
   HAL_GPIO_WritePin(WIFI_RESET_GPIO_Port, WIFI_RESET_Pin, GPIO_PIN_SET);
 }
 
@@ -167,6 +187,81 @@ HAL_StatusTypeDef APP_WiFi_Platform_SdioEnumerate(void)
   return HAL_TIMEOUT;
 }
 
+HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Read(uint8_t functionNumber, uint32_t address, uint8_t *value)
+{
+  uint8_t response = 0U;
+  const uint32_t argument = APP_WiFi_Platform_BuildCmd52Argument(0U, functionNumber, address, 0U, 0U);
+  const uint32_t error = SDMMC_SDIO_CmdReadWriteDirect(SDMMC1, argument, &response);
+
+  g_wifiLastSdioStatus = SDMMC1->STA;
+  g_wifiLastSdioError = error;
+
+  if (error != SDMMC_ERROR_NONE)
+  {
+    return APP_WiFi_Platform_SdioErrorToHalStatus(error);
+  }
+
+  if (value != NULL)
+  {
+    *value = response;
+  }
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Write(uint8_t functionNumber, uint32_t address, uint8_t value)
+{
+  uint8_t response = 0U;
+  const uint32_t argument = APP_WiFi_Platform_BuildCmd52Argument(1U, functionNumber, address, 0U, value);
+  const uint32_t error = SDMMC_SDIO_CmdReadWriteDirect(SDMMC1, argument, &response);
+
+  g_wifiLastSdioStatus = SDMMC1->STA;
+  g_wifiLastSdioError = error;
+
+  if (error != SDMMC_ERROR_NONE)
+  {
+    return APP_WiFi_Platform_SdioErrorToHalStatus(error);
+  }
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void)
+{
+  uint8_t value = 0U;
+
+  if (g_wifiSdioEnumerated == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_REV, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrRevision = value;
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_SDREV, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrSdRevision = value;
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_IORDY, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrIoReady = value;
+
+  if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_CAPS, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+  g_wifiCccrCapabilities = value;
+
+  return HAL_OK;
+}
+
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
 {
   return g_wifiSdioInterruptCount;
@@ -192,6 +287,26 @@ uint16_t APP_WiFi_Platform_GetSdioRca(void)
   return g_wifiSdioRca;
 }
 
+uint8_t APP_WiFi_Platform_GetCccrRevision(void)
+{
+  return g_wifiCccrRevision;
+}
+
+uint8_t APP_WiFi_Platform_GetCccrSdRevision(void)
+{
+  return g_wifiCccrSdRevision;
+}
+
+uint8_t APP_WiFi_Platform_GetCccrIoReady(void)
+{
+  return g_wifiCccrIoReady;
+}
+
+uint8_t APP_WiFi_Platform_GetCccrCapabilities(void)
+{
+  return g_wifiCccrCapabilities;
+}
+
 void APP_WiFi_Platform_SDMMC_IRQHandler(void)
 {
   const uint32_t status = SDMMC1->STA;
@@ -213,4 +328,36 @@ void APP_WiFi_Platform_SDMMC_IRQHandler(void)
   {
     SDMMC1->ICR = 0xFFFFFFFFU;
   }
+}
+
+static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error)
+{
+  if (error == SDMMC_ERROR_NONE)
+  {
+    return HAL_OK;
+  }
+
+  if (error == SDMMC_ERROR_TIMEOUT)
+  {
+    return HAL_TIMEOUT;
+  }
+
+  return HAL_ERROR;
+}
+
+static uint32_t APP_WiFi_Platform_BuildCmd52Argument(uint8_t rwFlag,
+                                                     uint8_t functionNumber,
+                                                     uint32_t address,
+                                                     uint8_t rawFlag,
+                                                     uint8_t value)
+{
+  uint32_t argument = 0U;
+
+  argument |= (uint32_t)value;
+  argument |= ((address & 0x1FFFFU) << 9U);
+  argument |= (((uint32_t)rawFlag & 0x1U) << 27U);
+  argument |= (((uint32_t)functionNumber & 0x7U) << 28U);
+  argument |= (((uint32_t)rwFlag & 0x1U) << 31U);
+
+  return argument;
 }
