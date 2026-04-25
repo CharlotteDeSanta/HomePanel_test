@@ -1,12 +1,19 @@
 #include "app_wifi_platform.h"
 
+#include "cmsis_os2.h"
 #include "main.h"
 #include "sdmmc.h"
 #include "stm32h7xx_ll_sdmmc.h"
 
+#define APP_WIFI_SDIO_ENUM_TIMEOUT_MS 500U
+
 static volatile uint32_t g_wifiSdioInterruptCount = 0U;
 static volatile uint32_t g_wifiLastSdioStatus = 0U;
+static volatile uint32_t g_wifiLastSdioError = SDMMC_ERROR_NONE;
+static volatile uint32_t g_wifiSdioOcr = 0U;
+static volatile uint16_t g_wifiSdioRca = 0U;
 static volatile uint32_t g_wifiSdioHostInitialized = 0U;
+static volatile uint32_t g_wifiSdioEnumerated = 0U;
 
 static void APP_WiFi_Platform_SdioGpioInit(void)
 {
@@ -30,7 +37,11 @@ void APP_WiFi_Platform_Init(void)
 {
   g_wifiSdioInterruptCount = 0U;
   g_wifiLastSdioStatus = 0U;
+  g_wifiLastSdioError = SDMMC_ERROR_NONE;
+  g_wifiSdioOcr = 0U;
+  g_wifiSdioRca = 0U;
   g_wifiSdioHostInitialized = 0U;
+  g_wifiSdioEnumerated = 0U;
   HAL_GPIO_WritePin(WIFI_RESET_GPIO_Port, WIFI_RESET_Pin, GPIO_PIN_SET);
 }
 
@@ -88,9 +99,72 @@ HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void)
   }
 
   g_wifiLastSdioStatus = SDMMC1->STA;
+  g_wifiLastSdioError = SDMMC_ERROR_NONE;
   g_wifiSdioHostInitialized = 1U;
 
   return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_SdioEnumerate(void)
+{
+  uint32_t attempt = 0U;
+
+  if (g_wifiSdioHostInitialized == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  if (g_wifiSdioEnumerated != 0U)
+  {
+    return HAL_OK;
+  }
+
+  for (attempt = 0U; attempt < APP_WIFI_SDIO_ENUM_TIMEOUT_MS; ++attempt)
+  {
+    uint32_t error = SDMMC_CmdGoIdleState(SDMMC1);
+    uint32_t ocr = 0U;
+    uint16_t rca = 0U;
+
+    if (error != SDMMC_ERROR_NONE)
+    {
+      g_wifiLastSdioError = error;
+      osDelay(1U);
+      continue;
+    }
+
+    error = SDMMC_CmdSendOperationcondition(SDMMC1, 0U, &ocr);
+    if (error != SDMMC_ERROR_NONE)
+    {
+      g_wifiLastSdioError = error;
+      osDelay(1U);
+      continue;
+    }
+
+    error = SDMMC_CmdSetRelAdd(SDMMC1, &rca);
+    if ((error != SDMMC_ERROR_NONE) || (rca == 0U))
+    {
+      g_wifiLastSdioError = (error != SDMMC_ERROR_NONE) ? error : SDMMC_ERROR_TIMEOUT;
+      osDelay(1U);
+      continue;
+    }
+
+    error = SDMMC_CmdSelDesel(SDMMC1, ((uint32_t)rca) << 16U);
+    if (error != SDMMC_ERROR_NONE)
+    {
+      g_wifiLastSdioError = error;
+      osDelay(1U);
+      continue;
+    }
+
+    g_wifiSdioOcr = ocr;
+    g_wifiSdioRca = rca;
+    g_wifiLastSdioStatus = SDMMC1->STA;
+    g_wifiLastSdioError = SDMMC_ERROR_NONE;
+    g_wifiSdioEnumerated = 1U;
+    return HAL_OK;
+  }
+
+  return HAL_TIMEOUT;
 }
 
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
@@ -101,6 +175,21 @@ uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
 uint32_t APP_WiFi_Platform_GetLastSdioStatus(void)
 {
   return g_wifiLastSdioStatus;
+}
+
+uint32_t APP_WiFi_Platform_GetLastSdioError(void)
+{
+  return g_wifiLastSdioError;
+}
+
+uint32_t APP_WiFi_Platform_GetSdioOcr(void)
+{
+  return g_wifiSdioOcr;
+}
+
+uint16_t APP_WiFi_Platform_GetSdioRca(void)
+{
+  return g_wifiSdioRca;
 }
 
 void APP_WiFi_Platform_SDMMC_IRQHandler(void)

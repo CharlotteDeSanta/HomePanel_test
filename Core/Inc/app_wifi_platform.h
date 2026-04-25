@@ -12,8 +12,12 @@ extern "C" {
 void APP_WiFi_Platform_Init(void);
 void APP_WiFi_Platform_SetResetPin(GPIO_PinState pinState);
 HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void);
+HAL_StatusTypeDef APP_WiFi_Platform_SdioEnumerate(void);
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void);
 uint32_t APP_WiFi_Platform_GetLastSdioStatus(void);
+uint32_t APP_WiFi_Platform_GetLastSdioError(void);
+uint32_t APP_WiFi_Platform_GetSdioOcr(void);
+uint16_t APP_WiFi_Platform_GetSdioRca(void);
 void APP_WiFi_Platform_SDMMC_IRQHandler(void);
 
 #ifdef __cplusplus

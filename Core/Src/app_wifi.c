@@ -117,6 +117,19 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_SDIO_HOST_READY:
+        if (APP_WiFi_Platform_SdioEnumerate() == HAL_OK)
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_SDIO_ENUMERATED);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_SDIO_ENUMERATED:
       case APP_WIFI_STATE_READY:
       case APP_WIFI_STATE_ERROR:
       default:
