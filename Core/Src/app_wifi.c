@@ -185,6 +185,23 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_BUS_READY:
+        if (APP_WiFi_Platform_RunCmd53SmokeTest() == HAL_OK)
+        {
+          /*
+           * First minimal CMD53 smoke test succeeded. We now have proof that
+           * the SDIO data path is alive, not just the command path.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_CMD53_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_CMD53_READY:
       case APP_WIFI_STATE_READY:
       case APP_WIFI_STATE_ERROR:
       default:
