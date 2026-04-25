@@ -26,13 +26,25 @@
 #define APP_WIFI_SDIO_FUNC_READY_1    0x02U
 #define APP_WIFI_SDIO_BUS_WIDTH_MASK  0x03U
 #define APP_WIFI_SDIO_BUS_WIDTH_4BIT  0x02U
+#define APP_WIFI_SDIO_BACKPLANE_ADDRESS_LOW  0x1000AU
+#define APP_WIFI_SDIO_BACKPLANE_ADDRESS_MID  0x1000BU
+#define APP_WIFI_SDIO_BACKPLANE_ADDRESS_HIGH 0x1000CU
 #define APP_WIFI_SDIO_CHIP_CLOCK_CSR  0x1000EU
 #define APP_WIFI_SDIO_CMD53_SMOKE_LEN 4U
 #define APP_WIFI_SDIO_ALP_TIMEOUT_MS  500U
+#define APP_WIFI_SDIO_HT_TIMEOUT_MS   500U
 #define APP_WIFI_SDIO_FORCE_ALP       0x01U
+#define APP_WIFI_SDIO_FORCE_HT        0x02U
 #define APP_WIFI_SDIO_ALP_AVAIL_REQ   0x08U
+#define APP_WIFI_SDIO_HT_AVAIL_REQ    0x10U
 #define APP_WIFI_SDIO_FORCE_HW_CLKREQ_OFF 0x20U
 #define APP_WIFI_SDIO_ALP_AVAIL       0x40U
+#define APP_WIFI_SDIO_HT_AVAIL        0x80U
+#define APP_WIFI_BACKPLANE_ADDRESS_MASK 0x7FFFU
+#define APP_WIFI_BACKPLANE_WINDOW_SIZE (APP_WIFI_BACKPLANE_ADDRESS_MASK + 1U)
+#define APP_WIFI_BACKPLANE_WINDOW_INVALID 0xFFFFFFFFU
+#define APP_WIFI_CHIPCOMMON_BASE_ADDRESS 0x18000000U
+#define APP_WIFI_CHIPCOMMON_GPIO_CONTROL (APP_WIFI_CHIPCOMMON_BASE_ADDRESS + 0x6CU)
 
 static volatile uint32_t g_wifiSdioInterruptCount = 0U;
 static volatile uint32_t g_wifiLastSdioStatus = 0U;
@@ -43,6 +55,8 @@ static volatile uint32_t g_wifiSdioHostInitialized = 0U;
 static volatile uint32_t g_wifiSdioEnumerated = 0U;
 static volatile uint32_t g_wifiSdioBusConfigured = 0U;
 static volatile uint32_t g_wifiLastCmd53Word = 0U;
+static volatile uint32_t g_wifiLastBackplaneWord = 0U;
+static volatile uint32_t g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
 static volatile uint8_t g_wifiChipClockCsr = 0U;
 static volatile uint8_t g_wifiCccrIoEnable = 0U;
 static volatile uint8_t g_wifiCccrBusControl = 0U;
@@ -55,6 +69,7 @@ static uint32_t g_wifiCmd53Scratch[(APP_WIFI_SDIO_BLOCK_SIZE + sizeof(uint32_t) 
 static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error);
 static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide);
 static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void);
+static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, uint32_t address, const uint8_t *data, uint16_t dataLength);
 static uint32_t APP_WiFi_Platform_BuildCmd53Argument(uint8_t rwFlag,
                                                      uint8_t functionNumber,
                                                      uint32_t address,
@@ -98,6 +113,8 @@ void APP_WiFi_Platform_Init(void)
   g_wifiSdioEnumerated = 0U;
   g_wifiSdioBusConfigured = 0U;
   g_wifiLastCmd53Word = 0U;
+  g_wifiLastBackplaneWord = 0U;
+  g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
   g_wifiChipClockCsr = 0U;
   g_wifiCccrIoEnable = 0U;
   g_wifiCccrBusControl = 0U;
@@ -514,6 +531,181 @@ HAL_StatusTypeDef APP_WiFi_Platform_RequestAlpClock(void)
   return HAL_TIMEOUT;
 }
 
+HAL_StatusTypeDef APP_WiFi_Platform_SetBackplaneWindow(uint32_t address)
+{
+  const uint32_t base = address & (uint32_t)(~APP_WIFI_BACKPLANE_ADDRESS_MASK);
+
+  if (base == g_wifiBackplaneWindowBase)
+  {
+    return HAL_OK;
+  }
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_BACKPLANE_ADDRESS_HIGH, (uint8_t)(base >> 24U)) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_BACKPLANE_ADDRESS_MID, (uint8_t)(base >> 16U)) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_BACKPLANE_ADDRESS_LOW, (uint8_t)(base >> 8U)) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiBackplaneWindowBase = base;
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead(uint32_t address, uint8_t *data, uint16_t dataLength)
+{
+  const uint32_t windowOffset = address & APP_WIFI_BACKPLANE_ADDRESS_MASK;
+
+  if ((data == NULL) || (dataLength == 0U))
+  {
+    return HAL_ERROR;
+  }
+
+  if (((uint32_t)dataLength > APP_WIFI_BACKPLANE_WINDOW_SIZE) ||
+      ((windowOffset + (uint32_t)dataLength) > APP_WIFI_BACKPLANE_WINDOW_SIZE))
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_SetBackplaneWindow(address) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  return APP_WiFi_Platform_Cmd53Read(APP_WIFI_SDIO_FN1, windowOffset, data, dataLength);
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead32(uint32_t address, uint32_t *value)
+{
+  uint8_t data[sizeof(uint32_t)] = {0};
+
+  if (value == NULL)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_BackplaneRead(address, data, (uint16_t)sizeof(data)) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  *value = ((uint32_t)data[0]) |
+           ((uint32_t)data[1] << 8U) |
+           ((uint32_t)data[2] << 16U) |
+           ((uint32_t)data[3] << 24U);
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite(uint32_t address, const uint8_t *data, uint16_t dataLength)
+{
+  const uint32_t windowOffset = address & APP_WIFI_BACKPLANE_ADDRESS_MASK;
+
+  if ((data == NULL) || (dataLength == 0U))
+  {
+    return HAL_ERROR;
+  }
+
+  if (((uint32_t)dataLength > APP_WIFI_BACKPLANE_WINDOW_SIZE) ||
+      ((windowOffset + (uint32_t)dataLength) > APP_WIFI_BACKPLANE_WINDOW_SIZE))
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_SetBackplaneWindow(address) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  return APP_WiFi_Platform_Cmd53Write(APP_WIFI_SDIO_FN1, windowOffset, data, dataLength);
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite32(uint32_t address, uint32_t value)
+{
+  uint8_t data[sizeof(uint32_t)] = {0};
+
+  data[0] = (uint8_t)(value & 0xFFU);
+  data[1] = (uint8_t)((value >> 8U) & 0xFFU);
+  data[2] = (uint8_t)((value >> 16U) & 0xFFU);
+  data[3] = (uint8_t)((value >> 24U) & 0xFFU);
+
+  return APP_WiFi_Platform_BackplaneWrite(address, data, (uint16_t)sizeof(data));
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneSmokeTest(void)
+{
+  uint32_t value = 0U;
+
+  if (APP_WiFi_Platform_BackplaneRead32(APP_WIFI_CHIPCOMMON_GPIO_CONTROL, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiLastBackplaneWord = value;
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneWriteSmokeTest(void)
+{
+  uint32_t value = 0U;
+
+  if (APP_WiFi_Platform_BackplaneRead32(APP_WIFI_CHIPCOMMON_GPIO_CONTROL, &value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_BackplaneWrite32(APP_WIFI_CHIPCOMMON_GPIO_CONTROL, value) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiLastBackplaneWord = value;
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void)
+{
+  const uint8_t requestValue = APP_WIFI_SDIO_FORCE_HW_CLKREQ_OFF | APP_WIFI_SDIO_HT_AVAIL_REQ;
+  uint32_t attempt = 0U;
+  uint8_t chipClockCsr = 0U;
+
+  if (g_wifiSdioBusConfigured == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_CHIP_CLOCK_CSR, requestValue) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  for (attempt = 0U; attempt < APP_WIFI_SDIO_HT_TIMEOUT_MS; ++attempt)
+  {
+    if (APP_WiFi_Platform_Fn1Read8(APP_WIFI_SDIO_CHIP_CLOCK_CSR, &chipClockCsr) != HAL_OK)
+    {
+      osDelay(1U);
+      continue;
+    }
+
+    g_wifiChipClockCsr = chipClockCsr;
+    if ((chipClockCsr & APP_WIFI_SDIO_HT_AVAIL) != 0U)
+    {
+      return HAL_OK;
+    }
+
+    osDelay(1U);
+  }
+
+  g_wifiLastSdioError = SDMMC_ERROR_TIMEOUT;
+  return HAL_TIMEOUT;
+}
+
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
 {
   return g_wifiSdioInterruptCount;
@@ -542,6 +734,16 @@ uint16_t APP_WiFi_Platform_GetSdioRca(void)
 uint32_t APP_WiFi_Platform_GetLastCmd53Word(void)
 {
   return g_wifiLastCmd53Word;
+}
+
+uint32_t APP_WiFi_Platform_GetLastBackplaneWord(void)
+{
+  return g_wifiLastBackplaneWord;
+}
+
+uint32_t APP_WiFi_Platform_GetBackplaneWindowBase(void)
+{
+  return g_wifiBackplaneWindowBase;
 }
 
 uint8_t APP_WiFi_Platform_GetChipClockCsr(void)
@@ -695,6 +897,44 @@ static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void)
       return HAL_TIMEOUT;
     }
   }
+}
+
+static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, uint32_t address, const uint8_t *data, uint16_t dataLength)
+{
+  const uint32_t transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
+  const uint32_t dctrlBlockSize = APP_WiFi_Platform_GetDctrlBlockSize(transferLength);
+  const uint32_t argument = APP_WiFi_Platform_BuildCmd53Argument(1U,
+                                                                 functionNumber,
+                                                                 address,
+                                                                 0U,
+                                                                 1U,
+                                                                 (uint16_t)transferLength);
+
+  if ((data == NULL) || (dataLength == 0U) || (transferLength == 0U) || (dctrlBlockSize == 0U))
+  {
+    return HAL_ERROR;
+  }
+
+  memset((void *)g_wifiCmd53Scratch, 0, sizeof(g_wifiCmd53Scratch));
+  memcpy((void *)g_wifiCmd53Scratch, data, dataLength);
+
+  SDMMC1->MASK = 0U;
+  SDMMC1->ICR = 0xFFFFFFFFU;
+  SDMMC1->DTIMER = SDMMC_DATATIMEOUT;
+  SDMMC1->DLEN = transferLength;
+  SDMMC1->DCTRL = dctrlBlockSize | SDMMC_TRANSFER_DIR_TO_CARD | SDMMC_TRANSFER_MODE_BLOCK | SDMMC_DCTRL_SDIOEN;
+  SDMMC1->IDMACTRL = SDMMC_ENABLE_IDMA_SINGLE_BUFF;
+  SDMMC1->IDMABASE0 = (uint32_t)g_wifiCmd53Scratch;
+
+  SDMMC1->ARG = argument;
+  SDMMC1->CMD = (uint32_t)(SDMMC_CMD_SDMMC_RW_EXTENDED | SDMMC_RESPONSE_SHORT | SDMMC_WAIT_NO | SDMMC_CPSM_ENABLE | SDMMC_CMD_CMDTRANS);
+
+  if (APP_WiFi_Platform_WaitCmd53Transfer() != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
 }
 
 static uint32_t APP_WiFi_Platform_BuildCmd53Argument(uint8_t rwFlag,

@@ -220,6 +220,61 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_CLOCK_READY:
+        if (APP_WiFi_Platform_RunBackplaneSmokeTest() == HAL_OK)
+        {
+          /*
+           * We can now set a backplane window and pull a real 32-bit word from
+           * chipcommon space through Fn1/CMD53. This is the first point where
+           * we know the AP6181 backplane path, not just raw SDIO transport, is
+           * alive.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_BACKPLANE_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_BACKPLANE_READY:
+        if (APP_WiFi_Platform_RequestHtClock() == HAL_OK)
+        {
+          /*
+           * Unlike the earlier ALP request, HT is kept asserted here so the
+           * WLAN backplane stays up for the next stages. This mirrors the
+           * normal WWD "bus up" progression more closely.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_HT_CLOCK_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_HT_CLOCK_READY:
+        if (APP_WiFi_Platform_RunBackplaneWriteSmokeTest() == HAL_OK)
+        {
+          /*
+           * The backplane write path now works too. We keep the smoke test
+           * conservative by writing a register back with the same value we
+           * just read, so the path is exercised without intentionally changing
+           * chip configuration.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
       case APP_WIFI_STATE_READY:
       case APP_WIFI_STATE_ERROR:
       default:
