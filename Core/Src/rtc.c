@@ -174,9 +174,17 @@ void MX_RTC_Init(void)
   */
   if (rtcNeedsInit != 0U)
   {
-    sTime.Hours = parseBuildTimeComponent(__TIME__ + 0);
-    sTime.Minutes = parseBuildTimeComponent(__TIME__ + 3);
-    sTime.Seconds = parseBuildTimeComponent(__TIME__ + 6);
+    const uint16_t buildYear = parseBuildYear();
+    const uint8_t buildMonth = parseBuildMonth();
+    const uint8_t buildDay = parseBuildDay();
+    const uint8_t buildHour = parseBuildTimeComponent(&__TIME__[0]);
+    const uint8_t buildMinute = parseBuildTimeComponent(&__TIME__[3]);
+    const uint8_t buildSecond = parseBuildTimeComponent(&__TIME__[6]);
+    const uint8_t buildWeekday = calculateWeekday(buildYear, buildMonth, buildDay);
+
+    sTime.Hours = buildHour;
+    sTime.Minutes = buildMinute;
+    sTime.Seconds = buildSecond;
     sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
     sTime.StoreOperation = RTC_STOREOPERATION_RESET;
     if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
@@ -184,11 +192,10 @@ void MX_RTC_Init(void)
       Error_Handler();
     }
 
-    sDate.WeekDay = modelWeekdayToRtc(calculateWeekday(parseBuildYear(), parseBuildMonth(), parseBuildDay()));
-    sDate.Month = parseBuildMonth();
-    sDate.Date = parseBuildDay();
-    sDate.Year = (uint8_t)(parseBuildYear() % 100U);
-
+    sDate.WeekDay = (uint8_t)modelWeekdayToRtc(buildWeekday);
+    sDate.Month = buildMonth;
+    sDate.Date = buildDay;
+    sDate.Year = (uint8_t)(buildYear % 100U);
     if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
     {
       Error_Handler();

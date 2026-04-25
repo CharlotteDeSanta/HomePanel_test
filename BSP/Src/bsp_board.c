@@ -13,6 +13,10 @@
 #define BSP_LCD_BL_PORT GPIOD
 #define BSP_LCD_RST_PIN GPIO_PIN_7
 #define BSP_LCD_RST_PORT GPIOG
+#define BSP_WIFI_RESET_PIN WIFI_RESET_Pin
+#define BSP_WIFI_RESET_PORT WIFI_RESET_GPIO_Port
+#define BSP_WIFI_OOB_PIN WIFI_OOB_IRQ_Pin
+#define BSP_WIFI_OOB_PORT WIFI_OOB_IRQ_GPIO_Port
 
 static uint32_t bsp_board_initialized = 0U;
 
@@ -34,8 +38,12 @@ void BSP_Board_Init(void)
 
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
+  __HAL_RCC_GPIOI_CLK_ENABLE();
+
+  HAL_GPIO_WritePin(BSP_WIFI_RESET_PORT, BSP_WIFI_RESET_PIN, GPIO_PIN_SET);
 
   GPIO_InitStruct.Pin = BSP_LED_R_PIN | BSP_LED_G_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -52,6 +60,21 @@ void BSP_Board_Init(void)
 
   GPIO_InitStruct.Pin = BSP_LCD_RST_PIN;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = BSP_WIFI_RESET_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(BSP_WIFI_RESET_PORT, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = BSP_WIFI_OOB_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(BSP_WIFI_OOB_PORT, &GPIO_InitStruct);
+
+  HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC2, SYSCFG_SWITCH_PC2_CLOSE);
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 10, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   BSP_Board_SetStatusLed(0U, 0U, 0U);
   HAL_GPIO_WritePin(BSP_LCD_BL_PORT, BSP_LCD_BL_PIN, GPIO_PIN_SET);

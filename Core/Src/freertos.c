@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "app_touchgfx.h"
+#include "app_wifi.h"
 
 /* USER CODE END Includes */
 
@@ -38,6 +39,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define GUI_TASK_STACK_BYTES (4096U * 4U)
+#define WIFI_TASK_STACK_BYTES (2048U * 4U)
 
 /* USER CODE END PD */
 
@@ -57,6 +59,13 @@ const osThreadAttr_t guiTask_attributes = {
   .stack_size = GUI_TASK_STACK_BYTES,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for wifiTask */
+osThreadId_t wifiTaskHandle;
+const osThreadAttr_t wifiTask_attributes = {
+  .name = "wifiTask",
+  .stack_size = WIFI_TASK_STACK_BYTES,
+  .priority = (osPriority_t) osPriorityBelowNormal,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -64,6 +73,7 @@ const osThreadAttr_t guiTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartGUITask(void *argument);
+void StartWiFiTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -74,6 +84,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+  APP_WiFi_Init();
 
   /* USER CODE END Init */
 
@@ -97,6 +108,13 @@ void MX_FREERTOS_Init(void) {
   /* creation of guiTask */
   guiTaskHandle = osThreadNew(StartGUITask, NULL, &guiTask_attributes);
   if (guiTaskHandle == NULL)
+  {
+    Error_Handler();
+  }
+
+  /* creation of wifiTask */
+  wifiTaskHandle = osThreadNew(StartWiFiTask, NULL, &wifiTask_attributes);
+  if (wifiTaskHandle == NULL)
   {
     Error_Handler();
   }
@@ -129,6 +147,21 @@ void StartGUITask(void *argument)
   TouchGFX_Task(argument);
   Error_Handler();
   /* USER CODE END StartGUITask */
+}
+
+/* USER CODE BEGIN Header_StartWiFiTask */
+/**
+  * @brief  Function implementing the wifiTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartWiFiTask */
+void StartWiFiTask(void *argument)
+{
+  /* USER CODE BEGIN StartWiFiTask */
+  APP_WiFi_Task(argument);
+  Error_Handler();
+  /* USER CODE END StartWiFiTask */
 }
 
 /* Private application code --------------------------------------------------*/
