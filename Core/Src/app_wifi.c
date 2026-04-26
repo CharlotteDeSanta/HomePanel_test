@@ -332,6 +332,135 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_RESOURCES_READY:
+        if (APP_WiFi_Platform_StageFirmwareImage() == HAL_OK)
+        {
+          /*
+           * The firmware blob has now been copied into the WLAN RAM aperture.
+           * We still keep the ARM core halted from a workflow perspective and
+           * stage NVRAM separately, so download errors are easier to isolate.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_FIRMWARE_STAGED);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_FIRMWARE_STAGED:
+        if (APP_WiFi_Platform_StageNvramImage() == HAL_OK)
+        {
+          /*
+           * NVRAM and its trailer word are now in place at the top of WLAN
+           * RAM. The next step can focus purely on core release and firmware
+           * boot, because the download payload itself is already staged.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_NVRAM_STAGED);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_NVRAM_STAGED:
+        if (APP_WiFi_Platform_ReleaseWlanArmCore() == HAL_OK)
+        {
+          /*
+           * The WLAN ARM wrapper has now been taken out of reset using the
+           * same minimal sequence the official stack uses. The next state only
+           * waits for the core wrapper to report a sane post-release state.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_ARM_RELEASED);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_ARM_RELEASED:
+        if (APP_WiFi_Platform_WaitForFirmwareBoot() == HAL_OK)
+        {
+          /*
+           * At this point the WLAN ARM core wrapper reports clock enabled and
+           * not in reset, which is the first practical "firmware booted"
+           * checkpoint we can get before pulling in the heavier WWD logic.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_FIRMWARE_BOOTED);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_FIRMWARE_BOOTED:
+        if (APP_WiFi_Platform_ProbeSharedMemory() == HAL_OK)
+        {
+          /*
+           * The firmware has now published a non-zero shared-area pointer at
+           * the top of WLAN RAM. That is a much stronger sign of life than the
+           * wrapper-only boot check, and it gives us a concrete handhold for
+           * later WWD-style shared-memory parsing.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_SHARED_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_SHARED_READY:
+        if (APP_WiFi_Platform_ProbeConsole() == HAL_OK)
+        {
+          /*
+           * The firmware's console structure is now readable through the
+           * shared-area pointer, so we have a concrete log-buffer location and
+           * cursor state available for later debug-log extraction.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_CONSOLE_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_CONSOLE_READY:
+        if (APP_WiFi_Platform_ProbeMailbox() == HAL_OK)
+        {
+          /*
+          * We can now read the host-facing mailbox and interrupt-status path
+           * after firmware boot, on top of the already-parsed shared/console
+           * state. That gives the next bring-up steps a stable checkpoint
+           * before we start leaning harder on higher-level bus-up assumptions
+           * from the vendor stack.
+           */
+          APP_WiFi_SetState(APP_WIFI_STATE_MAILBOX_READY);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+        }
+        else
+        {
+          APP_WiFi_SetState(APP_WIFI_STATE_ERROR);
+          osDelay(APP_WIFI_POLL_MS);
+        }
+        break;
+
+      case APP_WIFI_STATE_MAILBOX_READY:
       case APP_WIFI_STATE_ERROR:
       default:
         osDelay(APP_WIFI_POLL_MS);
