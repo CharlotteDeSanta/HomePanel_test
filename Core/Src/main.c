@@ -26,6 +26,7 @@
 #include "quadspi.h"
 #include "rtc.h"
 #include "sdmmc.h"
+#include "usart.h"
 #include "gpio.h"
 #include "fmc.h"
 #include "app_touchgfx.h"
@@ -109,24 +110,16 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  if (BSP_Touch_Init() != HAL_OK)
-  {
-    Error_Handler();
-  }
+  BSP_Touch_Init();
   CPU_CACHE_Enable();
   MX_FMC_Init();
-  if (BSP_QSPI_Init() != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (BSP_QSPI_EnableMemoryMappedMode() != HAL_OK)
-  {
-    Error_Handler();
-  }
+  BSP_QSPI_Init();
+  BSP_QSPI_EnableMemoryMappedMode();
   MX_LTDC_Init();
   MX_CRC_Init();
   MX_DMA2D_Init();
   MX_RTC_Init();
+  MX_USART1_UART_Init();
   /* Call PreOsInit function */
   MX_TouchGFX_PreOSInit();
   /* USER CODE BEGIN 2 */

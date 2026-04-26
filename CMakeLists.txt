@@ -55,16 +55,22 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_debug_uart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi_platform.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi_resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_board.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_sdram.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_display.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_qspi_flash.c
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Src/bsp_touch_gt911.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/wifi_lwip_tcpecho_socket/User/43362A2_bin.c
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Inc
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/include
 )
 
 # Add project symbols (macros)

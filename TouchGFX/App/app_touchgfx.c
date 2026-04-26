@@ -55,6 +55,19 @@ static void TouchGFX_EnsureInitialized(void);
 
 /* USER CODE END PFP */
 
+/* USER CODE BEGIN 1 */
+static void TouchGFX_EnsureInitialized(void)
+{
+    if (touchgfxInitialized == 0U)
+    {
+        touchgfx_components_init();
+        touchgfx_init();
+        touchgfxInitialized = 1U;
+    }
+}
+
+/* USER CODE END 1 */
+
 /**
  * PreOS Initialization function
  */
@@ -87,16 +100,6 @@ void TouchGFX_Task(void* argument)
     (void)argument;
     TouchGFX_EnsureInitialized();
     touchgfx_taskEntry();
-}
-
-static void TouchGFX_EnsureInitialized(void)
-{
-    if (touchgfxInitialized == 0U)
-    {
-        touchgfx_components_init();
-        touchgfx_init();
-        touchgfxInitialized = 1U;
-    }
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -56,14 +56,14 @@
 osThreadId_t guiTaskHandle;
 const osThreadAttr_t guiTask_attributes = {
   .name = "guiTask",
-  .stack_size = GUI_TASK_STACK_BYTES,
+  .stack_size = 4096 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for wifiTask */
 osThreadId_t wifiTaskHandle;
 const osThreadAttr_t wifiTask_attributes = {
   .name = "wifiTask",
-  .stack_size = WIFI_TASK_STACK_BYTES,
+  .stack_size = 2048 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
 
@@ -107,17 +107,9 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of guiTask */
   guiTaskHandle = osThreadNew(StartGUITask, NULL, &guiTask_attributes);
-  if (guiTaskHandle == NULL)
-  {
-    Error_Handler();
-  }
 
   /* creation of wifiTask */
   wifiTaskHandle = osThreadNew(StartWiFiTask, NULL, &wifiTask_attributes);
-  if (wifiTaskHandle == NULL)
-  {
-    Error_Handler();
-  }
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
