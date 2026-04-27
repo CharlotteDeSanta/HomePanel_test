@@ -15,16 +15,94 @@
 #define APP_WIFI_MODULE_SETTLE_MS       200U
 #define APP_WIFI_POLL_MS                1000U
 #define APP_WIFI_HEARTBEAT_MS           5000U
-#define APP_WIFI_LOG_BUFFER_SIZE        256U
+#define APP_WIFI_LOG_BUFFER_SIZE        512U
+#define APP_WIFI_SDIO_FN2               2U
+#define APP_WIFI_SDPCM_FRAME_AVAILABLE_MASK 0x000000F0U
+#define APP_WIFI_SDPCM_HW_TAG_SIZE      4U
+#define APP_WIFI_SDPCM_HEADER_SIZE      12U
+#define APP_WIFI_SDPCM_CDC_HEADER_SIZE  16U
+#define APP_WIFI_SDPCM_CONTROL_HEADER_CAPTURE_SIZE 64U
+#define APP_WIFI_SDPCM_MAX_FRAME_LEN    2048U
+#define APP_WIFI_SDPCM_CHANNEL_MASK     0x0FU
+#define APP_WIFI_SDPCM_CHANNEL_CONTROL  0U
+#define APP_WIFI_SDPCM_CHANNEL_EVENT    1U
+#define APP_WIFI_SDPCM_CHANNEL_DATA     2U
+#define APP_WIFI_SDPCM_IOCTL_GET        0x00U
+#define APP_WIFI_SDPCM_IOCTL_SET        0x02U
+#define APP_WIFI_SDPCM_IOCTL_ID_SHIFT   16U
+#define APP_WIFI_SDPCM_IOCTL_ID_MASK    0xFFFF0000UL
+#define APP_WIFI_SDPCM_IOCTL_IF_SHIFT   12U
+#define APP_WIFI_IOCTL_U32_SIZE         4U
+#define APP_WIFI_MAC_ADDRESS_SIZE       6U
+#define APP_WIFI_WLC_GET_VERSION        1UL
+#define APP_WIFI_WLC_UP                 2UL
+#define APP_WIFI_WLC_SET_PM             86UL
+#define APP_WIFI_WLC_GET_VAR            262UL
+#define APP_WIFI_WLC_SET_VAR            263UL
+#define APP_WIFI_IOVAR_CUR_ETHERADDR    "cur_etheraddr"
+#define APP_WIFI_IOVAR_EVENT_MSGS       "event_msgs"
+#define APP_WIFI_PM_OFF                 0UL
+#define APP_WIFI_WL_EVENTING_MASK_LEN   19U
 
 static volatile APP_WiFiState_t g_wifiState = APP_WIFI_STATE_IDLE;
 static volatile uint32_t g_wifiOobInterruptCount = 0U;
 static uint32_t g_wifiLastHeartbeatTick = 0U;
+static uint32_t g_wifiSdpcmFrameCount = 0U;
+static uint32_t g_wifiLastSdpcmFrameInterrupt = 0U;
+static uint16_t g_wifiLastSdpcmFrameLength = 0U;
+static uint8_t g_wifiLastSdpcmSequence = 0U;
+static uint8_t g_wifiLastSdpcmChannel = 0U;
+static uint8_t g_wifiLastSdpcmHeaderLength = 0U;
+static uint8_t g_wifiLastSdpcmNextLength = 0U;
+static uint8_t g_wifiLastSdpcmBusCredit = 0U;
+static uint8_t g_wifiLastSdpcmFlowControl = 0U;
+static uint8_t g_wifiBusCredit = 1U;
+static uint8_t g_wifiBusCreditDiff = 0U;
+static uint8_t g_wifiTxSequence = 0U;
+static uint16_t g_wifiIoctlRequestId = 0U;
+static uint8_t g_wifiIoctlProbeSent = 0U;
+static uint8_t g_wifiIoctlProbeCompleted = 0U;
+static uint8_t g_wifiVersionProbeCompleted = 0U;
+static uint8_t g_wifiUpProbeSent = 0U;
+static uint8_t g_wifiUpProbeCompleted = 0U;
+static uint8_t g_wifiMacProbeSent = 0U;
+static uint8_t g_wifiMacProbeCompleted = 0U;
+static uint8_t g_wifiEventMaskSent = 0U;
+static uint8_t g_wifiEventMaskCompleted = 0U;
+static uint8_t g_wifiPmProbeSent = 0U;
+static uint8_t g_wifiPmProbeCompleted = 0U;
+static uint8_t g_wifiLastMacAddress[APP_WIFI_MAC_ADDRESS_SIZE] = {0U};
+static uint32_t g_wifiLastIoctlCommand = 0U;
+static uint32_t g_wifiLastIoctlStatus = 0U;
+static uint32_t g_wifiLastIoctlFlags = 0U;
+static uint32_t g_wifiLastIoctlValue = 0U;
 
 static const char *APP_WiFi_StateToString(APP_WiFiState_t state);
+static const char *APP_WiFi_SdpcmChannelToString(uint8_t channel);
 static void APP_WiFi_Logf(const char *format, ...);
 static void APP_WiFi_LogStateDetails(APP_WiFiState_t state);
 static void APP_WiFi_LogPeriodicHeartbeat(void);
+static uint16_t APP_WiFi_ReadLe16(const uint8_t *bytes);
+static uint32_t APP_WiFi_ReadLe32(const uint8_t *bytes);
+static void APP_WiFi_WriteLe16(uint8_t *bytes, uint16_t value);
+static void APP_WiFi_WriteLe32(uint8_t *bytes, uint32_t value);
+static uint16_t APP_WiFi_GetSdpcmChunkSize(uint16_t remaining);
+static void APP_WiFi_RecordSdpcmHeader(const uint8_t *header, uint16_t frameLength, uint32_t frameInterrupt);
+static void APP_WiFi_UpdateSdpcmCredit(const uint8_t *header);
+static void APP_WiFi_LogSdpcmBytes(const char *prefix, const uint8_t *data, uint16_t length);
+static void APP_WiFi_LogMacAddress(const char *prefix, const uint8_t *macAddress);
+static void APP_WiFi_SetEventMaskBit(uint8_t *eventMask, uint16_t eventNumber);
+static HAL_StatusTypeDef APP_WiFi_SendControlIoctl(uint8_t ioctlType,
+                                                   uint32_t command,
+                                                   const void *payload,
+                                                   uint16_t payloadLength,
+                                                   const char *name);
+static HAL_StatusTypeDef APP_WiFi_SendGetVersionIoctl(void);
+static HAL_StatusTypeDef APP_WiFi_SendUpIoctl(void);
+static HAL_StatusTypeDef APP_WiFi_SendGetCurEtheraddrIovar(void);
+static HAL_StatusTypeDef APP_WiFi_SendSetEventMsgsIovar(void);
+static HAL_StatusTypeDef APP_WiFi_SendSetPmOffIoctl(void);
+static uint8_t APP_WiFi_TryProbeSdpcmRx(void);
 
 static void APP_WiFi_SetState(APP_WiFiState_t nextState)
 {
@@ -45,6 +123,35 @@ void APP_WiFi_Init(void)
 {
   g_wifiOobInterruptCount = 0U;
   g_wifiLastHeartbeatTick = HAL_GetTick();
+  g_wifiSdpcmFrameCount = 0U;
+  g_wifiLastSdpcmFrameInterrupt = 0U;
+  g_wifiLastSdpcmFrameLength = 0U;
+  g_wifiLastSdpcmSequence = 0U;
+  g_wifiLastSdpcmChannel = 0U;
+  g_wifiLastSdpcmHeaderLength = 0U;
+  g_wifiLastSdpcmNextLength = 0U;
+  g_wifiLastSdpcmBusCredit = 0U;
+  g_wifiLastSdpcmFlowControl = 0U;
+  g_wifiBusCredit = 1U;
+  g_wifiBusCreditDiff = 0U;
+  g_wifiTxSequence = 0U;
+  g_wifiIoctlRequestId = 0U;
+  g_wifiIoctlProbeSent = 0U;
+  g_wifiIoctlProbeCompleted = 0U;
+  g_wifiVersionProbeCompleted = 0U;
+  g_wifiUpProbeSent = 0U;
+  g_wifiUpProbeCompleted = 0U;
+  g_wifiMacProbeSent = 0U;
+  g_wifiMacProbeCompleted = 0U;
+  g_wifiEventMaskSent = 0U;
+  g_wifiEventMaskCompleted = 0U;
+  g_wifiPmProbeSent = 0U;
+  g_wifiPmProbeCompleted = 0U;
+  memset(g_wifiLastMacAddress, 0, sizeof(g_wifiLastMacAddress));
+  g_wifiLastIoctlCommand = 0U;
+  g_wifiLastIoctlStatus = 0U;
+  g_wifiLastIoctlFlags = 0U;
+  g_wifiLastIoctlValue = 0U;
   APP_WiFi_Resources_Init();
   APP_WiFi_Platform_Init();
   APP_WiFi_SetState(APP_WIFI_STATE_IDLE);
@@ -137,6 +244,21 @@ static const char *APP_WiFi_StateToString(APP_WiFiState_t state)
   }
 }
 
+static const char *APP_WiFi_SdpcmChannelToString(uint8_t channel)
+{
+  switch (channel)
+  {
+    case APP_WIFI_SDPCM_CHANNEL_CONTROL:
+      return "control";
+    case APP_WIFI_SDPCM_CHANNEL_EVENT:
+      return "event";
+    case APP_WIFI_SDPCM_CHANNEL_DATA:
+      return "data";
+    default:
+      return "other";
+  }
+}
+
 static void APP_WiFi_Logf(const char *format, ...)
 {
   char logBuffer[APP_WIFI_LOG_BUFFER_SIZE];
@@ -164,6 +286,658 @@ static void APP_WiFi_Logf(const char *format, ...)
   }
 
   (void)APP_DebugUart_WriteString(logBuffer);
+}
+
+static uint16_t APP_WiFi_ReadLe16(const uint8_t *bytes)
+{
+  if (bytes == NULL)
+  {
+    return 0U;
+  }
+
+  return (uint16_t)(((uint16_t)bytes[0]) | ((uint16_t)bytes[1] << 8U));
+}
+
+static uint32_t APP_WiFi_ReadLe32(const uint8_t *bytes)
+{
+  if (bytes == NULL)
+  {
+    return 0U;
+  }
+
+  return ((uint32_t)bytes[0]) |
+         ((uint32_t)bytes[1] << 8U) |
+         ((uint32_t)bytes[2] << 16U) |
+         ((uint32_t)bytes[3] << 24U);
+}
+
+static void APP_WiFi_WriteLe16(uint8_t *bytes, uint16_t value)
+{
+  if (bytes == NULL)
+  {
+    return;
+  }
+
+  bytes[0] = (uint8_t)(value & 0xFFU);
+  bytes[1] = (uint8_t)((value >> 8U) & 0xFFU);
+}
+
+static void APP_WiFi_WriteLe32(uint8_t *bytes, uint32_t value)
+{
+  if (bytes == NULL)
+  {
+    return;
+  }
+
+  bytes[0] = (uint8_t)(value & 0xFFU);
+  bytes[1] = (uint8_t)((value >> 8U) & 0xFFU);
+  bytes[2] = (uint8_t)((value >> 16U) & 0xFFU);
+  bytes[3] = (uint8_t)((value >> 24U) & 0xFFU);
+}
+
+static uint16_t APP_WiFi_GetSdpcmChunkSize(uint16_t remaining)
+{
+  return (remaining > 4U) ? 4U : remaining;
+}
+
+static void APP_WiFi_RecordSdpcmHeader(const uint8_t *header, uint16_t frameLength, uint32_t frameInterrupt)
+{
+  if (header == NULL)
+  {
+    return;
+  }
+
+  g_wifiSdpcmFrameCount++;
+  g_wifiLastSdpcmFrameInterrupt = frameInterrupt;
+  g_wifiLastSdpcmFrameLength = frameLength;
+  g_wifiLastSdpcmSequence = header[4];
+  g_wifiLastSdpcmChannel = (uint8_t)(header[5] & APP_WIFI_SDPCM_CHANNEL_MASK);
+  g_wifiLastSdpcmNextLength = header[6];
+  g_wifiLastSdpcmHeaderLength = header[7];
+  g_wifiLastSdpcmFlowControl = header[8];
+  g_wifiLastSdpcmBusCredit = header[9];
+
+  APP_WiFi_Logf("[wifi] sdpcm: #%lu irq=0x%08lX len=%u seq=%u ch=%s(%u) hdr=%u next=%u credit=%u flow=%u\n",
+                (unsigned long)g_wifiSdpcmFrameCount,
+                (unsigned long)frameInterrupt,
+                (unsigned int)frameLength,
+                (unsigned int)g_wifiLastSdpcmSequence,
+                APP_WiFi_SdpcmChannelToString(g_wifiLastSdpcmChannel),
+                (unsigned int)g_wifiLastSdpcmChannel,
+                (unsigned int)g_wifiLastSdpcmHeaderLength,
+                (unsigned int)g_wifiLastSdpcmNextLength,
+                (unsigned int)g_wifiLastSdpcmBusCredit,
+                (unsigned int)g_wifiLastSdpcmFlowControl);
+}
+
+static void APP_WiFi_UpdateSdpcmCredit(const uint8_t *header)
+{
+  uint8_t creditDiff = 0U;
+
+  if (header == NULL)
+  {
+    return;
+  }
+
+  if ((header[5] & APP_WIFI_SDPCM_CHANNEL_MASK) >= 3U)
+  {
+    return;
+  }
+
+  creditDiff = (uint8_t)(header[9] - g_wifiBusCredit);
+  if (creditDiff <= 15U)
+  {
+    g_wifiBusCredit = header[9];
+    g_wifiBusCreditDiff = creditDiff;
+  }
+}
+
+static void APP_WiFi_LogSdpcmBytes(const char *prefix, const uint8_t *data, uint16_t length)
+{
+  char logBuffer[APP_WIFI_LOG_BUFFER_SIZE];
+  int written = 0;
+  uint16_t index = 0U;
+
+  if ((prefix == NULL) || (data == NULL) || (length == 0U))
+  {
+    return;
+  }
+
+  written = snprintf(logBuffer, sizeof(logBuffer), "%s", prefix);
+  if ((written <= 0) || ((size_t)written >= sizeof(logBuffer)))
+  {
+    return;
+  }
+
+  for (index = 0U; index < length; ++index)
+  {
+    const int chunkWritten = snprintf(&logBuffer[written],
+                                      sizeof(logBuffer) - (size_t)written,
+                                      "%s%02X",
+                                      (index == 0U) ? "" : " ",
+                                      (unsigned int)data[index]);
+    if ((chunkWritten <= 0) || ((size_t)chunkWritten >= (sizeof(logBuffer) - (size_t)written)))
+    {
+      break;
+    }
+
+    written += chunkWritten;
+  }
+
+  if ((size_t)written < (sizeof(logBuffer) - 2U))
+  {
+    logBuffer[written++] = '\n';
+    logBuffer[written] = '\0';
+  }
+  else
+  {
+    logBuffer[sizeof(logBuffer) - 2U] = '\n';
+    logBuffer[sizeof(logBuffer) - 1U] = '\0';
+  }
+
+  (void)APP_DebugUart_WriteString(logBuffer);
+}
+
+static void APP_WiFi_LogMacAddress(const char *prefix, const uint8_t *macAddress)
+{
+  if ((prefix == NULL) || (macAddress == NULL))
+  {
+    return;
+  }
+
+  APP_WiFi_Logf("%s%02X:%02X:%02X:%02X:%02X:%02X\n",
+                prefix,
+                (unsigned int)macAddress[0],
+                (unsigned int)macAddress[1],
+                (unsigned int)macAddress[2],
+                (unsigned int)macAddress[3],
+                (unsigned int)macAddress[4],
+                (unsigned int)macAddress[5]);
+}
+
+static void APP_WiFi_SetEventMaskBit(uint8_t *eventMask, uint16_t eventNumber)
+{
+  if ((eventMask == NULL) || (eventNumber >= (APP_WIFI_WL_EVENTING_MASK_LEN * 8U)))
+  {
+    return;
+  }
+
+  eventMask[eventNumber / 8U] |= (uint8_t)(1U << (eventNumber % 8U));
+}
+
+static HAL_StatusTypeDef APP_WiFi_SendControlIoctl(uint8_t ioctlType,
+                                                   uint32_t command,
+                                                   const void *payload,
+                                                   uint16_t payloadLength,
+                                                   const char *name)
+{
+  uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + APP_WIFI_IOCTL_U32_SIZE] = {0};
+  uint32_t flags = 0U;
+  uint8_t availableCredits = 0U;
+  uint8_t txSequence = 0U;
+  uint16_t ioctlRequestId = 0U;
+  const uint16_t frameLength = (uint16_t)(APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + payloadLength);
+
+  if (payloadLength > APP_WIFI_IOCTL_U32_SIZE)
+  {
+    return HAL_ERROR;
+  }
+
+  availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
+  if (availableCredits == 0U)
+  {
+    APP_WiFi_Logf("[wifi] ioctl: no credits available for %s tx=%u credit=%u\n",
+                  name,
+                  (unsigned int)g_wifiTxSequence,
+                  (unsigned int)g_wifiBusCredit);
+    return HAL_BUSY;
+  }
+
+  APP_WiFi_WriteLe16(&frame[0], frameLength);
+  APP_WiFi_WriteLe16(&frame[2], (uint16_t)(~frameLength));
+  txSequence = g_wifiTxSequence;
+  frame[4] = txSequence;
+  frame[5] = APP_WIFI_SDPCM_CHANNEL_CONTROL;
+  frame[7] = APP_WIFI_SDPCM_HEADER_SIZE;
+
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 0U], command);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 4U], payloadLength);
+
+  ioctlRequestId = (uint16_t)(g_wifiIoctlRequestId + 1U);
+  flags = ((((uint32_t)ioctlRequestId << APP_WIFI_SDPCM_IOCTL_ID_SHIFT) & APP_WIFI_SDPCM_IOCTL_ID_MASK) |
+           (((uint32_t)0U) << APP_WIFI_SDPCM_IOCTL_IF_SHIFT) |
+           ioctlType);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 8U], flags);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 12U], 0U);
+
+  if ((payload != NULL) && (payloadLength != 0U))
+  {
+    memcpy(&frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE], payload, payloadLength);
+  }
+
+  if (APP_WiFi_Platform_Fn2Write(frame, frameLength) != HAL_OK)
+  {
+    APP_WiFi_Logf("[wifi] ioctl: send %s failed id=%u sta=0x%08lX err=0x%08lX\n",
+                  name,
+                  (unsigned int)ioctlRequestId,
+                  (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
+                  (unsigned long)APP_WiFi_Platform_GetLastSdioError());
+    return HAL_ERROR;
+  }
+
+  g_wifiTxSequence = (uint8_t)(txSequence + 1U);
+  g_wifiIoctlRequestId = ioctlRequestId;
+  g_wifiIoctlProbeSent = 1U;
+  g_wifiIoctlProbeCompleted = 0U;
+  g_wifiLastIoctlCommand = command;
+  g_wifiLastIoctlFlags = flags;
+  g_wifiLastIoctlStatus = 0U;
+  g_wifiLastIoctlValue = 0U;
+  APP_WiFi_Logf("[wifi] ioctl: sent %s id=%u txseq=%u credits=%u len=%u type=%u\n",
+                name,
+                (unsigned int)g_wifiIoctlRequestId,
+                (unsigned int)txSequence,
+                (unsigned int)availableCredits,
+                (unsigned int)payloadLength,
+                (unsigned int)ioctlType);
+  return HAL_OK;
+}
+
+static HAL_StatusTypeDef APP_WiFi_SendGetVersionIoctl(void)
+{
+  const uint32_t versionPlaceholder = 0U;
+
+  return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_GET,
+                                   APP_WIFI_WLC_GET_VERSION,
+                                   &versionPlaceholder,
+                                   APP_WIFI_IOCTL_U32_SIZE,
+                                   "WLC_GET_VERSION");
+}
+
+static HAL_StatusTypeDef APP_WiFi_SendUpIoctl(void)
+{
+  return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
+                                   APP_WIFI_WLC_UP,
+                                   NULL,
+                                   0U,
+                                   "WLC_UP");
+}
+
+static HAL_StatusTypeDef APP_WiFi_SendGetCurEtheraddrIovar(void)
+{
+  uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + 32U] = {0};
+  const char *iovarName = APP_WIFI_IOVAR_CUR_ETHERADDR;
+  const uint16_t nameLength = (uint16_t)(strlen(iovarName) + 1U);
+  const uint16_t payloadLength = (uint16_t)(nameLength + APP_WIFI_MAC_ADDRESS_SIZE);
+  const uint16_t frameLength = (uint16_t)(APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + payloadLength);
+  uint32_t flags = 0U;
+  uint8_t availableCredits = 0U;
+  uint8_t txSequence = 0U;
+  uint16_t ioctlRequestId = 0U;
+
+  availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
+  if (availableCredits == 0U)
+  {
+    APP_WiFi_Logf("[wifi] iovar: no credits available for %s tx=%u credit=%u\n",
+                  APP_WIFI_IOVAR_CUR_ETHERADDR,
+                  (unsigned int)g_wifiTxSequence,
+                  (unsigned int)g_wifiBusCredit);
+    return HAL_BUSY;
+  }
+
+  APP_WiFi_WriteLe16(&frame[0], frameLength);
+  APP_WiFi_WriteLe16(&frame[2], (uint16_t)(~frameLength));
+  txSequence = g_wifiTxSequence;
+  frame[4] = txSequence;
+  frame[5] = APP_WIFI_SDPCM_CHANNEL_CONTROL;
+  frame[7] = APP_WIFI_SDPCM_HEADER_SIZE;
+
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 0U], APP_WIFI_WLC_GET_VAR);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 4U], payloadLength);
+
+  ioctlRequestId = (uint16_t)(g_wifiIoctlRequestId + 1U);
+  flags = ((((uint32_t)ioctlRequestId << APP_WIFI_SDPCM_IOCTL_ID_SHIFT) & APP_WIFI_SDPCM_IOCTL_ID_MASK) |
+           (((uint32_t)0U) << APP_WIFI_SDPCM_IOCTL_IF_SHIFT) |
+           APP_WIFI_SDPCM_IOCTL_GET);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 8U], flags);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 12U], 0U);
+
+  memcpy(&frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE],
+         iovarName,
+         nameLength);
+
+  if (APP_WiFi_Platform_Fn2Write(frame, frameLength) != HAL_OK)
+  {
+    APP_WiFi_Logf("[wifi] iovar: send %s failed id=%u sta=0x%08lX err=0x%08lX\n",
+                  APP_WIFI_IOVAR_CUR_ETHERADDR,
+                  (unsigned int)ioctlRequestId,
+                  (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
+                  (unsigned long)APP_WiFi_Platform_GetLastSdioError());
+    return HAL_ERROR;
+  }
+
+  g_wifiTxSequence = (uint8_t)(txSequence + 1U);
+  g_wifiIoctlRequestId = ioctlRequestId;
+  g_wifiIoctlProbeSent = 1U;
+  g_wifiIoctlProbeCompleted = 0U;
+  g_wifiLastIoctlCommand = APP_WIFI_WLC_GET_VAR;
+  g_wifiLastIoctlFlags = flags;
+  g_wifiLastIoctlStatus = 0U;
+  g_wifiLastIoctlValue = 0U;
+  APP_WiFi_Logf("[wifi] iovar: sent %s id=%u txseq=%u credits=%u len=%u\n",
+                APP_WIFI_IOVAR_CUR_ETHERADDR,
+                (unsigned int)g_wifiIoctlRequestId,
+                (unsigned int)txSequence,
+                (unsigned int)availableCredits,
+                (unsigned int)APP_WIFI_MAC_ADDRESS_SIZE);
+  return HAL_OK;
+}
+
+static HAL_StatusTypeDef APP_WiFi_SendSetEventMsgsIovar(void)
+{
+  uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + 64U] = {0};
+  const char *iovarName = APP_WIFI_IOVAR_EVENT_MSGS;
+  const uint16_t nameLength = (uint16_t)(strlen(iovarName) + 1U);
+  const uint16_t payloadLength = (uint16_t)(nameLength + APP_WIFI_WL_EVENTING_MASK_LEN);
+  const uint16_t frameLength = (uint16_t)(APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + payloadLength);
+  uint8_t *eventMask = &frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + nameLength];
+  uint32_t flags = 0U;
+  uint8_t availableCredits = 0U;
+  uint8_t txSequence = 0U;
+  uint16_t ioctlRequestId = 0U;
+
+  availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
+  if (availableCredits == 0U)
+  {
+    APP_WiFi_Logf("[wifi] iovar: no credits available for %s tx=%u credit=%u\n",
+                  APP_WIFI_IOVAR_EVENT_MSGS,
+                  (unsigned int)g_wifiTxSequence,
+                  (unsigned int)g_wifiBusCredit);
+    return HAL_BUSY;
+  }
+
+  APP_WiFi_WriteLe16(&frame[0], frameLength);
+  APP_WiFi_WriteLe16(&frame[2], (uint16_t)(~frameLength));
+  txSequence = g_wifiTxSequence;
+  frame[4] = txSequence;
+  frame[5] = APP_WIFI_SDPCM_CHANNEL_CONTROL;
+  frame[7] = APP_WIFI_SDPCM_HEADER_SIZE;
+
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 0U], APP_WIFI_WLC_SET_VAR);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 4U], payloadLength);
+
+  ioctlRequestId = (uint16_t)(g_wifiIoctlRequestId + 1U);
+  flags = ((((uint32_t)ioctlRequestId << APP_WIFI_SDPCM_IOCTL_ID_SHIFT) & APP_WIFI_SDPCM_IOCTL_ID_MASK) |
+           (((uint32_t)0U) << APP_WIFI_SDPCM_IOCTL_IF_SHIFT) |
+           APP_WIFI_SDPCM_IOCTL_SET);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 8U], flags);
+  APP_WiFi_WriteLe32(&frame[APP_WIFI_SDPCM_HEADER_SIZE + 12U], 0U);
+
+  memcpy(&frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE],
+         iovarName,
+         nameLength);
+
+  memset(eventMask, 0, APP_WIFI_WL_EVENTING_MASK_LEN);
+  APP_WiFi_SetEventMaskBit(eventMask, 0U);   /* WLC_E_SET_SSID */
+  APP_WiFi_SetEventMaskBit(eventMask, 1U);   /* WLC_E_JOIN */
+  APP_WiFi_SetEventMaskBit(eventMask, 3U);   /* WLC_E_AUTH */
+  APP_WiFi_SetEventMaskBit(eventMask, 5U);   /* WLC_E_DEAUTH */
+  APP_WiFi_SetEventMaskBit(eventMask, 7U);   /* WLC_E_ASSOC */
+  APP_WiFi_SetEventMaskBit(eventMask, 11U);  /* WLC_E_DISASSOC */
+  APP_WiFi_SetEventMaskBit(eventMask, 16U);  /* WLC_E_LINK */
+  APP_WiFi_SetEventMaskBit(eventMask, 23U);  /* WLC_E_PRUNE */
+  APP_WiFi_SetEventMaskBit(eventMask, 26U);  /* WLC_E_SCAN_COMPLETE */
+  APP_WiFi_SetEventMaskBit(eventMask, 46U);  /* WLC_E_PSK_SUP */
+  APP_WiFi_SetEventMaskBit(eventMask, 69U);  /* WLC_E_ESCAN_RESULT */
+
+  if (APP_WiFi_Platform_Fn2Write(frame, frameLength) != HAL_OK)
+  {
+    APP_WiFi_Logf("[wifi] iovar: send %s failed id=%u sta=0x%08lX err=0x%08lX\n",
+                  APP_WIFI_IOVAR_EVENT_MSGS,
+                  (unsigned int)ioctlRequestId,
+                  (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
+                  (unsigned long)APP_WiFi_Platform_GetLastSdioError());
+    return HAL_ERROR;
+  }
+
+  g_wifiTxSequence = (uint8_t)(txSequence + 1U);
+  g_wifiIoctlRequestId = ioctlRequestId;
+  g_wifiIoctlProbeSent = 1U;
+  g_wifiIoctlProbeCompleted = 0U;
+  g_wifiLastIoctlCommand = APP_WIFI_WLC_SET_VAR;
+  g_wifiLastIoctlFlags = flags;
+  g_wifiLastIoctlStatus = 0U;
+  g_wifiLastIoctlValue = 0U;
+  APP_WiFi_Logf("[wifi] iovar: sent %s id=%u txseq=%u credits=%u maskLen=%u\n",
+                APP_WIFI_IOVAR_EVENT_MSGS,
+                (unsigned int)g_wifiIoctlRequestId,
+                (unsigned int)txSequence,
+                (unsigned int)availableCredits,
+                (unsigned int)APP_WIFI_WL_EVENTING_MASK_LEN);
+  return HAL_OK;
+}
+
+static HAL_StatusTypeDef APP_WiFi_SendSetPmOffIoctl(void)
+{
+  const uint32_t pmValue = APP_WIFI_PM_OFF;
+
+  return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
+                                   APP_WIFI_WLC_SET_PM,
+                                   &pmValue,
+                                   APP_WIFI_IOCTL_U32_SIZE,
+                                   "WLC_SET_PM(PM_OFF)");
+}
+
+static uint8_t APP_WiFi_TryProbeSdpcmRx(void)
+{
+  uint32_t frameInterrupt = 0U;
+  uint8_t header[APP_WIFI_SDPCM_CONTROL_HEADER_CAPTURE_SIZE] = {0};
+  uint8_t chunkBuffer[64] = {0};
+  uint8_t hwtagReadSize = APP_WIFI_SDPCM_HW_TAG_SIZE;
+  uint16_t frameLength = 0U;
+  uint16_t frameCheck = 0U;
+  uint16_t remaining = 0U;
+  uint16_t captured = APP_WIFI_SDPCM_HW_TAG_SIZE;
+
+  if (APP_WiFi_Platform_GetFunction2RxInterruptStatus(&frameInterrupt) != HAL_OK)
+  {
+    return 0U;
+  }
+
+  if ((frameInterrupt & APP_WIFI_SDPCM_FRAME_AVAILABLE_MASK) == 0U)
+  {
+    return 0U;
+  }
+
+  if (APP_WiFi_Platform_Fn2Read(header, APP_WIFI_SDPCM_HW_TAG_SIZE) != HAL_OK)
+  {
+    (void)APP_WiFi_Platform_AbortFunction2Read();
+
+    if (APP_WiFi_Platform_Fn2Read(chunkBuffer, (uint16_t)sizeof(chunkBuffer)) != HAL_OK)
+    {
+      APP_WiFi_Logf("[wifi] sdpcm: hwtag read failed irq=0x%08lX sta=0x%08lX err=0x%08lX\n",
+                    (unsigned long)frameInterrupt,
+                    (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
+                    (unsigned long)APP_WiFi_Platform_GetLastSdioError());
+      (void)APP_WiFi_Platform_AbortFunction2Read();
+      (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+      return 0U;
+    }
+
+    memcpy(header, chunkBuffer, APP_WIFI_SDPCM_HW_TAG_SIZE);
+    hwtagReadSize = (uint8_t)sizeof(chunkBuffer);
+    captured = (hwtagReadSize > APP_WIFI_SDPCM_CONTROL_HEADER_CAPTURE_SIZE) ? APP_WIFI_SDPCM_CONTROL_HEADER_CAPTURE_SIZE : hwtagReadSize;
+    if (captured > APP_WIFI_SDPCM_HW_TAG_SIZE)
+    {
+      memcpy(&header[APP_WIFI_SDPCM_HW_TAG_SIZE],
+             &chunkBuffer[APP_WIFI_SDPCM_HW_TAG_SIZE],
+             (size_t)(captured - APP_WIFI_SDPCM_HW_TAG_SIZE));
+    }
+
+    APP_WiFi_Logf("[wifi] sdpcm: hwtag fallback used irq=0x%08lX\n",
+                  (unsigned long)frameInterrupt);
+  }
+
+  frameLength = APP_WiFi_ReadLe16(&header[0]);
+  frameCheck = APP_WiFi_ReadLe16(&header[2]);
+
+  if ((frameLength == 0U) || ((uint16_t)(frameLength ^ frameCheck) != 0xFFFFU))
+  {
+    APP_WiFi_Logf("[wifi] sdpcm: hwtag mismatch irq=0x%08lX len=0x%04X chk=0x%04X\n",
+                  (unsigned long)frameInterrupt,
+                  (unsigned int)frameLength,
+                  (unsigned int)frameCheck);
+    APP_WiFi_LogSdpcmBytes("[wifi] sdpcm: raw=",
+                           header,
+                           captured);
+    (void)APP_WiFi_Platform_AbortFunction2Read();
+    (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+    return 0U;
+  }
+
+  if (frameLength > APP_WIFI_SDPCM_MAX_FRAME_LEN)
+  {
+    APP_WiFi_Logf("[wifi] sdpcm: frame too large irq=0x%08lX len=%u\n",
+                  (unsigned long)frameInterrupt,
+                  (unsigned int)frameLength);
+    (void)APP_WiFi_Platform_AbortFunction2Read();
+    (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+    return 0U;
+  }
+
+  remaining = (frameLength > hwtagReadSize) ? (uint16_t)(frameLength - hwtagReadSize) : 0U;
+  while (remaining > 0U)
+  {
+    const uint16_t chunkSize = APP_WiFi_GetSdpcmChunkSize(remaining);
+    uint16_t copyLength = 0U;
+    HAL_StatusTypeDef status = HAL_ERROR;
+
+    if (chunkSize == 1U)
+    {
+      status = APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN2, 0U, &chunkBuffer[0]);
+    }
+    else
+    {
+      status = APP_WiFi_Platform_Fn2Read(chunkBuffer, chunkSize);
+    }
+
+    if (status != HAL_OK)
+    {
+      APP_WiFi_Logf("[wifi] sdpcm: payload read failed irq=0x%08lX len=%u rem=%u sta=0x%08lX err=0x%08lX\n",
+                    (unsigned long)frameInterrupt,
+                    (unsigned int)frameLength,
+                    (unsigned int)remaining,
+                    (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
+                    (unsigned long)APP_WiFi_Platform_GetLastSdioError());
+      (void)APP_WiFi_Platform_AbortFunction2Read();
+      (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+      return 0U;
+    }
+
+    if (captured < APP_WIFI_SDPCM_CONTROL_HEADER_CAPTURE_SIZE)
+    {
+      copyLength = (uint16_t)(APP_WIFI_SDPCM_CONTROL_HEADER_CAPTURE_SIZE - captured);
+      if (copyLength > chunkSize)
+      {
+        copyLength = chunkSize;
+      }
+
+      memcpy(&header[captured], chunkBuffer, copyLength);
+      captured = (uint16_t)(captured + copyLength);
+    }
+
+    remaining = (uint16_t)(remaining - chunkSize);
+  }
+
+  if (frameLength < APP_WIFI_SDPCM_HEADER_SIZE)
+  {
+    APP_WiFi_Logf("[wifi] sdpcm: short frame irq=0x%08lX len=%u\n",
+                  (unsigned long)frameInterrupt,
+                  (unsigned int)frameLength);
+    (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+    return 1U;
+  }
+
+  APP_WiFi_UpdateSdpcmCredit(header);
+  APP_WiFi_RecordSdpcmHeader(header, frameLength, frameInterrupt);
+  if ((g_wifiLastSdpcmChannel == APP_WIFI_SDPCM_CHANNEL_CONTROL) &&
+      (captured >= (APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE)))
+  {
+    const uint32_t command = APP_WiFi_ReadLe32(&header[APP_WIFI_SDPCM_HEADER_SIZE + 0U]);
+    const uint32_t payloadLength = APP_WiFi_ReadLe32(&header[APP_WIFI_SDPCM_HEADER_SIZE + 4U]);
+    const uint32_t flags = APP_WiFi_ReadLe32(&header[APP_WIFI_SDPCM_HEADER_SIZE + 8U]);
+    const uint32_t status = APP_WiFi_ReadLe32(&header[APP_WIFI_SDPCM_HEADER_SIZE + 12U]);
+
+    g_wifiLastIoctlCommand = command;
+    g_wifiLastIoctlFlags = flags;
+    g_wifiLastIoctlStatus = status;
+
+    if ((command == APP_WIFI_WLC_GET_VERSION) &&
+        (payloadLength >= sizeof(uint32_t)) &&
+        (captured >= (APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + sizeof(uint32_t))))
+    {
+      g_wifiLastIoctlValue = APP_WiFi_ReadLe32(&header[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE]);
+    }
+
+    if ((command == APP_WIFI_WLC_GET_VAR) &&
+        (payloadLength >= APP_WIFI_MAC_ADDRESS_SIZE) &&
+        (captured >= (APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + APP_WIFI_MAC_ADDRESS_SIZE)))
+    {
+      memcpy(g_wifiLastMacAddress,
+             &header[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE],
+             APP_WIFI_MAC_ADDRESS_SIZE);
+      APP_WiFi_LogMacAddress("[wifi] iovar: rsp cur_etheraddr mac=", g_wifiLastMacAddress);
+    }
+
+    APP_WiFi_Logf("[wifi] ioctl: rsp cmd=%lu id=%u len=%lu status=0x%08lX value=0x%08lX\n",
+                  (unsigned long)command,
+                  (unsigned int)((flags & APP_WIFI_SDPCM_IOCTL_ID_MASK) >> APP_WIFI_SDPCM_IOCTL_ID_SHIFT),
+                  (unsigned long)payloadLength,
+                  (unsigned long)status,
+                  (unsigned long)g_wifiLastIoctlValue);
+
+    if (((flags & APP_WIFI_SDPCM_IOCTL_ID_MASK) >> APP_WIFI_SDPCM_IOCTL_ID_SHIFT) == g_wifiIoctlRequestId)
+    {
+      g_wifiIoctlProbeCompleted = 1U;
+
+      if ((command == APP_WIFI_WLC_GET_VERSION) && (status == 0U))
+      {
+        g_wifiVersionProbeCompleted = 1U;
+      }
+
+      if ((command == APP_WIFI_WLC_UP) && (status == 0U))
+      {
+        g_wifiUpProbeCompleted = 1U;
+      }
+
+      if ((command == APP_WIFI_WLC_GET_VAR) && (status == 0U))
+      {
+        g_wifiMacProbeCompleted = 1U;
+      }
+
+      if ((command == APP_WIFI_WLC_SET_VAR) && (status == 0U))
+      {
+        g_wifiEventMaskCompleted = 1U;
+      }
+
+      if ((command == APP_WIFI_WLC_SET_PM) && (status == 0U))
+      {
+        g_wifiPmProbeCompleted = 1U;
+      }
+    }
+  }
+  if ((frameLength == APP_WIFI_SDPCM_HEADER_SIZE) &&
+      (g_wifiLastSdpcmHeaderLength == APP_WIFI_SDPCM_HEADER_SIZE))
+  {
+    APP_WiFi_Logf("[wifi] sdpcm: credit-only seq=%u ch=%s credit=%u diff=%u flow=%u\n",
+                  (unsigned int)g_wifiLastSdpcmSequence,
+                  APP_WiFi_SdpcmChannelToString(g_wifiLastSdpcmChannel),
+                  (unsigned int)g_wifiBusCredit,
+                  (unsigned int)g_wifiBusCreditDiff,
+                  (unsigned int)g_wifiLastSdpcmFlowControl);
+  }
+  (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+  return 1U;
 }
 
 static void APP_WiFi_LogStateDetails(APP_WiFiState_t state)
@@ -302,17 +1076,87 @@ static void APP_WiFi_LogPeriodicHeartbeat(void)
 
   if (g_wifiState == APP_WIFI_STATE_MAILBOX_READY)
   {
+    uint32_t drainCount = 0U;
+
+    for (drainCount = 0U; drainCount < 4U; ++drainCount)
+    {
+      if (APP_WiFi_TryProbeSdpcmRx() == 0U)
+      {
+        break;
+      }
+    }
+
+    if (g_wifiIoctlProbeSent == 0U)
+    {
+      (void)APP_WiFi_SendGetVersionIoctl();
+    }
+    else if ((g_wifiVersionProbeCompleted != 0U) &&
+             (g_wifiUpProbeSent == 0U) &&
+             (g_wifiIoctlProbeCompleted != 0U))
+    {
+      if (APP_WiFi_SendUpIoctl() == HAL_OK)
+      {
+        g_wifiUpProbeSent = 1U;
+      }
+    }
+    else if ((g_wifiUpProbeCompleted != 0U) &&
+             (g_wifiMacProbeSent == 0U) &&
+             (g_wifiIoctlProbeCompleted != 0U))
+    {
+      if (APP_WiFi_SendGetCurEtheraddrIovar() == HAL_OK)
+      {
+        g_wifiMacProbeSent = 1U;
+      }
+    }
+    else if ((g_wifiMacProbeCompleted != 0U) &&
+             (g_wifiEventMaskSent == 0U) &&
+             (g_wifiIoctlProbeCompleted != 0U))
+    {
+      if (APP_WiFi_SendSetEventMsgsIovar() == HAL_OK)
+      {
+        g_wifiEventMaskSent = 1U;
+      }
+    }
+    else if ((g_wifiEventMaskCompleted != 0U) &&
+             (g_wifiPmProbeSent == 0U) &&
+             (g_wifiIoctlProbeCompleted != 0U))
+    {
+      if (APP_WiFi_SendSetPmOffIoctl() == HAL_OK)
+      {
+        g_wifiPmProbeSent = 1U;
+      }
+    }
+
     (void)APP_WiFi_Platform_ProbeConsole();
     (void)APP_WiFi_Platform_ProbeMailbox();
 
-    APP_WiFi_Logf("[wifi] heartbeat: state=%s sdioIrq=%lu oob=%lu mailbox=0x%08lX int=0x%08lX consoleWr=%lu consoleOut=%lu\n",
+    APP_WiFi_Logf("[wifi] heartbeat: state=%s sdioIrq=%lu oob=%lu mailbox=0x%08lX int=0x%08lX consoleWr=%lu consoleOut=%lu sdpcm=%lu len=%u ch=%u seq=%u credit=%u flow=%u ioctlSent=%u ioctlDone=%u ioctlCmd=%lu ioctlStatus=0x%08lX verOk=%u upSent=%u upOk=%u macSent=%u macOk=%u evtSent=%u evtOk=%u pmSent=%u pmOk=%u\n",
                   APP_WiFi_StateToString(g_wifiState),
                   (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
                   (unsigned long)APP_WiFi_GetOobInterruptCount(),
                   (unsigned long)APP_WiFi_Platform_GetHostMailboxData(),
                   (unsigned long)APP_WiFi_Platform_GetInterruptStatus(),
                   (unsigned long)APP_WiFi_Platform_GetConsoleWriteIndex(),
-                  (unsigned long)APP_WiFi_Platform_GetConsoleOutIndex());
+                  (unsigned long)APP_WiFi_Platform_GetConsoleOutIndex(),
+                  (unsigned long)g_wifiSdpcmFrameCount,
+                  (unsigned int)g_wifiLastSdpcmFrameLength,
+                  (unsigned int)g_wifiLastSdpcmChannel,
+                  (unsigned int)g_wifiLastSdpcmSequence,
+                  (unsigned int)g_wifiBusCredit,
+                  (unsigned int)g_wifiLastSdpcmFlowControl,
+                  (unsigned int)g_wifiIoctlProbeSent,
+                  (unsigned int)g_wifiIoctlProbeCompleted,
+                  (unsigned long)g_wifiLastIoctlCommand,
+                  (unsigned long)g_wifiLastIoctlStatus,
+                  (unsigned int)g_wifiVersionProbeCompleted,
+                  (unsigned int)g_wifiUpProbeSent,
+                  (unsigned int)g_wifiUpProbeCompleted,
+                  (unsigned int)g_wifiMacProbeSent,
+                  (unsigned int)g_wifiMacProbeCompleted,
+                  (unsigned int)g_wifiEventMaskSent,
+                  (unsigned int)g_wifiEventMaskCompleted,
+                  (unsigned int)g_wifiPmProbeSent,
+                  (unsigned int)g_wifiPmProbeCompleted);
     return;
   }
 

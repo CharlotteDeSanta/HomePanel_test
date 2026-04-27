@@ -13,11 +13,13 @@
 #define APP_WIFI_SDIO_CMD53_TIMEOUT_MS 100U
 #define APP_WIFI_SDIO_FN0             0U
 #define APP_WIFI_SDIO_FN1             1U
+#define APP_WIFI_SDIO_FN2             2U
 #define APP_WIFI_SDIO_CCCR_REV        0x00U
 #define APP_WIFI_SDIO_CCCR_SDREV      0x01U
 #define APP_WIFI_SDIO_CCCR_IOEN       0x02U
 #define APP_WIFI_SDIO_CCCR_IORDY      0x03U
 #define APP_WIFI_SDIO_CCCR_INTEN      0x04U
+#define APP_WIFI_SDIO_CCCR_IOABORT    0x06U
 #define APP_WIFI_SDIO_CCCR_BICTRL     0x07U
 #define APP_WIFI_SDIO_CCCR_CAPS       0x08U
 #define APP_WIFI_SDIO_SEP_INT_CTL     0xF2U
@@ -25,6 +27,8 @@
 #define APP_WIFI_SDIO_CCCR_BLKSIZE_1  0x11U
 #define APP_WIFI_SDIO_CCCR_F1BLKSIZE_0 0x110U
 #define APP_WIFI_SDIO_CCCR_F1BLKSIZE_1 0x111U
+#define APP_WIFI_SDIO_CCCR_F2BLKSIZE_0 0x210U
+#define APP_WIFI_SDIO_CCCR_F2BLKSIZE_1 0x211U
 #define APP_WIFI_SDIO_BLOCK_SIZE      64U
 #define APP_WIFI_SDIO_FUNC_ENABLE_1   0x02U
 #define APP_WIFI_SDIO_FUNC_ENABLE_2   0x04U
@@ -39,6 +43,7 @@
 #define APP_WIFI_SDIO_SEP_INTR_EN         0x02U
 #define APP_WIFI_SDIO_SEP_INTR_POL        0x04U
 #define APP_WIFI_SDIO_FUNCTION2_WATERMARK 0x10008U
+#define APP_WIFI_SDIO_FRAME_CONTROL   0x1000DU
 #define APP_WIFI_SDIO_BACKPLANE_ADDRESS_LOW  0x1000AU
 #define APP_WIFI_SDIO_BACKPLANE_ADDRESS_MID  0x1000BU
 #define APP_WIFI_SDIO_BACKPLANE_ADDRESS_HIGH 0x1000CU
@@ -83,6 +88,7 @@
 #define APP_WIFI_SICF_CPUHALT 0x20U
 #define APP_WIFI_AIRC_RESET 0x01U
 #define APP_WIFI_I_HMB_HOST_INT 0x00000080U
+#define APP_WIFI_SFC_RF_TERM    0x01U
 #define APP_WIFI_FIRMWARE_BOOT_TIMEOUT_MS 500U
 #define APP_WIFI_CONSOLE_LOG_OFFSET (sizeof(uint32_t) * 2U)
 
@@ -534,6 +540,16 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigureBus(void)
     return HAL_ERROR;
   }
 
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_F2BLKSIZE_0, APP_WIFI_SDIO_BLOCK_SIZE) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_F2BLKSIZE_1, 0U) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
   if (APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN0, APP_WIFI_SDIO_CCCR_BICTRL, &value) != HAL_OK)
   {
     return HAL_ERROR;
@@ -564,12 +580,6 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Read(uint8_t functionNumber, uint32_t a
 {
   const uint32_t transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
   const uint32_t dctrlBlockSize = APP_WiFi_Platform_GetDctrlBlockSize(transferLength);
-  const uint32_t argument = APP_WiFi_Platform_BuildCmd53Argument(0U,
-                                                                 functionNumber,
-                                                                 address,
-                                                                 0U,
-                                                                 1U,
-                                                                 (uint16_t)transferLength);
 
   if ((data == NULL) || (dataLength == 0U) || (transferLength == 0U) || (dctrlBlockSize == 0U) ||
       (transferLength > sizeof(g_wifiCmd53Scratch)))
@@ -588,7 +598,12 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Read(uint8_t functionNumber, uint32_t a
   SDMMC1->IDMACTRL = SDMMC_ENABLE_IDMA_SINGLE_BUFF;
   SDMMC1->IDMABASE0 = (uint32_t)g_wifiCmd53Scratch;
 
-  SDMMC1->ARG = argument;
+  SDMMC1->ARG = APP_WiFi_Platform_BuildCmd53Argument(0U,
+                                                     functionNumber,
+                                                     address,
+                                                     0U,
+                                                     1U,
+                                                     (uint16_t)transferLength);
   SDMMC1->CMD = (uint32_t)(SDMMC_CMD_SDMMC_RW_EXTENDED | SDMMC_RESPONSE_SHORT | SDMMC_WAIT_NO | SDMMC_CPSM_ENABLE | SDMMC_CMD_CMDTRANS);
 
   if (APP_WiFi_Platform_WaitCmd53Transfer() != HAL_OK)
@@ -1277,6 +1292,193 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeMailbox(void)
   return HAL_OK;
 }
 
+HAL_StatusTypeDef APP_WiFi_Platform_GetFunction2RxInterruptStatus(uint32_t *frameStatus)
+{
+  uint32_t interruptStatus = 0U;
+
+  if (frameStatus == NULL)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_BackplaneRead32(APP_WIFI_SDIO_INT_STATUS_ADDRESS, &interruptStatus) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiInterruptStatus = interruptStatus;
+  *frameStatus = (interruptStatus & APP_WIFI_HOST_INT_MASK_VALUE);
+
+  if ((*frameStatus != 0U) &&
+      (APP_WiFi_Platform_BackplaneWrite32(APP_WIFI_SDIO_INT_STATUS_ADDRESS, *frameStatus) != HAL_OK))
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiInterruptStatus &= ~(*frameStatus);
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_ClearFunction2RxInterrupt(uint32_t frameStatus)
+{
+  if (frameStatus == 0U)
+  {
+    return HAL_OK;
+  }
+
+  if (APP_WiFi_Platform_BackplaneWrite32(APP_WIFI_SDIO_INT_STATUS_ADDRESS, frameStatus) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiInterruptStatus &= ~frameStatus;
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_AbortFunction2Read(void)
+{
+  if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0,
+                                   APP_WIFI_SDIO_CCCR_IOABORT,
+                                   APP_WIFI_SDIO_FN2) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_FRAME_CONTROL, APP_WIFI_SFC_RF_TERM) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_Fn2Read(uint8_t *data, uint16_t dataLength)
+{
+  uint16_t count = 0U;
+  uint8_t blockMode = 0U;
+
+  if ((data == NULL) || (dataLength == 0U) || (dataLength > APP_WIFI_SDIO_BLOCK_SIZE))
+  {
+    return HAL_ERROR;
+  }
+
+  if (dataLength == 1U)
+  {
+    return APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN2, 0U, data);
+  }
+
+  if (dataLength >= APP_WIFI_SDIO_BLOCK_SIZE)
+  {
+    blockMode = 1U;
+    count = (uint16_t)((dataLength + APP_WIFI_SDIO_BLOCK_SIZE - 1U) / APP_WIFI_SDIO_BLOCK_SIZE);
+  }
+  else
+  {
+    blockMode = 0U;
+    count = dataLength;
+  }
+
+  memset((void *)g_wifiCmd53Scratch, 0, sizeof(g_wifiCmd53Scratch));
+  APP_WiFi_Platform_DCacheClean((const void *)g_wifiCmd53Scratch, dataLength);
+
+  SDMMC1->MASK = 0U;
+  SDMMC1->ICR = 0xFFFFFFFFU;
+  SDMMC1->DTIMER = SDMMC_DATATIMEOUT;
+  SDMMC1->DLEN = dataLength;
+  SDMMC1->DCTRL = SDMMC_DATABLOCK_SIZE_64B |
+                  SDMMC_TRANSFER_DIR_TO_SDMMC |
+                  SDMMC_TRANSFER_MODE_BLOCK |
+                  SDMMC_DCTRL_SDIOEN;
+  SDMMC1->IDMACTRL = SDMMC_ENABLE_IDMA_SINGLE_BUFF;
+  SDMMC1->IDMABASE0 = (uint32_t)g_wifiCmd53Scratch;
+
+  SDMMC1->ARG = APP_WiFi_Platform_BuildCmd53Argument(0U,
+                                                     APP_WIFI_SDIO_FN2,
+                                                     0U,
+                                                     blockMode,
+                                                     1U,
+                                                     count);
+  SDMMC1->CMD = (uint32_t)(SDMMC_CMD_SDMMC_RW_EXTENDED | SDMMC_RESPONSE_SHORT | SDMMC_WAIT_NO | SDMMC_CPSM_ENABLE | SDMMC_CMD_CMDTRANS);
+
+  if (APP_WiFi_Platform_WaitCmd53Transfer() != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  APP_WiFi_Platform_DCacheInvalidate((const void *)g_wifiCmd53Scratch, dataLength);
+  memcpy(data, (const void *)g_wifiCmd53Scratch, dataLength);
+  return HAL_OK;
+}
+
+HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataLength)
+{
+  uint32_t transferLength = 0U;
+  uint32_t dmaTransferLength = 0U;
+  uint32_t dctrlBlockSize = 0U;
+  uint16_t count = 0U;
+  uint8_t blockMode = 0U;
+
+  if ((data == NULL) || (dataLength == 0U) || (dataLength > APP_WIFI_SDIO_BLOCK_SIZE))
+  {
+    return HAL_ERROR;
+  }
+
+  memset((void *)g_wifiCmd53Scratch, 0, sizeof(g_wifiCmd53Scratch));
+  memcpy((void *)g_wifiCmd53Scratch, data, dataLength);
+
+  if (dataLength >= APP_WIFI_SDIO_BLOCK_SIZE)
+  {
+    transferLength = APP_WIFI_SDIO_BLOCK_SIZE;
+    dmaTransferLength = (uint32_t)(((dataLength + APP_WIFI_SDIO_BLOCK_SIZE - 1U) / APP_WIFI_SDIO_BLOCK_SIZE) * APP_WIFI_SDIO_BLOCK_SIZE);
+    dctrlBlockSize = SDMMC_DATABLOCK_SIZE_64B;
+    blockMode = 1U;
+    count = (uint16_t)(dmaTransferLength / APP_WIFI_SDIO_BLOCK_SIZE);
+  }
+  else
+  {
+    transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
+    dmaTransferLength = transferLength;
+    dctrlBlockSize = APP_WiFi_Platform_GetDctrlBlockSize(transferLength);
+    blockMode = 0U;
+    count = (uint16_t)transferLength;
+  }
+
+  if ((transferLength == 0U) || (dmaTransferLength == 0U) || (dctrlBlockSize == 0U) ||
+      (dmaTransferLength > sizeof(g_wifiCmd53Scratch)))
+  {
+    return HAL_ERROR;
+  }
+
+  APP_WiFi_Platform_DCacheClean((const void *)g_wifiCmd53Scratch, dmaTransferLength);
+
+  SDMMC1->MASK = 0U;
+  SDMMC1->ICR = 0xFFFFFFFFU;
+  SDMMC1->DTIMER = SDMMC_DATATIMEOUT;
+  SDMMC1->DLEN = dmaTransferLength;
+  SDMMC1->DCTRL = dctrlBlockSize |
+                  SDMMC_TRANSFER_DIR_TO_CARD |
+                  SDMMC_TRANSFER_MODE_BLOCK |
+                  SDMMC_DCTRL_SDIOEN;
+  SDMMC1->IDMACTRL = SDMMC_ENABLE_IDMA_SINGLE_BUFF;
+  SDMMC1->IDMABASE0 = (uint32_t)g_wifiCmd53Scratch;
+
+  SDMMC1->ARG = APP_WiFi_Platform_BuildCmd53Argument(1U,
+                                                     APP_WIFI_SDIO_FN2,
+                                                     0U,
+                                                     blockMode,
+                                                     1U,
+                                                     count);
+  SDMMC1->CMD = (uint32_t)(SDMMC_CMD_SDMMC_RW_EXTENDED | SDMMC_RESPONSE_SHORT | SDMMC_WAIT_NO | SDMMC_CPSM_ENABLE | SDMMC_CMD_CMDTRANS);
+
+  if (APP_WiFi_Platform_WaitCmd53Transfer() != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  return HAL_OK;
+}
+
 uint32_t APP_WiFi_Platform_GetSdioInterruptCount(void)
 {
   return g_wifiSdioInterruptCount;
@@ -1614,12 +1816,6 @@ static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, ui
 {
   const uint32_t transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
   const uint32_t dctrlBlockSize = APP_WiFi_Platform_GetDctrlBlockSize(transferLength);
-  const uint32_t argument = APP_WiFi_Platform_BuildCmd53Argument(1U,
-                                                                 functionNumber,
-                                                                 address,
-                                                                 0U,
-                                                                 1U,
-                                                                 (uint16_t)transferLength);
 
   if ((data == NULL) || (dataLength == 0U) || (transferLength == 0U) || (dctrlBlockSize == 0U) ||
       (transferLength > sizeof(g_wifiCmd53Scratch)))
@@ -1639,7 +1835,12 @@ static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, ui
   SDMMC1->IDMACTRL = SDMMC_ENABLE_IDMA_SINGLE_BUFF;
   SDMMC1->IDMABASE0 = (uint32_t)g_wifiCmd53Scratch;
 
-  SDMMC1->ARG = argument;
+  SDMMC1->ARG = APP_WiFi_Platform_BuildCmd53Argument(1U,
+                                                     functionNumber,
+                                                     address,
+                                                     0U,
+                                                     1U,
+                                                     (uint16_t)transferLength);
   SDMMC1->CMD = (uint32_t)(SDMMC_CMD_SDMMC_RW_EXTENDED | SDMMC_RESPONSE_SHORT | SDMMC_WAIT_NO | SDMMC_CPSM_ENABLE | SDMMC_CMD_CMDTRANS);
 
   if (APP_WiFi_Platform_WaitCmd53Transfer() != HAL_OK)
