@@ -8,6 +8,7 @@
 #include <touchgfx/containers/Container.hpp>
 #include <touchgfx/widgets/Box.hpp>
 #include <touchgfx/widgets/TextArea.hpp>
+#include <touchgfx/widgets/ToggleButton.hpp>
 #include <touchgfx/widgets/RadioButton.hpp>
 #include <touchgfx/widgets/RadioButtonGroup.hpp>
 #include <touchgfx/widgets/Image.hpp>
@@ -110,6 +111,9 @@ protected:
      */
     touchgfx::Box backgroundBox;
     touchgfx::TextArea headerText;
+    touchgfx::ToggleButton usbButton3;
+    touchgfx::ToggleButton usbButton2;
+    touchgfx::ToggleButton usbButton1;
     touchgfx::RadioButtonGroup<4> fanButtons;
     touchgfx::RadioButton lowFanButton;
     touchgfx::RadioButton mediumFanButton;

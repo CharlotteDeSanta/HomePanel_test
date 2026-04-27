@@ -448,7 +448,7 @@
             "X": 510,
             "Y": 55,
             "Width": 260,
-            "Height": 366,
+            "Height": 398,
             "Visible": false,
             "CustomContainerDefinitionName": "SetTempAndFan"
           },
@@ -2096,14 +2096,14 @@
       {
         "Name": "SetTempAndFan",
         "Width": 260,
-        "Height": 366,
+        "Height": 419,
         "Components": [
           {
             "Type": "Box",
             "Name": "backgroundBox",
             "Y": 15,
             "Width": 260,
-            "Height": 330,
+            "Height": 404,
             "Color": {
               "Red": 244,
               "Green": 247,
@@ -2124,6 +2124,39 @@
               "Green": 123,
               "Blue": 158
             }
+          },
+          {
+            "Type": "ToggleButton",
+            "Name": "usbButton3",
+            "X": 173,
+            "Y": 368,
+            "Width": 62,
+            "Height": 34,
+            "Pressed": "__generated\\clay_theme_images_widgets_togglebutton_small_round_small_on_action.png",
+            "Released": "__generated\\clay_theme_images_widgets_togglebutton_small_round_small_off_light.png",
+            "Preset": "clay_theme\\presets\\togglebutton\\small\\round_neutral_action.json"
+          },
+          {
+            "Type": "ToggleButton",
+            "Name": "usbButton2",
+            "X": 99,
+            "Y": 368,
+            "Width": 62,
+            "Height": 34,
+            "Pressed": "__generated\\clay_theme_images_widgets_togglebutton_small_round_small_on_action.png",
+            "Released": "__generated\\clay_theme_images_widgets_togglebutton_small_round_small_off_light.png",
+            "Preset": "clay_theme\\presets\\togglebutton\\small\\round_neutral_action.json"
+          },
+          {
+            "Type": "ToggleButton",
+            "Name": "usbButton1",
+            "X": 25,
+            "Y": 368,
+            "Width": 62,
+            "Height": 34,
+            "Pressed": "__generated\\clay_theme_images_widgets_togglebutton_small_round_small_on_action.png",
+            "Released": "__generated\\clay_theme_images_widgets_togglebutton_small_round_small_off_light.png",
+            "Preset": "clay_theme\\presets\\togglebutton\\small\\round_neutral_action.json"
           },
           {
             "Type": "RadioButton",
@@ -2235,7 +2268,8 @@
           {
             "Type": "Image",
             "Name": "bottomImage",
-            "Y": 345,
+            "X": -1,
+            "Y": 419,
             "Width": 260,
             "Height": 15,
             "RelativeFilename": "Main\\Set_temp_buttom.png"

@@ -17,8 +17,8 @@ SetTempAndFanBase::SetTempAndFanBase() :
     scrollWheel1IsAnimatingCallback(this, &SetTempAndFanBase::scrollWheel1IsAnimatingCallbackHandler)
 {
     setWidth(260);
-    setHeight(366);
-    backgroundBox.setPosition(0, 15, 260, 330);
+    setHeight(419);
+    backgroundBox.setPosition(0, 15, 260, 404);
     backgroundBox.setColor(touchgfx::Color::getColorFromRGB(244, 247, 251));
     add(backgroundBox);
 
@@ -27,6 +27,18 @@ SetTempAndFanBase::SetTempAndFanBase() :
     headerText.setLinespacing(0);
     headerText.setTypedText(touchgfx::TypedText(T___SINGLEUSE_8O5R));
     add(headerText);
+
+    usbButton3.setXY(173, 368);
+    usbButton3.setBitmaps(touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_TOGGLEBUTTON_SMALL_ROUND_SMALL_OFF_LIGHT_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_TOGGLEBUTTON_SMALL_ROUND_SMALL_ON_ACTION_ID));
+    add(usbButton3);
+
+    usbButton2.setXY(99, 368);
+    usbButton2.setBitmaps(touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_TOGGLEBUTTON_SMALL_ROUND_SMALL_OFF_LIGHT_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_TOGGLEBUTTON_SMALL_ROUND_SMALL_ON_ACTION_ID));
+    add(usbButton2);
+
+    usbButton1.setXY(25, 368);
+    usbButton1.setBitmaps(touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_TOGGLEBUTTON_SMALL_ROUND_SMALL_OFF_LIGHT_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_TOGGLEBUTTON_SMALL_ROUND_SMALL_ON_ACTION_ID));
+    add(usbButton1);
 
     fanButtons.setRadioButtonSelectedHandler(radioButtonSelectedCallback);
     
@@ -78,7 +90,7 @@ SetTempAndFanBase::SetTempAndFanBase() :
     headerImage.setBitmap(touchgfx::Bitmap(BITMAP_ICON_LIVINGROOM_ID));
     add(headerImage);
 
-    bottomImage.setXY(0, 345);
+    bottomImage.setXY(-1, 419);
     bottomImage.setBitmap(touchgfx::Bitmap(BITMAP_SET_TEMP_BUTTOM_ID));
     add(bottomImage);
 

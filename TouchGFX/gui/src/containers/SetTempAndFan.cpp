@@ -35,6 +35,12 @@ void SetTempAndFan::startupAnimation()
     mediumFanButton.setAlpha(0);
     lowFanButton.setAlpha(0);
     headerText.setAlpha(0);
+    usbButton1.setAlpha(0);
+    usbButton2.setAlpha(0);
+    usbButton3.setAlpha(0);
+    usbButton1.setTouchable(false);
+    usbButton2.setTouchable(false);
+    usbButton3.setTouchable(false);
     scrollWheel1.setVisible(false);
 
     // Move into position
@@ -92,6 +98,12 @@ void SetTempAndFan::handleTickEvent()
             mediumFanButton.setAlpha(0);
             lowFanButton.setAlpha(0);
             headerText.setAlpha(0);
+            usbButton1.setAlpha(0);
+            usbButton2.setAlpha(0);
+            usbButton3.setAlpha(0);
+            usbButton1.setTouchable(false);
+            usbButton2.setTouchable(false);
+            usbButton3.setTouchable(false);
             scrollWheel1.setVisible(false);
             faderBox.setAlpha(0);
 
@@ -230,6 +242,12 @@ void SetTempAndFan::fadeIn()
     mediumFanButton.setAlpha(255);
     lowFanButton.setAlpha(255);
     headerText.setAlpha(255);
+    usbButton1.setAlpha(255);
+    usbButton2.setAlpha(255);
+    usbButton3.setAlpha(255);
+    usbButton1.setTouchable(true);
+    usbButton2.setTouchable(true);
+    usbButton3.setTouchable(true);
     scrollWheel1.setVisible(true);
     invalidate();
 }

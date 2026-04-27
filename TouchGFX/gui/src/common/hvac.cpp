@@ -1,6 +1,5 @@
 #include "gui/common/hvac.hpp"
-
-#include "rtc.h"
+#include "gui/common/GuiTime.hpp"
 
 #include <math.h>
 #include <string.h>
@@ -110,9 +109,9 @@ float getFanStrength(HVAC_FanMode_t fanMode, float difference)
     }
 }
 
-uint8_t getRtcDateTime(APP_RTC_DateTime_t& dateTime)
+bool getRtcDateTime(GuiDateTime& dateTime)
 {
-    return APP_RTC_GetDateTime(&dateTime);
+    return GUI_Time_GetDateTime(dateTime);
 }
 
 uint16_t getCurrentWeatherCode(uint16_t baseCode, uint8_t hour)
@@ -171,12 +170,12 @@ float getCurrentOutdoorTemperature(const WeatherTemplate& weather, uint8_t hour,
 
 void refreshWeatherState(uint32_t nowMs)
 {
-    APP_RTC_DateTime_t dateTime = {};
+    GuiDateTime dateTime = {};
     uint8_t weekday = 1U;
     uint8_t hour = 12U;
     uint8_t minute = 0U;
 
-    if (getRtcDateTime(dateTime) != 0U)
+    if (getRtcDateTime(dateTime))
     {
         weekday = dateTime.weekday % 7U;
         hour = dateTime.hour;
@@ -284,7 +283,7 @@ void fillTelemetryEvent(HVAC_Event_t* event, uint32_t nowMs)
 
 bool xHVAC_ControllerInit()
 {
-    const uint32_t nowMs = HAL_GetTick();
+    const uint32_t nowMs = GUI_Time_GetTickMs();
 
     g_controllerInitialized = true;
     g_pendingWeatherEvent = true;
@@ -343,7 +342,7 @@ bool xHVAC_ReceiveFromController(HVAC_Event_t* event, uint32_t xTicksToWait)
         xHVAC_ControllerInit();
     }
 
-    const uint32_t nowMs = HAL_GetTick();
+    const uint32_t nowMs = GUI_Time_GetTickMs();
     stepController(nowMs);
 
     if (g_pendingWeatherEvent)
@@ -409,7 +408,7 @@ bool xHVAC_GetWeather(HVAC_Weather_t* pxWeather)
         xHVAC_ControllerInit();
     }
 
-    stepController(HAL_GetTick());
+    stepController(GUI_Time_GetTickMs());
     *pxWeather = g_weather;
     return true;
 }

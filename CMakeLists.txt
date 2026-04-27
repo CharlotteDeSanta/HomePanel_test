@@ -40,6 +40,11 @@ add_subdirectory(cmake/stm32cubemx)
 # Add touchgfx generated sources and libraries
 add_subdirectory(cmake/touchgfx)
 
+# Keep custom TouchGFX helper sources outside Designer-generated CMake files.
+target_sources(TouchGFX PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/TouchGFX/gui/src/common/GuiTime.cpp
+)
+
 # Keep board support code in BSP even if CubeMX regenerates these files.
 set_source_files_properties(
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/gpio.c

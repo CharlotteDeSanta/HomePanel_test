@@ -1,10 +1,9 @@
 #include <gui/model/Model.hpp>
 #include <gui/model/ModelListener.hpp>
+#include <gui/common/GuiTime.hpp>
 #include <images/BitmapDatabase.hpp>
 #include <texts/TextKeysAndLanguages.hpp>
 #include <algorithm>
-#include <rtc.h>
-#include <stm32h7xx_hal.h>
 
 namespace
 {
@@ -121,8 +120,8 @@ Model::Model() :
         weatherData.dailyWeatherText[i] = getTextFromWeatherCode(incomingEvent.weather.daily_code[i]);
     }
 
-    APP_RTC_DateTime_t rtcDateTime = {};
-    if (APP_RTC_GetDateTime(&rtcDateTime) != 0U)
+    GuiDateTime rtcDateTime = {};
+    if (GUI_Time_GetDateTime(rtcDateTime))
     {
         clockYear = rtcDateTime.year;
         clockMonth = rtcDateTime.month;
@@ -135,7 +134,7 @@ Model::Model() :
 
 void Model::tick()
 {
-    const uint32_t nowMs = HAL_GetTick();
+    const uint32_t nowMs = GUI_Time_GetTickMs();
 
     if (!runtimeTimingInitialized)
     {
@@ -443,8 +442,8 @@ void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& retu
 
 void Model::syncClockFromRtc(bool forceNotify)
 {
-    APP_RTC_DateTime_t rtcDateTime = {};
-    if (APP_RTC_GetDateTime(&rtcDateTime) == 0U)
+    GuiDateTime rtcDateTime = {};
+    if (!GUI_Time_GetDateTime(rtcDateTime))
     {
         return;
     }

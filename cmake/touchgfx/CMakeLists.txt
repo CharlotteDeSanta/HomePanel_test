@@ -20,6 +20,7 @@ set(TouchGFX_Include_Dirs
 # TouchGFX generated application sources
 set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/FrontendApplication.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/GuiTime.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/hvac.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/MenuElement.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/MenuElementSelected.cpp
@@ -239,6 +240,8 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w95_Thunder_slight_big.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w96_Thunserstorm_slight_big.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w99_Thunserstorm_heavy_hail_big.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_togglebutton_small_round_small_off_light.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_togglebutton_small_round_small_on_action.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_00.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_01.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_02.cpp

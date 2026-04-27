@@ -336,6 +336,9 @@
     <ClCompile Include="..\..\generated\gui_generated\src\weather_screen\WeatherViewBase.cpp">
       <Filter>Source Files\generated\gui_generated\weather_screen</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gui\src\common\GuiTime.cpp">
+      <Filter>Source Files\gui\common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ApplicationRoot)\assets\texts\texts.xml">
@@ -861,6 +864,9 @@
     </ClInclude>
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\weather_screen\WeatherViewBase.hpp">
       <Filter>Header Files\generated\gui_generated\weather_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\common\GuiTime.hpp">
+      <Filter>Header Files\gui\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
