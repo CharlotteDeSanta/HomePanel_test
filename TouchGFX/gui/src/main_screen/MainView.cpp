@@ -16,7 +16,6 @@ void MainView::setupScreen()
 
     // Setup with values from model
     updateClock(presenter->getClockHour(), presenter->getClockMinute());
-    updateCurrentWeather(presenter->getWeatherData(), presenter->getIsFahrenheit());
     setTemperatures();
     updateRoomHumidity(KITCHEN, presenter->getRoomHumidity(KITCHEN));
     updateRoomHumidity(LIVINGROOM, presenter->getRoomHumidity(LIVINGROOM));
@@ -27,17 +26,10 @@ void MainView::setupScreen()
     kitchenCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(KITCHEN));
     livingroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(LIVINGROOM));
     bedroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(BEDROOM));
-    if (presenter->getIsFahrenheit())
-    {
-        fahrenheitToggle.forceState(true);
-    }
 
     // Setup start animations
-    startupAnimation(weatherButton, FADE_DURATION, 0);
-    startupAnimation(weatherIcon, FADE_DURATION, 0);
-    startupAnimation(weatherTemp, FADE_DURATION, 0);
-    startupAnimation(weatherDegrees, FADE_DURATION, 0);
-    startupAnimation(fahrenheitToggle, FADE_DURATION, 0);
+    startupAnimation(wificonfButton, FADE_DURATION, 0);
+    startupAnimation(wificonfIcon, FADE_DURATION, 0);
     kitchenCardContainer.startupAnimation(FADE_DURATION, 1, TypedText(T_KITCHENTEXT));
     livingroomCardContainer.startupAnimation(FADE_DURATION, 2, TypedText(T_LIVINGROOMTEXT));
     bedroomCardContainer.startupAnimation(FADE_DURATION, 3, TypedText(T_BEDROOMTEXT));
@@ -119,13 +111,6 @@ void MainView::bedroomCardButtonClicked()
     setTempAndFan.showContainer(BEDROOM, presenter->getRoomFanSetPoint(BEDROOM), presenter->getRoomTempSetPoint(BEDROOM), presenter->getIsFahrenheit());
 
     setSelectedRoom(BEDROOM);
-}
-
-void MainView::fahrenheitToggleClicked()
-{
-    presenter->setIsFahrenheit(!presenter->getIsFahrenheit());
-
-    setTemperatures();
 }
 
 void MainView::resetRoomCards()
@@ -270,14 +255,8 @@ void MainView::updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t wee
 
 void MainView::updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit)
 {
-    Unicode::snprintf(weatherTempBuffer, WEATHERTEMP_SIZE, "%d",
-                      (int)(isUnitFahrenheit ? weatherData.weatherInfo.current_temp * 1.8f + 32 : weatherData.weatherInfo.current_temp));
-
-    weatherDegrees.invalidate();
-    weatherTemp.invalidate();
-
-    weatherIcon.setBitmap(weatherData.currentWeatherBmp);
-    weatherIcon.invalidate();
+    (void)weatherData;
+    (void)isUnitFahrenheit;
 }
 
 void MainView::setTemperatures()
@@ -288,12 +267,6 @@ void MainView::setTemperatures()
     bedroomCardContainer.setTemperature(presenter->getRoomTemperature(BEDROOM), presenter->getIsFahrenheit());
 
     temperatureAnimation.setTemperature(presenter->getRoomTempSetPoint(presenter->getSelectedRoom()), presenter->getIsFahrenheit());
-
-    weatherDegrees.setTypedText(TypedText(presenter->getIsFahrenheit() ? T_FAHRENHEITUNIT : T_CELSIUSUNIT));
-    Unicode::snprintf(weatherTempBuffer, WEATHERTEMP_SIZE, "%d",
-                      (int)(presenter->getIsFahrenheit() ? presenter->getWeatherData().weatherInfo.current_temp * 1.8f + 32 : presenter->getWeatherData().weatherInfo.current_temp));
-    weatherDegrees.invalidate();
-    weatherTemp.invalidate();
 }
 
 void MainView::setSelectedRoom(Rooms room)

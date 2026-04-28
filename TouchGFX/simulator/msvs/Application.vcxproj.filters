@@ -184,29 +184,17 @@
     <Filter Include="Source Files\gui\containers">
       <UniqueIdentifier>11E9F7EE-A79F-1261-947B-0A227F8CC464</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\gui\weather_screen">
-      <UniqueIdentifier>68D2BBA8-9C10-B999-5E78-003D864098E4</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\gui\main_screen">
       <UniqueIdentifier>716BFAE0-0F1D-2CEF-21C8-F2E9F84E7EAF</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\gui\main_screen">
       <UniqueIdentifier>1F4C420F-AFDC-BE89-892A-7F9A941C9DA8</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\gui\weather_screen">
-      <UniqueIdentifier>7AD4F651-65BF-262B-B800-55463BC8C101</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\generated\gui_generated\containers">
       <UniqueIdentifier>CE78F5EC-CAFA-19C5-2AF1-4B375B3AFD8C</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\generated\gui_generated\containers">
       <UniqueIdentifier>0E6C147D-E3C9-1B65-6456-1A9497BAAD60</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\generated\gui_generated\weather_screen">
-      <UniqueIdentifier>5A21E520-53C8-4037-6B8E-470B4117A629</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\generated\gui_generated\weather_screen">
-      <UniqueIdentifier>8B0E16D4-548F-2B3A-C291-2AE7530DC723</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\generated\gui_generated\main_screen">
       <UniqueIdentifier>E9298647-1CDC-60EE-E300-C6839D6728B5</UniqueIdentifier>
@@ -219,6 +207,18 @@
     </Filter>
     <Filter Include="Source Files\generated\gui_generated\graph_screen">
       <UniqueIdentifier>B71C018E-82CD-FBCD-B6CF-19A40417C715</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\gui\wifi_screen">
+      <UniqueIdentifier>01CD5C18-2EF3-0A6D-FD1D-8A39600000FD</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\gui\wifi_screen">
+      <UniqueIdentifier>D9EB89DC-1DA7-B3AD-19B4-B16F6B8FB396</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\generated\gui_generated\wifi_screen">
+      <UniqueIdentifier>80A93EFF-D55F-4941-067B-9DDD49DF61AE</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\generated\gui_generated\wifi_screen">
+      <UniqueIdentifier>8792B6B8-052B-63C4-7AFF-46B0D2B501BE</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -321,22 +321,37 @@
     <ClCompile Include="..\..\generated\gui_generated\src\containers\TemperatureAnimationBase.cpp">
       <Filter>Source Files\generated\gui_generated\containers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gui\src\containers\WeatherDaily.cpp">
+    <ClCompile Include="..\..\gui\src\common\GuiTime.cpp">
+      <Filter>Source Files\gui\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\wifi_screen\WifiPresenter.cpp">
+      <Filter>Source Files\gui\wifi_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\wifi_screen\WifiView.cpp">
+      <Filter>Source Files\gui\wifi_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\generated\gui_generated\src\wifi_screen\WifiViewBase.cpp">
+      <Filter>Source Files\generated\gui_generated\wifi_screen</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\containers\ssidElement.cpp">
       <Filter>Source Files\gui\containers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\generated\gui_generated\src\containers\WeatherDailyBase.cpp">
+    <ClCompile Include="..\..\generated\gui_generated\src\containers\ssidElementBase.cpp">
       <Filter>Source Files\generated\gui_generated\containers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gui\src\weather_screen\WeatherPresenter.cpp">
-      <Filter>Source Files\gui\weather_screen</Filter>
+    <ClCompile Include="..\..\gui\src\containers\ssidScrollWheelContainer.cpp">
+      <Filter>Source Files\gui\containers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gui\src\weather_screen\WeatherView.cpp">
-      <Filter>Source Files\gui\weather_screen</Filter>
+    <ClCompile Include="..\..\generated\gui_generated\src\containers\ssidScrollWheelContainerBase.cpp">
+      <Filter>Source Files\generated\gui_generated\containers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\generated\gui_generated\src\weather_screen\WeatherViewBase.cpp">
-      <Filter>Source Files\generated\gui_generated\weather_screen</Filter>
+    <ClCompile Include="..\..\gui\src\containers\ssidElementSelected.cpp">
+      <Filter>Source Files\gui\containers</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gui\src\common\GuiTime.cpp">
+    <ClCompile Include="..\..\generated\gui_generated\src\containers\ssidElementSelectedBase.cpp">
+      <Filter>Source Files\generated\gui_generated\containers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\src\common\CustomKeyboard.cpp">
       <Filter>Source Files\gui\common</Filter>
     </ClCompile>
   </ItemGroup>
@@ -850,22 +865,43 @@
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\TemperatureAnimationBase.hpp">
       <Filter>Header Files\generated\gui_generated\containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\include\gui\containers\WeatherDaily.hpp">
+    <ClInclude Include="..\..\gui\include\gui\common\GuiTime.hpp">
+      <Filter>Header Files\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\wifi_screen\WifiPresenter.hpp">
+      <Filter>Header Files\gui\wifi_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\wifi_screen\WifiView.hpp">
+      <Filter>Header Files\gui\wifi_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\wifi_screen\WifiViewBase.hpp">
+      <Filter>Header Files\generated\gui_generated\wifi_screen</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\containers\ssidElement.hpp">
       <Filter>Header Files\gui\containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\WeatherDailyBase.hpp">
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\ssidElementBase.hpp">
       <Filter>Header Files\generated\gui_generated\containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\include\gui\weather_screen\WeatherPresenter.hpp">
-      <Filter>Header Files\gui\weather_screen</Filter>
+    <ClInclude Include="..\..\gui\include\gui\containers\ssidScrollWheelContainer.hpp">
+      <Filter>Header Files\gui\containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\include\gui\weather_screen\WeatherView.hpp">
-      <Filter>Header Files\gui\weather_screen</Filter>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\ssidScrollWheelContainerBase.hpp">
+      <Filter>Header Files\generated\gui_generated\containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\weather_screen\WeatherViewBase.hpp">
-      <Filter>Header Files\generated\gui_generated\weather_screen</Filter>
+    <ClInclude Include="..\..\gui\include\gui\containers\ssidElementSelected.hpp">
+      <Filter>Header Files\gui\containers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\include\gui\common\GuiTime.hpp">
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\ssidElementSelectedBase.hpp">
+      <Filter>Header Files\generated\gui_generated\containers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\common\CustomKeyboard.hpp">
+      <Filter>Header Files\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\common\KeyboardKeyMapping.hpp">
+      <Filter>Header Files\gui\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\include\gui\common\KeyboardLayout.hpp">
       <Filter>Header Files\gui\common</Filter>
     </ClInclude>
   </ItemGroup>

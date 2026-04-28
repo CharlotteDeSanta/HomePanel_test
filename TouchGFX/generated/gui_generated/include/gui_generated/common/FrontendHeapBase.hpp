@@ -16,8 +16,8 @@
 #include <gui/main_screen/MainPresenter.hpp>
 #include <gui/graph_screen/GraphView.hpp>
 #include <gui/graph_screen/GraphPresenter.hpp>
-#include <gui/weather_screen/WeatherView.hpp>
-#include <gui/weather_screen/WeatherPresenter.hpp>
+#include <gui/wifi_screen/WifiView.hpp>
+#include <gui/wifi_screen/WifiPresenter.hpp>
 
 
 /**
@@ -42,7 +42,7 @@ public:
      */
     typedef touchgfx::meta::TypeList< MainView,
             touchgfx::meta::TypeList< GraphView,
-            touchgfx::meta::TypeList< WeatherView,
+            touchgfx::meta::TypeList< WifiView,
             touchgfx::meta::Nil > >
             > GeneratedViewTypes;
 
@@ -57,7 +57,7 @@ public:
      */
     typedef touchgfx::meta::TypeList< MainPresenter,
             touchgfx::meta::TypeList< GraphPresenter,
-            touchgfx::meta::TypeList< WeatherPresenter,
+            touchgfx::meta::TypeList< WifiPresenter,
             touchgfx::meta::Nil > >
             > GeneratedPresenterTypes;
 

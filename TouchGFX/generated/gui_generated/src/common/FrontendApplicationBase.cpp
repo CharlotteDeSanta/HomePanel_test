@@ -13,8 +13,8 @@
 #include <gui/main_screen/MainPresenter.hpp>
 #include <gui/graph_screen/GraphView.hpp>
 #include <gui/graph_screen/GraphPresenter.hpp>
-#include <gui/weather_screen/WeatherView.hpp>
-#include <gui/weather_screen/WeatherPresenter.hpp>
+#include <gui/wifi_screen/WifiView.hpp>
+#include <gui/wifi_screen/WifiPresenter.hpp>
 
 using namespace touchgfx;
 
@@ -61,15 +61,15 @@ void FrontendApplicationBase::gotoGraphScreenNoTransitionImpl()
     touchgfx::makeTransition<GraphView, GraphPresenter, touchgfx::NoTransition, Model >(&currentScreen, &currentPresenter, frontendHeap, &currentTransition, &model);
 }
 
-// Weather
+// Wifi
 
-void FrontendApplicationBase::gotoWeatherScreenNoTransition()
+void FrontendApplicationBase::gotoWifiScreenNoTransition()
 {
-    transitionCallback = touchgfx::Callback<FrontendApplicationBase>(this, &FrontendApplicationBase::gotoWeatherScreenNoTransitionImpl);
+    transitionCallback = touchgfx::Callback<FrontendApplicationBase>(this, &FrontendApplicationBase::gotoWifiScreenNoTransitionImpl);
     pendingScreenTransitionCallback = &transitionCallback;
 }
 
-void FrontendApplicationBase::gotoWeatherScreenNoTransitionImpl()
+void FrontendApplicationBase::gotoWifiScreenNoTransitionImpl()
 {
-    touchgfx::makeTransition<WeatherView, WeatherPresenter, touchgfx::NoTransition, Model >(&currentScreen, &currentPresenter, frontendHeap, &currentTransition, &model);
+    touchgfx::makeTransition<WifiView, WifiPresenter, touchgfx::NoTransition, Model >(&currentScreen, &currentPresenter, frontendHeap, &currentTransition, &model);
 }

@@ -44,12 +44,17 @@
     <ClCompile Include="..\..\generated\gui_generated\src\containers\SpinningFanContainerBase.cpp"/>
     <ClCompile Include="..\..\gui\src\containers\TemperatureAnimation.cpp"/>
     <ClCompile Include="..\..\generated\gui_generated\src\containers\TemperatureAnimationBase.cpp"/>
-    <ClCompile Include="..\..\gui\src\containers\WeatherDaily.cpp"/>
-    <ClCompile Include="..\..\generated\gui_generated\src\containers\WeatherDailyBase.cpp"/>
-    <ClCompile Include="..\..\gui\src\weather_screen\WeatherPresenter.cpp"/>
-    <ClCompile Include="..\..\gui\src\weather_screen\WeatherView.cpp"/>
-    <ClCompile Include="..\..\generated\gui_generated\src\weather_screen\WeatherViewBase.cpp"/>
     <ClCompile Include="..\..\gui\src\common\GuiTime.cpp"/>
+    <ClCompile Include="..\..\gui\src\wifi_screen\WifiPresenter.cpp"/>
+    <ClCompile Include="..\..\gui\src\wifi_screen\WifiView.cpp"/>
+    <ClCompile Include="..\..\generated\gui_generated\src\wifi_screen\WifiViewBase.cpp"/>
+    <ClCompile Include="..\..\gui\src\containers\ssidElement.cpp"/>
+    <ClCompile Include="..\..\generated\gui_generated\src\containers\ssidElementBase.cpp"/>
+    <ClCompile Include="..\..\gui\src\containers\ssidScrollWheelContainer.cpp"/>
+    <ClCompile Include="..\..\generated\gui_generated\src\containers\ssidScrollWheelContainerBase.cpp"/>
+    <ClCompile Include="..\..\gui\src\containers\ssidElementSelected.cpp"/>
+    <ClCompile Include="..\..\generated\gui_generated\src\containers\ssidElementSelectedBase.cpp"/>
+    <ClCompile Include="..\..\gui\src\common\CustomKeyboard.cpp"/>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ApplicationRoot)\assets\texts\texts.xml"/>
@@ -223,12 +228,19 @@
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\SpinningFanContainerBase.hpp"/>
     <ClInclude Include="..\..\gui\include\gui\containers\TemperatureAnimation.hpp"/>
     <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\TemperatureAnimationBase.hpp"/>
-    <ClInclude Include="..\..\gui\include\gui\containers\WeatherDaily.hpp"/>
-    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\WeatherDailyBase.hpp"/>
-    <ClInclude Include="..\..\gui\include\gui\weather_screen\WeatherPresenter.hpp"/>
-    <ClInclude Include="..\..\gui\include\gui\weather_screen\WeatherView.hpp"/>
-    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\weather_screen\WeatherViewBase.hpp"/>
     <ClInclude Include="..\..\gui\include\gui\common\GuiTime.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\wifi_screen\WifiPresenter.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\wifi_screen\WifiView.hpp"/>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\wifi_screen\WifiViewBase.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\containers\ssidElement.hpp"/>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\ssidElementBase.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\containers\ssidScrollWheelContainer.hpp"/>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\ssidScrollWheelContainerBase.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\containers\ssidElementSelected.hpp"/>
+    <ClInclude Include="..\..\generated\gui_generated\include\gui_generated\containers\ssidElementSelectedBase.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\common\CustomKeyboard.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\common\KeyboardKeyMapping.hpp"/>
+    <ClInclude Include="..\..\gui\include\gui\common\KeyboardLayout.hpp"/>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(ApplicationRoot)\generated\simulator\touchgfx.rc"/>

@@ -15,8 +15,8 @@
 #include <touchgfx/containers/buttons/Buttons.hpp>
 #include <gui/containers/RoomCard.hpp>
 #include <touchgfx/mixins/FadeAnimator.hpp>
-#include <touchgfx/widgets/TextAreaWithWildcard.hpp>
 #include <touchgfx/widgets/TextArea.hpp>
+#include <touchgfx/widgets/TextAreaWithWildcard.hpp>
 #include <gui/containers/PerformanceMeasure.hpp>
 #include <gui/containers/SpinningFanContainer.hpp>
 #include <gui/containers/SetTempAndFan.hpp>
@@ -63,10 +63,6 @@ public:
     {
         // Override and implement this function in Main
     }
-    virtual void fahrenheitToggleClicked()
-    {
-        // Override and implement this function in Main
-    }
     virtual void resetRoomCards()
     {
         // Override and implement this function in Main
@@ -98,16 +94,14 @@ protected:
     touchgfx::BoxWithBorderButtonStyle< touchgfx::ClickButtonTrigger >  kitchenGraphButton;
     touchgfx::BoxWithBorderButtonStyle< touchgfx::ClickButtonTrigger >  livingRoomGraphButton;
     touchgfx::BoxWithBorderButtonStyle< touchgfx::ClickButtonTrigger >  bedRoomGraphButton;
-    touchgfx::FadeAnimator< touchgfx::ImageButtonStyle< touchgfx::ClickButtonTrigger >  > weatherButton;
-    touchgfx::FadeAnimator< touchgfx::Image > weatherIcon;
-    touchgfx::FadeAnimator< touchgfx::TextAreaWithOneWildcard > weatherTemp;
-    touchgfx::FadeAnimator< touchgfx::TextArea > weatherDegrees;
+    touchgfx::FadeAnimator< touchgfx::ImageButtonStyle< touchgfx::ClickButtonTrigger >  > wificonfButton;
+    touchgfx::TextArea wifistatText;
+    touchgfx::FadeAnimator< touchgfx::Image > wificonfIcon;
     touchgfx::TextAreaWithTwoWildcards clockText;
     PerformanceMeasure performanceText;
     touchgfx::FadeAnimator< touchgfx::Image > bedroomSelectedImage;
     touchgfx::FadeAnimator< touchgfx::Image > kitchenSelectedImage;
     touchgfx::FadeAnimator< touchgfx::Image > livingroomSelectedImage;
-    touchgfx::FadeAnimator< touchgfx::ImageButtonStyle< touchgfx::ToggleButtonTrigger >  > fahrenheitToggle;
     SpinningFanContainer bedRoomFan;
     SpinningFanContainer livingRoomFan;
     SpinningFanContainer kitchenFan;
@@ -118,8 +112,6 @@ protected:
     /*
      * Wildcard Buffers
      */
-    static const uint16_t WEATHERTEMP_SIZE = 4;
-    touchgfx::Unicode::UnicodeChar weatherTempBuffer[WEATHERTEMP_SIZE];
     static const uint16_t CLOCKTEXTBUFFER1_SIZE = 14;
     touchgfx::Unicode::UnicodeChar clockTextBuffer1[CLOCKTEXTBUFFER1_SIZE];
     static const uint16_t CLOCKTEXTBUFFER2_SIZE = 3;

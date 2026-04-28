@@ -4,6 +4,17 @@
     <Language Id="GB" />
   </Languages>
   <Texts>
+    <TextGroup Id="Group1">
+      <Text Id="EnteredText" Alignment="Left" TypographyId="Display">
+        <Translation Language="GB">&lt;placeholder&gt;</Translation>
+      </Text>
+      <Text Id="NumMode" Alignment="Center" TypographyId="Mode">
+        <Translation Language="GB">ABC</Translation>
+      </Text>
+      <Text Id="AlphaMode" Alignment="Center" TypographyId="Mode">
+        <Translation Language="GB">123</Translation>
+      </Text>
+    </TextGroup>
     <TextGroup Id="TemperatureAnimation">
       <Text Id="__SingleUse_0988" Alignment="Left" TypographyId="Semibold16">
         <Translation Language="GB">20</Translation>
@@ -164,27 +175,6 @@
       </Text>
     </TextGroup>
     <TextGroup Id="WeatherForecast">
-      <Text Id="__SingleUse_1X7S" Alignment="Left" TypographyId="Semibold30">
-        <Translation Language="GB">5 DAY - WEATHER FORECAST</Translation>
-      </Text>
-      <Text Id="__SingleUse_NEDU" Alignment="Center" TypographyId="Semibold20">
-        <Translation Language="GB">WEDNESDAY</Translation>
-      </Text>
-      <Text Id="__SingleUse_AEVP" Alignment="Center" TypographyId="Semibold14">
-        <Translation Language="GB">MODERATE RAIN</Translation>
-      </Text>
-      <Text Id="__SingleUse_3MWN" Alignment="Center" TypographyId="Semibold58">
-        <Translation Language="GB">&lt;value&gt;°</Translation>
-      </Text>
-      <Text Id="__SingleUse_RZSJ" Alignment="Left" TypographyId="Semibold58">
-        <Translation Language="GB">20</Translation>
-      </Text>
-      <Text Id="__SingleUse_B8XB" Alignment="Center" TypographyId="Semibold40">
-        <Translation Language="GB">&lt;value&gt;°</Translation>
-      </Text>
-      <Text Id="__SingleUse_3NYY" Alignment="Left" TypographyId="Semibold40">
-        <Translation Language="GB">9</Translation>
-      </Text>
       <Text Id="SUNDAYTEXT" Alignment="Center" TypographyId="Semibold20">
         <Translation Language="GB">SUNDAY</Translation>
       </Text>
@@ -295,6 +285,33 @@
       </Text>
     </TextGroup>
     <TextGroup Id="Unsorted">
+      <Text Id="__SingleUse_UMJJ" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB">Confirm</Translation>
+      </Text>
+      <Text Id="__SingleUse_MYL6" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB">Clear</Translation>
+      </Text>
+      <Text Id="__SingleUse_02U1" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">Password: &lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_LX2C" Alignment="Left" TypographyId="Semibold58">
+        <Translation Language="GB">20.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_V00R" Alignment="Center" TypographyId="Semibold58">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_24Z8" Alignment="Left" TypographyId="medium48">
+        <Translation Language="GB">20.0</Translation>
+      </Text>
+      <Text Id="__SingleUse_KCLB" Alignment="Center" TypographyId="medium48">
+        <Translation Language="GB">&lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_KBAT" Alignment="Left" TypographyId="Semibold30">
+        <Translation Language="GB">OffLine</Translation>
+      </Text>
+      <Text Id="__SingleUse_1X7S" Alignment="Center" TypographyId="Semibold30">
+        <Translation Language="GB">WLAN Configuration</Translation>
+      </Text>
       <Text Id="__SingleUse_CC9U" Alignment="Left" TypographyId="Semibold22">
         <Translation Language="GB">23.0</Translation>
       </Text>
@@ -364,12 +381,6 @@
       <Text Id="__SingleUse_E6XH" Alignment="Center" TypographyId="Medium30">
         <Translation Language="GB">&lt;hour&gt;:&lt;minute&gt;</Translation>
       </Text>
-      <Text Id="__SingleUse_NTXB" Alignment="Left" TypographyId="Semibold40">
-        <Translation Language="GB">13</Translation>
-      </Text>
-      <Text Id="__SingleUse_B2OZ" Alignment="Right" TypographyId="Semibold40">
-        <Translation Language="GB">&lt;value&gt;</Translation>
-      </Text>
       <Text Id="__SingleUse_I9DY" Alignment="Left" TypographyId="Semibold58">
         <Translation Language="GB">--.-</Translation>
       </Text>
@@ -416,5 +427,8 @@
     <Typography Id="Semibold16" Font="GeogrotesqueCyr-SemiBold.ttf" Size="16" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
     <Typography Id="medium48" Font="GeogrotesqueCyr-Medium.ttf" Size="48" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="-." WildcardCharacterRanges="0-9" />
     <Typography Id="Semibold22" Font="GeogrotesqueCyr-SemiBold.ttf" Size="22" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
+    <Typography Id="Display" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;?" WildcardCharacterRanges="a-z,A-Z,0-9" />
+    <Typography Id="Mode" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Keyboard" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;? " WildcardCharacterRanges="a-z,A-Z,0-9" />
   </Typographies>
 </TextDatabase>

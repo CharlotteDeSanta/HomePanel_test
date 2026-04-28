@@ -16,7 +16,6 @@ public:
     virtual void kitchenCardButtonClicked();
     virtual void livingroomCardButtonClicked();
     virtual void bedroomCardButtonClicked();
-    virtual void fahrenheitToggleClicked();
     virtual void resetRoomCards();
     virtual void fanModeChanged(HVAC_FanMode_t fanMode);
     virtual void temperatureChanged(float temperature);

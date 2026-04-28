@@ -1,17 +1,17 @@
-#ifndef WEATHERPRESENTER_HPP
-#define WEATHERPRESENTER_HPP
+#ifndef WIFIPRESENTER_HPP
+#define WIFIPRESENTER_HPP
 
 #include <gui/model/ModelListener.hpp>
 #include <mvp/Presenter.hpp>
 
 using namespace touchgfx;
 
-class WeatherView;
+class WifiView;
 
-class WeatherPresenter : public touchgfx::Presenter, public ModelListener
+class WifiPresenter : public touchgfx::Presenter, public ModelListener
 {
 public:
-    WeatherPresenter(WeatherView& v);
+    WifiPresenter(WifiView& v);
 
     /**
      * The activate function is called automatically when this screen is "switched in"
@@ -25,18 +25,12 @@ public:
      */
     virtual void deactivate();
 
-    virtual ~WeatherPresenter() {}
-
-    virtual void updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit);
-
-    bool getIsFahrenheit();
-    void setIsFahrenheit(bool isFahrenheit);
-    WeatherData getWeatherData();
+    virtual ~WifiPresenter() {}
 
 private:
-    WeatherPresenter();
+    WifiPresenter();
 
-    WeatherView& view;
+    WifiView& view;
 };
 
-#endif // WEATHERPRESENTER_HPP
+#endif // WIFIPRESENTER_HPP

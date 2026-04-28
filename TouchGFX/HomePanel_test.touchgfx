@@ -260,7 +260,7 @@
           },
           {
             "Type": "FlexButton",
-            "Name": "weatherButton",
+            "Name": "wificonfButton",
             "Width": 261,
             "Height": 122,
             "ButtonTrigger": {
@@ -276,50 +276,30 @@
             "Fadeable": true
           },
           {
+            "Type": "TextArea",
+            "Name": "wifistatText",
+            "X": 96,
+            "Y": 43,
+            "Width": 92,
+            "Height": 36,
+            "TextId": "__SingleUse_KBAT",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 149,
+              "Green": 163,
+              "Blue": 181
+            },
+            "AutoSize": true
+          },
+          {
             "Type": "Image",
-            "Name": "weatherIcon",
+            "Name": "wificonfIcon",
             "X": 37,
             "Y": 37,
-            "Width": 48,
-            "Height": 48,
+            "Width": 50,
+            "Height": 50,
             "LockPosition": true,
-            "RelativeFilename": "Weather\\w0_Clear_sky_day.png",
-            "Fadeable": true
-          },
-          {
-            "Type": "TextArea",
-            "Name": "weatherTemp",
-            "X": 89,
-            "Y": 36,
-            "Width": 59,
-            "Height": 40,
-            "TextId": "__SingleUse_B2OZ",
-            "TextRotation": "0",
-            "Color": {
-              "Green": 37,
-              "Blue": 128
-            },
-            "Wildcard1": {
-              "TextId": "__SingleUse_NTXB",
-              "UseBuffer": true,
-              "BufferSize": 4
-            },
-            "Fadeable": true
-          },
-          {
-            "Type": "TextArea",
-            "Name": "weatherDegrees",
-            "X": 153,
-            "Y": 39,
-            "Width": 29,
-            "Height": 36,
-            "TextId": "celsiusUnit",
-            "TextRotation": "0",
-            "Color": {
-              "Green": 37,
-              "Blue": 128
-            },
-            "AutoSize": true,
+            "RelativeFilename": "__generated\\icon_theme_images_notification_wifi_50_50_002580.svg.png",
             "Fadeable": true
           },
           {
@@ -395,27 +375,6 @@
             "Fadeable": true
           },
           {
-            "Type": "FlexButton",
-            "Name": "fahrenheitToggle",
-            "X": 169,
-            "Y": 31,
-            "Width": 62,
-            "Height": 61,
-            "ButtonTrigger": {
-              "Type": "ToggleButtonTrigger"
-            },
-            "ButtonStyles": [
-              {
-                "Type": "ImageButtonStyle",
-                "X": 32,
-                "Y": 18,
-                "ImageReleased": "weather_temperture_select_C.png",
-                "ImagePressed": "weather_temperture_select_F.png"
-              }
-            ],
-            "Fadeable": true
-          },
-          {
             "Type": "CustomContainerInstance",
             "Name": "bedRoomFan",
             "X": 344,
@@ -448,7 +407,7 @@
             "X": 510,
             "Y": 55,
             "Width": 260,
-            "Height": 398,
+            "Height": 419,
             "Visible": false,
             "CustomContainerDefinitionName": "SetTempAndFan"
           },
@@ -559,17 +518,6 @@
             }
           },
           {
-            "InteractionName": "fahrenheitToggleClicked",
-            "Trigger": {
-              "Type": "TriggerClicked",
-              "TriggerComponent": "fahrenheitToggle"
-            },
-            "Action": {
-              "Type": "ActionCustom",
-              "FunctionName": "fahrenheitToggleClicked"
-            }
-          },
-          {
             "InteractionName": "closeComplete",
             "Trigger": {
               "Type": "TriggerCustom",
@@ -585,12 +533,12 @@
             "InteractionName": "weatherButtonClicked",
             "Trigger": {
               "Type": "TriggerClicked",
-              "TriggerComponent": "weatherButton"
+              "TriggerComponent": "wificonfButton"
             },
             "Action": {
               "Type": "ActionGotoScreen",
               "ScreenTransitionType": "ScreenTransitionNone",
-              "ActionComponent": "Weather"
+              "ActionComponent": "Wifi"
             }
           },
           {
@@ -1791,14 +1739,14 @@
         ]
       },
       {
-        "Name": "Weather",
+        "Name": "Wifi",
         "Components": [
           {
             "Type": "Image",
-            "Name": "backgroundWeather",
+            "Name": "backgroundWifi",
             "Width": 800,
             "Height": 480,
-            "RelativeFilename": "Weather Big\\Weather_main_bg.png"
+            "RelativeFilename": "__generated\\light_theme_images_backgrounds_800x480_geometric_fade.png"
           },
           {
             "Type": "Button",
@@ -1811,85 +1759,110 @@
             "Released": "Close_normal.png"
           },
           {
-            "Type": "FlexButton",
-            "Name": "fahrenheitToggle",
-            "X": 725,
-            "Y": 45,
-            "Width": 60,
-            "Height": 60,
-            "ButtonTrigger": {
-              "Type": "ToggleButtonTrigger"
-            },
-            "ButtonStyles": [
-              {
-                "Type": "ImageButtonStyle",
-                "X": 25,
-                "Y": 18,
-                "ImageReleased": "weather_temperture_select_C.png",
-                "ImagePressed": "weather_temperture_select_F.png"
-              }
-            ],
-            "Fadeable": true
-          },
-          {
             "Type": "TextArea",
             "Name": "screenTitle",
             "X": 221,
-            "Y": 31,
+            "Y": 32,
             "Width": 359,
-            "Height": 30,
+            "Height": 39,
             "TextId": "__SingleUse_1X7S",
             "TextRotation": "0",
             "Color": {
-              "Red": 167,
-              "Green": 182,
-              "Blue": 206
+              "Red": 101,
+              "Green": 123,
+              "Blue": 158
             }
           },
           {
             "Type": "CustomContainerInstance",
-            "Name": "weatherDay5",
-            "X": 608,
-            "Y": 94,
-            "Width": 136,
-            "Height": 280,
-            "CustomContainerDefinitionName": "WeatherDaily"
+            "Name": "ssidScrollWheelContainer1",
+            "X": 20,
+            "Y": 95,
+            "Width": 360,
+            "Height": 335,
+            "CustomContainerDefinitionName": "ssidScrollWheelContainer"
           },
           {
-            "Type": "CustomContainerInstance",
-            "Name": "weatherDay4",
-            "X": 470,
-            "Y": 94,
-            "Width": 136,
-            "Height": 280,
-            "CustomContainerDefinitionName": "WeatherDaily"
+            "Type": "BoxWithBorder",
+            "Name": "boxWithBorder1",
+            "X": 392,
+            "Y": 75,
+            "Width": 402,
+            "Height": 50,
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "BorderColor": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "BorderSize": 5
           },
           {
-            "Type": "CustomContainerInstance",
-            "Name": "weatherDay3",
-            "X": 332,
-            "Y": 94,
-            "Width": 136,
-            "Height": 280,
-            "CustomContainerDefinitionName": "WeatherDaily"
+            "Type": "TextArea",
+            "Name": "passwordtextArea",
+            "X": 400,
+            "Y": 82,
+            "Width": 139,
+            "Height": 36,
+            "TextId": "__SingleUse_02U1",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "AutoSize": true,
+            "Wildcard1": {}
           },
           {
-            "Type": "CustomContainerInstance",
-            "Name": "weatherDay2",
-            "X": 194,
-            "Y": 94,
-            "Width": 136,
-            "Height": 280,
-            "CustomContainerDefinitionName": "WeatherDaily"
+            "Type": "ButtonWithLabel",
+            "Name": "clearButton",
+            "X": 392,
+            "Y": 135,
+            "Width": 110,
+            "Height": 50,
+            "Pressed": "__generated\\light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.png",
+            "Released": "__generated\\light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.png",
+            "TextId": "__SingleUse_MYL6",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 67,
+              "Green": 90,
+              "Blue": 120
+            },
+            "TextRotation": "0",
+            "Preset": "light_theme\\presets\\button\\regular\\height_50\\tiny_rounded_disabled.json"
           },
           {
-            "Type": "CustomContainerInstance",
-            "Name": "weatherDay1",
-            "X": 56,
-            "Y": 94,
-            "Width": 136,
-            "Height": 280,
-            "CustomContainerDefinitionName": "WeatherDaily"
+            "Type": "ButtonWithLabel",
+            "Name": "confirmButton",
+            "X": 684,
+            "Y": 135,
+            "Width": 110,
+            "Height": 50,
+            "Pressed": "__generated\\light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.png",
+            "Released": "__generated\\light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.png",
+            "TextId": "__SingleUse_UMJJ",
+            "ReleasedColor": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "PressedColor": {
+              "Red": 67,
+              "Green": 90,
+              "Blue": 120
+            },
+            "TextRotation": "0",
+            "Preset": "light_theme\\presets\\button\\regular\\height_50\\tiny_rounded_disabled.json"
           }
         ],
         "Interactions": [
@@ -1903,17 +1876,6 @@
               "Type": "ActionGotoScreen",
               "ScreenTransitionType": "ScreenTransitionNone",
               "ActionComponent": "Main"
-            }
-          },
-          {
-            "InteractionName": "fahrenheitToggleClicked",
-            "Trigger": {
-              "Type": "TriggerClicked",
-              "TriggerComponent": "fahrenheitToggle"
-            },
-            "Action": {
-              "Type": "ActionCustom",
-              "FunctionName": "fahrenheitToggleClicked"
             }
           }
         ]
@@ -2417,98 +2379,29 @@
         ]
       },
       {
-        "Name": "WeatherDaily",
-        "Width": 136,
-        "Height": 280,
+        "Name": "ssidElementSelected",
+        "Width": 437,
+        "Height": 67,
         "Components": [
           {
             "Type": "TextArea",
-            "Name": "minTemp",
-            "X": 8,
-            "Y": 57,
-            "Width": 120,
-            "Height": 45,
-            "TextId": "__SingleUse_B8XB",
+            "Name": "tempValueText",
+            "Y": -4,
+            "Width": 360,
+            "Height": 67,
+            "LockPosition": true,
+            "TextId": "__SingleUse_V00R",
             "TextRotation": "0",
             "Color": {
-              "Red": 131,
-              "Green": 156,
-              "Blue": 193
+              "Red": 4,
+              "Green": 72,
+              "Blue": 245
             },
             "Wildcard1": {
-              "TextId": "__SingleUse_3NYY",
+              "TextId": "__SingleUse_LX2C",
               "UseBuffer": true,
-              "BufferSize": 4
-            },
-            "Fadeable": true
-          },
-          {
-            "Type": "TextArea",
-            "Name": "maxTemp",
-            "X": 8,
-            "Y": 211,
-            "Width": 120,
-            "Height": 58,
-            "TextId": "__SingleUse_3MWN",
-            "TextRotation": "0",
-            "Color": {
-              "Green": 37,
-              "Blue": 128
-            },
-            "Wildcard1": {
-              "TextId": "__SingleUse_RZSJ",
-              "UseBuffer": true,
-              "BufferSize": 4
-            },
-            "Fadeable": true
-          },
-          {
-            "Type": "TextureMapper",
-            "Name": "weatherLogo",
-            "Y": 94,
-            "Width": 136,
-            "Height": 136,
-            "UseAnimation": true,
-            "RenderingAlgorithm": "Bilinear Interpolation",
-            "FileNameImage": "Weather Big\\w51_Drizzle_Light_big.png",
-            "LockBitmapToCenter": true,
-            "XBitmapPosition": 20.0,
-            "YBitmapPosition": 20.0,
-            "Scale": 1.0,
-            "LockOrigoToCenter": true,
-            "XOrigo": 68.0,
-            "YOrigo": 68.0,
-            "ZOrigo": 1000.0,
-            "CameraDistance": 1000.0
-          },
-          {
-            "Type": "TextArea",
-            "Name": "weatherText",
-            "Y": 30,
-            "Width": 136,
-            "Height": 35,
-            "TextId": "__SingleUse_AEVP",
-            "TextRotation": "0",
-            "Color": {
-              "Red": 131,
-              "Green": 156,
-              "Blue": 193
-            },
-            "Fadeable": true
-          },
-          {
-            "Type": "TextArea",
-            "Name": "dayText",
-            "Width": 136,
-            "Height": 30,
-            "TextId": "__SingleUse_NEDU",
-            "TextRotation": "0",
-            "Color": {
-              "Red": 101,
-              "Green": 123,
-              "Blue": 158
-            },
-            "Fadeable": true
+              "BufferSize": 5
+            }
           }
         ],
         "Interactions": []
@@ -2534,6 +2427,34 @@
             },
             "Wildcard1": {
               "TextId": "__SingleUse_3G6Q",
+              "UseBuffer": true,
+              "BufferSize": 5
+            }
+          }
+        ],
+        "Interactions": []
+      },
+      {
+        "Name": "ssidElement",
+        "Width": 437,
+        "Height": 70,
+        "Components": [
+          {
+            "Type": "TextArea",
+            "Name": "ssidValueText",
+            "Y": 3,
+            "Width": 360,
+            "Height": 67,
+            "LockPosition": true,
+            "TextId": "__SingleUse_KCLB",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "Wildcard1": {
+              "TextId": "__SingleUse_24Z8",
               "UseBuffer": true,
               "BufferSize": 5
             }
@@ -2568,6 +2489,46 @@
           }
         ],
         "Interactions": []
+      },
+      {
+        "Name": "ssidScrollWheelContainer",
+        "Width": 360,
+        "Height": 335,
+        "Components": [
+          {
+            "Type": "ScrollWheel",
+            "Name": "ssidscrollWheel",
+            "Y": -1,
+            "Width": 437,
+            "Height": 336,
+            "SelectedItemOffset": 65,
+            "UseSelectedStyle": true,
+            "SelectedItemTemplateName": "ssidElementSelected",
+            "ItemTemplateName": "ssidElement",
+            "NumberofItems": 60,
+            "InitialElement": 5,
+            "Easing": "Back",
+            "EasingOption": "Out",
+            "SwipeAcceleration": 1.0,
+            "DragAcceleration": 1.0,
+            "OverShootPercentage": 75
+          }
+        ],
+        "Interactions": [],
+        "CustomTriggers": [
+          {
+            "Name": "tempUpdated",
+            "Description": "The temperature is updated",
+            "HasValue": true,
+            "ValueType": "float"
+          },
+          {
+            "Name": "isAnimating",
+            "Description": "Indicates whether the scrool wheel is animating",
+            "HasValue": true,
+            "ValueType": "bool"
+          }
+        ]
       },
       {
         "Name": "ScrollWheelContainer",

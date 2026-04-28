@@ -16,8 +16,7 @@ KEEP extern const touchgfx::GlyphNode glyphs_GeogrotesqueCyr_SemiBold_58_4bpp[] 
     {  3938, 0x0037,  29,  39,  39,   1,  31,   9,   3, 0x00 }, // seven
     {  4523, 0x0038,  28,  39,  39,   2,  32,   0,   0, 0x00 }, // eight
     {  5069, 0x0039,  28,  39,  39,   2,  33,   0,   0, 0x00 }, // nine
-    {  5615, 0x003F,  28,  39,  39,   1,  30,  12,   1, 0x00 }, // question
-    {  6161, 0x00B0,  20,  18,  39,   2,  24,  13,   1, 0x00 }  // degree
+    {  5615, 0x003F,  28,  39,  39,   1,  30,  12,   1, 0x00 }  // question
 };
 
 // GeogrotesqueCyr_SemiBold_58_4bpp
@@ -35,6 +34,6 @@ touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_SemiBold_58_4bpp();
 
 touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_SemiBold_58_4bpp()
 {
-    static touchgfx::GeneratedFont GeogrotesqueCyr_SemiBold_58_4bpp(glyphs_GeogrotesqueCyr_SemiBold_58_4bpp, 14, 58, 58, 0, 0, 4, 1, 0, 0, unicodes_GeogrotesqueCyr_SemiBold_58_4bpp, kerning_GeogrotesqueCyr_SemiBold_58_4bpp, 63, 0, 0, 0);
+    static touchgfx::GeneratedFont GeogrotesqueCyr_SemiBold_58_4bpp(glyphs_GeogrotesqueCyr_SemiBold_58_4bpp, 13, 58, 58, 0, 0, 4, 1, 0, 0, unicodes_GeogrotesqueCyr_SemiBold_58_4bpp, kerning_GeogrotesqueCyr_SemiBold_58_4bpp, 63, 0, 0, 0);
     return GeogrotesqueCyr_SemiBold_58_4bpp;
 }

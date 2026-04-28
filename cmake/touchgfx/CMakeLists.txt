@@ -19,6 +19,7 @@ set(TouchGFX_Include_Dirs
 
 # TouchGFX generated application sources
 set(TouchGFX_Src
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/CustomKeyboard.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/FrontendApplication.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/GuiTime.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/common/hvac.cpp
@@ -30,14 +31,16 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/SetTempAndFan.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/SpinningFanContainer.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/TemperatureAnimation.cpp
-    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/WeatherDaily.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/ssidElement.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/ssidElementSelected.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/containers/ssidScrollWheelContainer.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/graph_screen/GraphPresenter.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/graph_screen/GraphView.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/main_screen/MainPresenter.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/main_screen/MainView.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/model/Model.cpp
-    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/weather_screen/WeatherPresenter.cpp
-    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/weather_screen/WeatherView.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/wifi_screen/WifiPresenter.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/gui/src/wifi_screen/WifiView.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/ApplicationFontProvider.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/CachedFont.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/CompressedFontCache.cpp
@@ -53,6 +56,7 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Font_GeogrotesqueCyr_SemiBold_30_4bpp_0.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Font_GeogrotesqueCyr_SemiBold_40_4bpp_0.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Font_GeogrotesqueCyr_SemiBold_58_4bpp_0.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Font_verdana_20_4bpp_0.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/GeneratedFont.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Kerning_GeogrotesqueCyr_Medium_30_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Kerning_GeogrotesqueCyr_Medium_48_4bpp.cpp
@@ -64,6 +68,7 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Kerning_GeogrotesqueCyr_SemiBold_30_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Kerning_GeogrotesqueCyr_SemiBold_40_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Kerning_GeogrotesqueCyr_SemiBold_58_4bpp.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Kerning_verdana_20_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_GeogrotesqueCyr_Medium_30_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_GeogrotesqueCyr_Medium_48_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_GeogrotesqueCyr_SemiBold_14_4bpp.cpp
@@ -74,6 +79,7 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_GeogrotesqueCyr_SemiBold_30_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_GeogrotesqueCyr_SemiBold_40_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_GeogrotesqueCyr_SemiBold_58_4bpp.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/Table_verdana_20_4bpp.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/UnmappedDataFont.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/fonts/src/VectorFontRendererBuffers.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/common/FrontendApplicationBase.cpp
@@ -85,10 +91,12 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/SetTempAndFanBase.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/SpinningFanContainerBase.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/TemperatureAnimationBase.cpp
-    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/WeatherDailyBase.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/ssidElementBase.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/ssidElementSelectedBase.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/containers/ssidScrollWheelContainerBase.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/graph_screen/GraphViewBase.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/main_screen/MainViewBase.cpp
-    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/weather_screen/WeatherViewBase.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/gui_generated/src/wifi_screen/WifiViewBase.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/BitmapDatabase.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Graph/image_Graph_fanspeed_active.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Graph/image_Graph_fanspeed_normal.cpp
@@ -242,6 +250,9 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w99_Thunserstorm_heavy_hail_big.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_togglebutton_small_round_small_off_light.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_togglebutton_small_round_small_on_action.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_icon_theme_images_notification_wifi_50_50_002580.svg.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_light_theme_images_backgrounds_800x480_geometric_fade.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_00.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_01.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_02.cpp
@@ -252,6 +263,15 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/fan-corner-animation/image_fan_corner_07.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_Close_normal.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_Close_pressed.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_icon_keyboard_even_row.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_icon_keyboard_highlighted.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_icon_keyboard_odd_row.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_keyboard_background.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_keyboard_key_delete_highlighted.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_keyboard_key_highlighted.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_keyboard_key_num_highlighted.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_keyboard_key_shift_highlighted.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_keyboard_space_highlighted.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_weather_temperture_select_C.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/image_weather_temperture_select_F.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/texts/src/LanguageGb.cpp

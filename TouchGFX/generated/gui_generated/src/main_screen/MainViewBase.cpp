@@ -82,29 +82,21 @@ MainViewBase::MainViewBase() :
     bedRoomGraphButton.setPosition(212, 283, 267, 157);
     add(bedRoomGraphButton);
 
-    weatherButton.setBitmaps(Bitmap(BITMAP_WEATHER_INFO_BG_ID), Bitmap(BITMAP_WEATHER_INFO_BG_SELECTED_ID));
-    weatherButton.setBitmapXY(0, 0);
-    weatherButton.setAction(flexButtonCallback);
-    weatherButton.setPosition(0, 0, 261, 122);
-    add(weatherButton);
+    wificonfButton.setBitmaps(Bitmap(BITMAP_WEATHER_INFO_BG_ID), Bitmap(BITMAP_WEATHER_INFO_BG_SELECTED_ID));
+    wificonfButton.setBitmapXY(0, 0);
+    wificonfButton.setAction(flexButtonCallback);
+    wificonfButton.setPosition(0, 0, 261, 122);
+    add(wificonfButton);
 
-    weatherIcon.setXY(37, 37);
-    weatherIcon.setBitmap(touchgfx::Bitmap(BITMAP_W0_CLEAR_SKY_DAY_ID));
-    add(weatherIcon);
+    wifistatText.setXY(96, 43);
+    wifistatText.setColor(touchgfx::Color::getColorFromRGB(149, 163, 181));
+    wifistatText.setLinespacing(0);
+    wifistatText.setTypedText(touchgfx::TypedText(T___SINGLEUSE_KBAT));
+    add(wifistatText);
 
-    weatherTemp.setPosition(89, 36, 59, 40);
-    weatherTemp.setColor(touchgfx::Color::getColorFromRGB(0, 37, 128));
-    weatherTemp.setLinespacing(0);
-    Unicode::snprintf(weatherTempBuffer, WEATHERTEMP_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_NTXB).getText());
-    weatherTemp.setWildcard(weatherTempBuffer);
-    weatherTemp.setTypedText(touchgfx::TypedText(T___SINGLEUSE_B2OZ));
-    add(weatherTemp);
-
-    weatherDegrees.setXY(153, 39);
-    weatherDegrees.setColor(touchgfx::Color::getColorFromRGB(0, 37, 128));
-    weatherDegrees.setLinespacing(0);
-    weatherDegrees.setTypedText(touchgfx::TypedText(T_CELSIUSUNIT));
-    add(weatherDegrees);
+    wificonfIcon.setXY(37, 37);
+    wificonfIcon.setBitmap(touchgfx::Bitmap(BITMAP_ICON_THEME_IMAGES_NOTIFICATION_WIFI_50_50_002580_SVG_ID));
+    add(wificonfIcon);
 
     clockText.setXY(522, 436);
     clockText.setColor(touchgfx::Color::getColorFromRGB(0, 37, 128));
@@ -134,12 +126,6 @@ MainViewBase::MainViewBase() :
     livingroomSelectedImage.setBitmap(touchgfx::Bitmap(BITMAP_LIVINGROOM_SELECTED_ID));
     livingroomSelectedImage.setAlpha(0);
     add(livingroomSelectedImage);
-
-    fahrenheitToggle.setBitmaps(Bitmap(BITMAP_WEATHER_TEMPERTURE_SELECT_C_ID), Bitmap(BITMAP_WEATHER_TEMPERTURE_SELECT_F_ID));
-    fahrenheitToggle.setBitmapXY(32, 18);
-    fahrenheitToggle.setAction(flexButtonCallback);
-    fahrenheitToggle.setPosition(169, 31, 62, 61);
-    add(fahrenheitToggle);
 
     bedRoomFan.setXY(344, 395);
     add(bedRoomFan);
@@ -225,19 +211,12 @@ void MainViewBase::flexButtonCallbackHandler(const touchgfx::AbstractButtonConta
         bedroomButtonContainer.setMoveAnimationDelay(30);
         bedroomButtonContainer.startMoveAnimation(495, 55, 15, touchgfx::EasingEquations::linearEaseIn, touchgfx::EasingEquations::linearEaseIn);
     }
-    if (&src == &fahrenheitToggle)
-    {
-        //fahrenheitToggleClicked
-        //When fahrenheitToggle clicked call virtual function
-        //Call fahrenheitToggleClicked
-        fahrenheitToggleClicked();
-    }
-    if (&src == &weatherButton)
+    if (&src == &wificonfButton)
     {
         //weatherButtonClicked
-        //When weatherButton clicked change screen to Weather
-        //Go to Weather with no screen transition
-        application().gotoWeatherScreenNoTransition();
+        //When wificonfButton clicked change screen to Wifi
+        //Go to Wifi with no screen transition
+        application().gotoWifiScreenNoTransition();
     }
     if (&src == &closeSettingsButton)
     {

@@ -26,8 +26,8 @@ public:
     // Graph
     void gotoGraphScreenNoTransition();
 
-    // Weather
-    void gotoWeatherScreenNoTransition();
+    // Wifi
+    void gotoWifiScreenNoTransition();
 
 protected:
     touchgfx::Callback<FrontendApplicationBase> transitionCallback;
@@ -40,8 +40,8 @@ protected:
     // Graph
     void gotoGraphScreenNoTransitionImpl();
 
-    // Weather
-    void gotoWeatherScreenNoTransitionImpl();
+    // Wifi
+    void gotoWifiScreenNoTransitionImpl();
 };
 
 #endif // FRONTENDAPPLICATIONBASE_HPP

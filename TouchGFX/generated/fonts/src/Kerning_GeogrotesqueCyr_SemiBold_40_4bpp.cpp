@@ -21,5 +21,4 @@ KEEP extern const touchgfx::KerningNode kerning_GeogrotesqueCyr_SemiBold_40_4bpp
     { 0x0031, -1 },  // (First char = [0x0031, one], Second char = [0x0037, seven], Kerning dist = -1)
     { 0x002C, -2 },  // (First char = [0x002C, comma], Second char = [0x003F, question], Kerning dist = -2)
     { 0x002E, -2 },  // (First char = [0x002E, period], Second char = [0x003F, question], Kerning dist = -2)
-    { 0x0031, -1 },  // (First char = [0x0031, one], Second char = [0x00B0, degree], Kerning dist = -1)
 };
