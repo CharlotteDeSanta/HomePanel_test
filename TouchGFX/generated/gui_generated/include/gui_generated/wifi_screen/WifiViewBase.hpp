@@ -41,6 +41,12 @@ protected:
     touchgfx::ButtonWithLabel clearButton;
     touchgfx::ButtonWithLabel confirmButton;
 
+    /*
+     * Wildcard Buffers
+     */
+    static const uint16_t PASSWORDTEXTAREA_SIZE = 15;
+    touchgfx::Unicode::UnicodeChar passwordtextAreaBuffer[PASSWORDTEXTAREA_SIZE];
+
 private:
 
     /*

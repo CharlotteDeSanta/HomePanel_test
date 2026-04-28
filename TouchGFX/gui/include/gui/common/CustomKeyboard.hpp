@@ -2,6 +2,7 @@
 #define TGFXKEYBOARD_HPP_
 
 #include <touchgfx/widgets/Keyboard.hpp>
+#include <touchgfx/Callback.hpp>
 #include <touchgfx/containers/Container.hpp>
 #include <touchgfx/widgets/Box.hpp>
 #include <texts/TextKeysAndLanguages.hpp>
@@ -23,6 +24,11 @@ class CustomKeyboard : public Container
 public:
     CustomKeyboard();
     virtual ~CustomKeyboard() { }
+
+    const Unicode::UnicodeChar* getBuffer() const;
+    uint16_t getBufferPosition();
+    void clearBuffer();
+    void setBufferChangedCallback(GenericCallback<>& callback);
 
     /*
      * Override setTouchable to also affect the keyboard object inside this
@@ -86,6 +92,7 @@ private:
      * True if the input position in the text field, and hence the buffer, is at the beginning.
      */
     bool firstCharacterEntry;
+    GenericCallback<>* bufferChangedCallback;
 
     /*
      * Sets the correct key mappings of the keyboard according to alpha/numeric and upper-case/lower-case.
@@ -112,6 +119,7 @@ private:
      * @param keyChar The UnicodeChar for the key that was pressed.
      */
     void keyPressedhandler(Unicode::UnicodeChar keyChar);
+    void notifyBufferChanged();
 };
 
 #endif /* TGFXKEYBOARD_HPP_ */

@@ -16,6 +16,7 @@ extern touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_SemiBold_16_4bpp();
 extern touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_Medium_48_4bpp();
 extern touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_SemiBold_22_4bpp();
 extern touchgfx::GeneratedFont& getFont_verdana_20_4bpp();
+extern touchgfx::GeneratedFont& getFont_verdana_30_4bpp();
 
 const touchgfx::Font* touchgfx_fonts[] = {
     &(getFont_GeogrotesqueCyr_SemiBold_30_4bpp()),
@@ -28,7 +29,8 @@ const touchgfx::Font* touchgfx_fonts[] = {
     &(getFont_GeogrotesqueCyr_SemiBold_16_4bpp()),
     &(getFont_GeogrotesqueCyr_Medium_48_4bpp()),
     &(getFont_GeogrotesqueCyr_SemiBold_22_4bpp()),
-    &(getFont_verdana_20_4bpp())
+    &(getFont_verdana_20_4bpp()),
+    &(getFont_verdana_30_4bpp())
 };
 
 extern const touchgfx::TypedText::TypedTextData typedText_database_DEFAULT[];
@@ -126,9 +128,10 @@ const touchgfx::TypedText::TypedTextData typedText_database_DEFAULT[] TEXT_LOCAT
     { 2, touchgfx::CENTER, touchgfx::TEXT_DIRECTION_LTR },
     { 2, touchgfx::CENTER, touchgfx::TEXT_DIRECTION_LTR },
     { 2, touchgfx::CENTER, touchgfx::TEXT_DIRECTION_LTR },
+    { 10, touchgfx::LEFT, touchgfx::TEXT_DIRECTION_LTR },
     { 0, touchgfx::CENTER, touchgfx::TEXT_DIRECTION_LTR },
     { 0, touchgfx::CENTER, touchgfx::TEXT_DIRECTION_LTR },
-    { 0, touchgfx::LEFT, touchgfx::TEXT_DIRECTION_LTR },
+    { 11, touchgfx::LEFT, touchgfx::TEXT_DIRECTION_LTR },
     { 1, touchgfx::LEFT, touchgfx::TEXT_DIRECTION_LTR },
     { 1, touchgfx::CENTER, touchgfx::TEXT_DIRECTION_LTR },
     { 8, touchgfx::LEFT, touchgfx::TEXT_DIRECTION_LTR },
@@ -235,6 +238,9 @@ void resetFont(touchgfx::FontId fontId)
         break;
     case 10:
         touchgfx_fonts[10] = &(getFont_verdana_20_4bpp());
+        break;
+    case 11:
+        touchgfx_fonts[11] = &(getFont_verdana_30_4bpp());
         break;
     }
 }

@@ -1806,7 +1806,7 @@
             "Name": "passwordtextArea",
             "X": 400,
             "Y": 82,
-            "Width": 139,
+            "Width": 156,
             "Height": 36,
             "TextId": "__SingleUse_02U1",
             "TextRotation": "0",
@@ -1816,7 +1816,11 @@
               "Blue": 156
             },
             "AutoSize": true,
-            "Wildcard1": {}
+            "Wildcard1": {
+              "TextId": "__SingleUse_QT6I",
+              "UseBuffer": true,
+              "BufferSize": 15
+            }
           },
           {
             "Type": "ButtonWithLabel",

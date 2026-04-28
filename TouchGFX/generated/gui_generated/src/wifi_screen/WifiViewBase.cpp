@@ -40,6 +40,9 @@ WifiViewBase::WifiViewBase() :
     passwordtextArea.setXY(400, 82);
     passwordtextArea.setColor(touchgfx::Color::getColorFromRGB(113, 132, 156));
     passwordtextArea.setLinespacing(0);
+    Unicode::snprintf(passwordtextAreaBuffer, PASSWORDTEXTAREA_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_QT6I).getText());
+    passwordtextArea.setWildcard(passwordtextAreaBuffer);
+    passwordtextArea.resizeToCurrentText();
     passwordtextArea.setTypedText(touchgfx::TypedText(T___SINGLEUSE_02U1));
     add(passwordtextArea);
 

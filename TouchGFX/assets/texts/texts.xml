@@ -285,14 +285,17 @@
       </Text>
     </TextGroup>
     <TextGroup Id="Unsorted">
+      <Text Id="__SingleUse_QT6I" Alignment="Left" TypographyId="Mode">
+        <Translation Language="GB"></Translation>
+      </Text>
       <Text Id="__SingleUse_UMJJ" Alignment="Center" TypographyId="Semibold30">
         <Translation Language="GB">Confirm</Translation>
       </Text>
       <Text Id="__SingleUse_MYL6" Alignment="Center" TypographyId="Semibold30">
         <Translation Language="GB">Clear</Translation>
       </Text>
-      <Text Id="__SingleUse_02U1" Alignment="Left" TypographyId="Semibold30">
-        <Translation Language="GB">Password: &lt;value&gt;</Translation>
+      <Text Id="__SingleUse_02U1" Alignment="Left" TypographyId="Keyboard30">
+        <Translation Language="GB">Password:&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_LX2C" Alignment="Left" TypographyId="Semibold58">
         <Translation Language="GB">20.0</Translation>
@@ -430,5 +433,6 @@
     <Typography Id="Display" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;?" WildcardCharacterRanges="a-z,A-Z,0-9" />
     <Typography Id="Mode" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
     <Typography Id="Keyboard" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;? " WildcardCharacterRanges="a-z,A-Z,0-9" />
+    <Typography Id="Keyboard30" Font="verdana.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;? ±×÷•º©£€®¥¡¢¿ " WildcardCharacterRanges="a-z,A-Z,0-9" />
   </Typographies>
 </TextDatabase>

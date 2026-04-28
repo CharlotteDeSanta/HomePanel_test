@@ -10,7 +10,8 @@ CustomKeyboard::CustomKeyboard() : keyboard(),
     keyPressed(this, &CustomKeyboard::keyPressedhandler),
     alphaKeys(true),
     uppercaseKeys(false),
-    firstCharacterEntry(false)
+    firstCharacterEntry(false),
+    bufferChangedCallback(0)
 {
     //Set the callbacks for the callback areas of the keyboard and set its layout.
     layout.callbackAreaArray[0].callback = &capslockPressed;
@@ -34,6 +35,31 @@ CustomKeyboard::CustomKeyboard() : keyboard(),
 
     add(keyboard);
     add(modeBtnTextArea);
+}
+
+const Unicode::UnicodeChar* CustomKeyboard::getBuffer() const
+{
+    return buffer;
+}
+
+uint16_t CustomKeyboard::getBufferPosition()
+{
+    return keyboard.getBufferPosition();
+}
+
+void CustomKeyboard::clearBuffer()
+{
+    memset(buffer, 0, sizeof(buffer));
+    keyboard.setBufferPosition(0);
+    firstCharacterEntry = true;
+    uppercaseKeys = true;
+    setKeyMappingList();
+    notifyBufferChanged();
+}
+
+void CustomKeyboard::setBufferChangedCallback(GenericCallback<>& callback)
+{
+    bufferChangedCallback = &callback;
 }
 
 void CustomKeyboard::setKeyMappingList()
@@ -80,6 +106,8 @@ void CustomKeyboard::backspacePressedHandler()
             uppercaseKeys = true;
             setKeyMappingList();
         }
+
+        notifyBufferChanged();
     }
 }
 
@@ -115,10 +143,23 @@ void CustomKeyboard::keyPressedhandler(Unicode::UnicodeChar keyChar)
         uppercaseKeys = false;
         setKeyMappingList();
     }
+
+    if (keyChar != 0)
+    {
+        notifyBufferChanged();
+    }
 }
 
 void CustomKeyboard::setTouchable(bool touch)
 {
     Container::setTouchable(touch);
     keyboard.setTouchable(touch);
+}
+
+void CustomKeyboard::notifyBufferChanged()
+{
+    if (bufferChangedCallback != 0)
+    {
+        bufferChangedCallback->execute();
+    }
 }
