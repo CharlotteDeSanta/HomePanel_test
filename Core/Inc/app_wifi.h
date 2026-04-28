@@ -8,6 +8,8 @@ extern "C" {
 #include <stdint.h>
 #include "cmsis_os2.h"
 
+#define APP_WIFI_SCAN_RESULT_CACHE_SIZE 32U
+
 typedef enum
 {
   APP_WIFI_STATE_IDLE = 0,
@@ -39,11 +41,23 @@ typedef enum
   APP_WIFI_STATE_ERROR
 } APP_WiFiState_t;
 
+typedef struct
+{
+  uint8_t bssid[6];
+  char ssid[33];
+  int16_t rssi;
+  uint8_t channel;
+} APP_WiFiScanResult_t;
+
 void APP_WiFi_Init(void);
 void APP_WiFi_Task(void *argument);
 APP_WiFiState_t APP_WiFi_GetState(void);
 uint32_t APP_WiFi_GetOobInterruptCount(void);
 void APP_WiFi_HandleOobInterrupt(uint16_t gpioPin);
+uint8_t APP_WiFi_IsScanComplete(void);
+uint8_t APP_WiFi_IsScanAborted(void);
+uint32_t APP_WiFi_GetCachedScanResultCount(void);
+uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t maxResults);
 
 #ifdef __cplusplus
 }

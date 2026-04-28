@@ -1419,8 +1419,10 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataL
   uint16_t count = 0U;
   uint8_t blockMode = 0U;
 
-  if ((data == NULL) || (dataLength == 0U) || (dataLength > APP_WIFI_SDIO_BLOCK_SIZE))
+  if ((data == NULL) || (dataLength == 0U))
   {
+    g_wifiLastSdioStatus = 0U;
+    g_wifiLastSdioError = SDMMC_ERROR_INVALID_PARAMETER;
     return HAL_ERROR;
   }
 
@@ -1447,6 +1449,8 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataL
   if ((transferLength == 0U) || (dmaTransferLength == 0U) || (dctrlBlockSize == 0U) ||
       (dmaTransferLength > sizeof(g_wifiCmd53Scratch)))
   {
+    g_wifiLastSdioStatus = 0U;
+    g_wifiLastSdioError = SDMMC_ERROR_INVALID_PARAMETER;
     return HAL_ERROR;
   }
 
