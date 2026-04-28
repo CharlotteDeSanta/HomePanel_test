@@ -36,8 +36,10 @@ protected:
     touchgfx::Button closeButton;
     touchgfx::TextArea screenTitle;
     ssidScrollWheelContainer ssidScrollWheelContainer1;
+    touchgfx::BoxWithBorder boxWithBorder2;
     touchgfx::BoxWithBorder boxWithBorder1;
     touchgfx::TextAreaWithOneWildcard passwordtextArea;
+    touchgfx::TextAreaWithOneWildcard ssidtextArea;
     touchgfx::ButtonWithLabel clearButton;
     touchgfx::ButtonWithLabel confirmButton;
 
@@ -46,6 +48,8 @@ protected:
      */
     static const uint16_t PASSWORDTEXTAREA_SIZE = 15;
     touchgfx::Unicode::UnicodeChar passwordtextAreaBuffer[PASSWORDTEXTAREA_SIZE];
+    static const uint16_t SSIDTEXTAREA_SIZE = 15;
+    touchgfx::Unicode::UnicodeChar ssidtextAreaBuffer[SSIDTEXTAREA_SIZE];
 
 private:
 

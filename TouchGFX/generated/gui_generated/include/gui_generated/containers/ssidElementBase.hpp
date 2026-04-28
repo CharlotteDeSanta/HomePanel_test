@@ -28,7 +28,7 @@ protected:
     /*
      * Wildcard Buffers
      */
-    static const uint16_t SSIDVALUETEXT_SIZE = 5;
+    static const uint16_t SSIDVALUETEXT_SIZE = 20;
     touchgfx::Unicode::UnicodeChar ssidValueTextBuffer[SSIDVALUETEXT_SIZE];
 
 private:

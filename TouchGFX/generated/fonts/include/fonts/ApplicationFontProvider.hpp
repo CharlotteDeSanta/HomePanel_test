@@ -41,10 +41,10 @@ struct TypographyFontIndex
     static const touchgfx::FontId SEMIBOLD16 = 7; // GeogrotesqueCyr_SemiBold_16_4bpp
     static const touchgfx::FontId MEDIUM48 = 8;   // GeogrotesqueCyr_Medium_48_4bpp
     static const touchgfx::FontId SEMIBOLD22 = 9; // GeogrotesqueCyr_SemiBold_22_4bpp
-    static const touchgfx::FontId DISPLAY = 10;    // verdana_20_4bpp
-    static const touchgfx::FontId MODE = 10;       // verdana_20_4bpp
-    static const touchgfx::FontId KEYBOARD = 10;   // verdana_20_4bpp
-    static const touchgfx::FontId KEYBOARD30 = 11; // verdana_30_4bpp
+    static const touchgfx::FontId DISPLAY = 10;    // verdana_30_4bpp
+    static const touchgfx::FontId MODE = 11;       // verdana_20_4bpp
+    static const touchgfx::FontId KEYBOARD = 11;   // verdana_20_4bpp
+    static const touchgfx::FontId KEYBOARD30 = 10; // verdana_30_4bpp
     static const uint16_t NUMBER_OF_FONTS = 12;
 };
 

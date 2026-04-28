@@ -285,6 +285,12 @@
       </Text>
     </TextGroup>
     <TextGroup Id="Unsorted">
+      <Text Id="__SingleUse_10VC" Alignment="Left" TypographyId="Mode">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_JPFH" Alignment="Left" TypographyId="Keyboard30">
+        <Translation Language="GB">SSID:&lt;value&gt;</Translation>
+      </Text>
       <Text Id="__SingleUse_QT6I" Alignment="Left" TypographyId="Mode">
         <Translation Language="GB"></Translation>
       </Text>
@@ -430,7 +436,7 @@
     <Typography Id="Semibold16" Font="GeogrotesqueCyr-SemiBold.ttf" Size="16" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
     <Typography Id="medium48" Font="GeogrotesqueCyr-Medium.ttf" Size="48" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="-." WildcardCharacterRanges="0-9" />
     <Typography Id="Semibold22" Font="GeogrotesqueCyr-SemiBold.ttf" Size="22" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="." WildcardCharacterRanges="0-9" />
-    <Typography Id="Display" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;?" WildcardCharacterRanges="a-z,A-Z,0-9" />
+    <Typography Id="Display" Font="verdana.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;?" WildcardCharacterRanges="a-z,A-Z,0-9" />
     <Typography Id="Mode" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
     <Typography Id="Keyboard" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;? " WildcardCharacterRanges="a-z,A-Z,0-9" />
     <Typography Id="Keyboard30" Font="verdana.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="`~!@#$%^&amp;*()-=_+[{]}\|;':&quot;,./&lt;&gt;? ±×÷•º©£€®¥¡¢¿ " WildcardCharacterRanges="a-z,A-Z,0-9" />

@@ -22,7 +22,7 @@ WifiViewBase::WifiViewBase() :
     closeButton.setAction(buttonCallback);
     add(closeButton);
 
-    screenTitle.setPosition(221, 32, 359, 39);
+    screenTitle.setPosition(221, 6, 359, 39);
     screenTitle.setColor(touchgfx::Color::getColorFromRGB(101, 123, 158));
     screenTitle.setLinespacing(0);
     screenTitle.setTypedText(touchgfx::TypedText(T___SINGLEUSE_1X7S));
@@ -31,13 +31,19 @@ WifiViewBase::WifiViewBase() :
     ssidScrollWheelContainer1.setXY(20, 95);
     add(ssidScrollWheelContainer1);
 
-    boxWithBorder1.setPosition(392, 75, 402, 50);
+    boxWithBorder2.setPosition(392, 45, 402, 50);
+    boxWithBorder2.setColor(touchgfx::Color::getColorFromRGB(255, 255, 255));
+    boxWithBorder2.setBorderColor(touchgfx::Color::getColorFromRGB(113, 132, 156));
+    boxWithBorder2.setBorderSize(5);
+    add(boxWithBorder2);
+
+    boxWithBorder1.setPosition(392, 102, 402, 50);
     boxWithBorder1.setColor(touchgfx::Color::getColorFromRGB(255, 255, 255));
     boxWithBorder1.setBorderColor(touchgfx::Color::getColorFromRGB(113, 132, 156));
     boxWithBorder1.setBorderSize(5);
     add(boxWithBorder1);
 
-    passwordtextArea.setXY(400, 82);
+    passwordtextArea.setXY(400, 109);
     passwordtextArea.setColor(touchgfx::Color::getColorFromRGB(113, 132, 156));
     passwordtextArea.setLinespacing(0);
     Unicode::snprintf(passwordtextAreaBuffer, PASSWORDTEXTAREA_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_QT6I).getText());
@@ -46,14 +52,23 @@ WifiViewBase::WifiViewBase() :
     passwordtextArea.setTypedText(touchgfx::TypedText(T___SINGLEUSE_02U1));
     add(passwordtextArea);
 
-    clearButton.setXY(392, 135);
+    ssidtextArea.setXY(400, 52);
+    ssidtextArea.setColor(touchgfx::Color::getColorFromRGB(113, 132, 156));
+    ssidtextArea.setLinespacing(0);
+    Unicode::snprintf(ssidtextAreaBuffer, SSIDTEXTAREA_SIZE, "%s", touchgfx::TypedText(T___SINGLEUSE_10VC).getText());
+    ssidtextArea.setWildcard(ssidtextAreaBuffer);
+    ssidtextArea.resizeToCurrentText();
+    ssidtextArea.setTypedText(touchgfx::TypedText(T___SINGLEUSE_JPFH));
+    add(ssidtextArea);
+
+    clearButton.setXY(392, 162);
     clearButton.setBitmaps(touchgfx::Bitmap(BITMAP_LIGHT_THEME_IMAGES_WIDGETS_BUTTON_REGULAR_HEIGHT_50_TINY_ROUNDED_DISABLED_ID), touchgfx::Bitmap(BITMAP_LIGHT_THEME_IMAGES_WIDGETS_BUTTON_REGULAR_HEIGHT_50_TINY_ROUNDED_DISABLED_ID));
     clearButton.setLabelText(touchgfx::TypedText(T___SINGLEUSE_MYL6));
     clearButton.setLabelColor(touchgfx::Color::getColorFromRGB(255, 255, 255));
     clearButton.setLabelColorPressed(touchgfx::Color::getColorFromRGB(67, 90, 120));
     add(clearButton);
 
-    confirmButton.setXY(684, 135);
+    confirmButton.setXY(684, 162);
     confirmButton.setBitmaps(touchgfx::Bitmap(BITMAP_LIGHT_THEME_IMAGES_WIDGETS_BUTTON_REGULAR_HEIGHT_50_TINY_ROUNDED_DISABLED_ID), touchgfx::Bitmap(BITMAP_LIGHT_THEME_IMAGES_WIDGETS_BUTTON_REGULAR_HEIGHT_50_TINY_ROUNDED_DISABLED_ID));
     confirmButton.setLabelText(touchgfx::TypedText(T___SINGLEUSE_UMJJ));
     confirmButton.setLabelColor(touchgfx::Color::getColorFromRGB(255, 255, 255));

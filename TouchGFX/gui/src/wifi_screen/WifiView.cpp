@@ -6,6 +6,7 @@ WifiView::WifiView() :
     keyboardBufferChangedCallback(this, &WifiView::keyboardBufferChangedHandler),
     passwordTextDirty(false)
 {
+    memset(selectedSsidTextBuffer, 0, sizeof(selectedSsidTextBuffer));
     keyboard.setPosition(392, 220, 320, 240);
     keyboard.setBufferChangedCallback(keyboardBufferChangedCallback);
     add(keyboard);
@@ -15,9 +16,14 @@ void WifiView::setupScreen()
 {
     WifiViewBase::setupScreen();
     clearButton.setAction(actionButtonCallback);
+    ssidScrollWheelContainer1.refreshScanResults();
+    memset(selectedSsidTextBuffer, 0, sizeof(selectedSsidTextBuffer));
+    ssidtextArea.setWildcard(selectedSsidTextBuffer);
+    ssidtextArea.setPosition(400, 52, 386, 36);
+    syncSelectedSsidToTextArea();
     memset(passwordtextAreaBuffer, 0, sizeof(passwordtextAreaBuffer));
     passwordtextArea.setWildcard(passwordtextAreaBuffer);
-    passwordtextArea.setPosition(400, 82, 386, 36);
+    passwordtextArea.setPosition(400, 109, 386, 36);
     passwordtextArea.invalidate();
 }
 
@@ -37,6 +43,8 @@ void WifiView::actionButtonHandler(const touchgfx::AbstractButton& src)
 
 void WifiView::handleTickEvent()
 {
+    ssidScrollWheelContainer1.refreshScanResults();
+    syncSelectedSsidToTextArea();
     syncKeyboardBufferToPasswordText();
 }
 
@@ -64,5 +72,33 @@ void WifiView::syncKeyboardBufferToPasswordText()
     if (changed)
     {
         passwordtextArea.invalidate();
+    }
+}
+
+void WifiView::syncSelectedSsidToTextArea()
+{
+    const char* selectedSsid = ssidScrollWheelContainer1.getSelectedSSID();
+    const char* safeSsid = (selectedSsid != 0) ? selectedSsid : "";
+    bool changed = false;
+
+    for (uint16_t i = 0; i < MAX_SELECTED_SSID_TEXT_SIZE; i++)
+    {
+        touchgfx::Unicode::UnicodeChar nextChar = 0;
+
+        if (safeSsid[i] != '\0')
+        {
+            nextChar = static_cast<touchgfx::Unicode::UnicodeChar>(safeSsid[i]);
+        }
+
+        if (selectedSsidTextBuffer[i] != nextChar)
+        {
+            changed = true;
+            selectedSsidTextBuffer[i] = nextChar;
+        }
+    }
+
+    if (changed)
+    {
+        ssidtextArea.invalidate();
     }
 }

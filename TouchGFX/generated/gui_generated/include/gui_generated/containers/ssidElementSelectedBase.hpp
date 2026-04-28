@@ -28,7 +28,7 @@ protected:
     /*
      * Wildcard Buffers
      */
-    static const uint16_t TEMPVALUETEXT_SIZE = 5;
+    static const uint16_t TEMPVALUETEXT_SIZE = 20;
     touchgfx::Unicode::UnicodeChar tempValueTextBuffer[TEMPVALUETEXT_SIZE];
 
 private:

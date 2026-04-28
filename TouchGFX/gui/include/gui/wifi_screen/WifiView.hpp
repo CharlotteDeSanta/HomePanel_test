@@ -9,6 +9,8 @@
 class WifiView : public WifiViewBase
 {
 public:
+    static const uint16_t MAX_SELECTED_SSID_TEXT_SIZE = 34;
+
     WifiView();
     virtual ~WifiView() {}
     virtual void setupScreen();
@@ -18,11 +20,13 @@ protected:
     void actionButtonHandler(const touchgfx::AbstractButton& src);
     void keyboardBufferChangedHandler();
     void syncKeyboardBufferToPasswordText();
+    void syncSelectedSsidToTextArea();
 
     CustomKeyboard keyboard;
     touchgfx::Callback<WifiView, const touchgfx::AbstractButton&> actionButtonCallback;
     touchgfx::Callback<WifiView> keyboardBufferChangedCallback;
     bool passwordTextDirty;
+    touchgfx::Unicode::UnicodeChar selectedSsidTextBuffer[MAX_SELECTED_SSID_TEXT_SIZE];
 };
 
 #endif // WIFIVIEW_HPP

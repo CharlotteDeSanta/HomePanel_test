@@ -40,17 +40,17 @@ touchgfx::Font* ApplicationFontProvider::getFont(touchgfx::FontId typography)
         // GeogrotesqueCyr_SemiBold_22_4bpp
         return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[9]);
     case Typography::DISPLAY:
-        // verdana_20_4bpp
+        // verdana_30_4bpp
         return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[10]);
     case Typography::MODE:
         // verdana_20_4bpp
-        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[10]);
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[11]);
     case Typography::KEYBOARD:
         // verdana_20_4bpp
-        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[10]);
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[11]);
     case Typography::KEYBOARD30:
         // verdana_30_4bpp
-        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[11]);
+        return const_cast<touchgfx::Font*>(TypedTextDatabase::getFonts()[10]);
     default:
         return 0;
     }

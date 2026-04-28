@@ -1762,7 +1762,7 @@
             "Type": "TextArea",
             "Name": "screenTitle",
             "X": 221,
-            "Y": 32,
+            "Y": 6,
             "Width": 359,
             "Height": 39,
             "TextId": "__SingleUse_1X7S",
@@ -1784,9 +1784,28 @@
           },
           {
             "Type": "BoxWithBorder",
+            "Name": "boxWithBorder2",
+            "X": 392,
+            "Y": 45,
+            "Width": 402,
+            "Height": 50,
+            "Color": {
+              "Red": 255,
+              "Green": 255,
+              "Blue": 255
+            },
+            "BorderColor": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "BorderSize": 5
+          },
+          {
+            "Type": "BoxWithBorder",
             "Name": "boxWithBorder1",
             "X": 392,
-            "Y": 75,
+            "Y": 102,
             "Width": 402,
             "Height": 50,
             "Color": {
@@ -1805,7 +1824,7 @@
             "Type": "TextArea",
             "Name": "passwordtextArea",
             "X": 400,
-            "Y": 82,
+            "Y": 109,
             "Width": 156,
             "Height": 36,
             "TextId": "__SingleUse_02U1",
@@ -1823,10 +1842,31 @@
             }
           },
           {
+            "Type": "TextArea",
+            "Name": "ssidtextArea",
+            "X": 400,
+            "Y": 52,
+            "Width": 92,
+            "Height": 36,
+            "TextId": "__SingleUse_JPFH",
+            "TextRotation": "0",
+            "Color": {
+              "Red": 113,
+              "Green": 132,
+              "Blue": 156
+            },
+            "AutoSize": true,
+            "Wildcard1": {
+              "TextId": "__SingleUse_10VC",
+              "UseBuffer": true,
+              "BufferSize": 15
+            }
+          },
+          {
             "Type": "ButtonWithLabel",
             "Name": "clearButton",
             "X": 392,
-            "Y": 135,
+            "Y": 162,
             "Width": 110,
             "Height": 50,
             "Pressed": "__generated\\light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.png",
@@ -1849,7 +1889,7 @@
             "Type": "ButtonWithLabel",
             "Name": "confirmButton",
             "X": 684,
-            "Y": 135,
+            "Y": 162,
             "Width": 110,
             "Height": 50,
             "Pressed": "__generated\\light_theme_images_widgets_button_regular_height_50_tiny_rounded_disabled.png",
@@ -2404,7 +2444,7 @@
             "Wildcard1": {
               "TextId": "__SingleUse_LX2C",
               "UseBuffer": true,
-              "BufferSize": 5
+              "BufferSize": 20
             }
           }
         ],
@@ -2460,7 +2500,7 @@
             "Wildcard1": {
               "TextId": "__SingleUse_24Z8",
               "UseBuffer": true,
-              "BufferSize": 5
+              "BufferSize": 20
             }
           }
         ],
