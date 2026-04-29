@@ -10,6 +10,7 @@ class WifiView : public WifiViewBase
 {
 public:
     static const uint16_t MAX_SELECTED_SSID_TEXT_SIZE = 34;
+    static const uint16_t MAX_PASSWORD_TEXT_SIZE = 65;
 
     WifiView();
     virtual ~WifiView() {}
@@ -27,6 +28,7 @@ protected:
     touchgfx::Callback<WifiView> keyboardBufferChangedCallback;
     bool passwordTextDirty;
     touchgfx::Unicode::UnicodeChar selectedSsidTextBuffer[MAX_SELECTED_SSID_TEXT_SIZE];
+    touchgfx::Unicode::UnicodeChar passwordTextBuffer[MAX_PASSWORD_TEXT_SIZE];
 };
 
 #endif // WIFIVIEW_HPP

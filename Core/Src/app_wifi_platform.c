@@ -1442,8 +1442,22 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataL
     transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
     dmaTransferLength = transferLength;
     dctrlBlockSize = APP_WiFi_Platform_GetDctrlBlockSize(transferLength);
-    blockMode = 0U;
-    count = (uint16_t)transferLength;
+    if (transferLength >= APP_WIFI_SDIO_BLOCK_SIZE)
+    {
+      /*
+       * Small control frames that round up to 64 bytes have proven unstable
+       * when issued as CMD53 byte-mode transfers with count=64. Treat that
+       * case as a single 64-byte block transfer instead, while still keeping
+       * the payload zero-padded in the DMA scratch buffer.
+       */
+      blockMode = 1U;
+      count = 1U;
+    }
+    else
+    {
+      blockMode = 0U;
+      count = (uint16_t)transferLength;
+    }
   }
 
   if ((transferLength == 0U) || (dmaTransferLength == 0U) || (dctrlBlockSize == 0U) ||
