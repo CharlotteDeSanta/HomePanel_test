@@ -9,6 +9,8 @@ extern "C" {
 #include "cmsis_os2.h"
 
 #define APP_WIFI_SCAN_RESULT_CACHE_SIZE 32U
+#define APP_WIFI_MAC_ADDRESS_SIZE 6U
+#define APP_WIFI_LWIP_TX_PACKET_MAX_LEN 1600U
 
 typedef enum
 {
@@ -57,6 +59,13 @@ typedef struct
   uint8_t channel;
 } APP_WiFiScanResult_t;
 
+typedef enum
+{
+  APP_WIFI_TX_STATUS_OK = 0,
+  APP_WIFI_TX_STATUS_BUSY,
+  APP_WIFI_TX_STATUS_ERROR
+} APP_WiFiTxStatus_t;
+
 void APP_WiFi_Init(void);
 void APP_WiFi_Task(void *argument);
 APP_WiFiState_t APP_WiFi_GetState(void);
@@ -69,6 +78,8 @@ uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t 
 uint8_t APP_WiFi_RequestScan(void);
 uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password);
 APP_WiFiLinkState_t APP_WiFi_GetLinkState(void);
+uint8_t APP_WiFi_GetMacAddress(uint8_t *macAddress);
+APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length);
 
 #ifdef __cplusplus
 }

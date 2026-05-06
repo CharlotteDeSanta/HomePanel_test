@@ -592,6 +592,9 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Read(uint8_t functionNumber, uint32_t a
 
   SDMMC1->MASK = 0U;
   SDMMC1->ICR = 0xFFFFFFFFU;
+  SDMMC1->DLEN = 0U;
+  SDMMC1->DCTRL = 0U;
+  SDMMC1->IDMACTRL = SDMMC_DISABLE_IDMA;
   SDMMC1->DTIMER = SDMMC_DATATIMEOUT;
   SDMMC1->DLEN = transferLength;
   SDMMC1->DCTRL = dctrlBlockSize | SDMMC_TRANSFER_DIR_TO_SDMMC | SDMMC_TRANSFER_MODE_BLOCK | SDMMC_DCTRL_SDIOEN;
@@ -871,6 +874,11 @@ HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void)
   uint8_t chipClockCsr = 0U;
 
   if (g_wifiSdioBusConfigured == 0U)
+  {
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_Fn1Write8(APP_WIFI_SDIO_CHIP_CLOCK_CSR, APP_WIFI_SDIO_HT_AVAIL_REQ) != HAL_OK)
   {
     return HAL_ERROR;
   }
@@ -1363,6 +1371,11 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Read(uint8_t *data, uint16_t dataLength)
     return HAL_ERROR;
   }
 
+  if (APP_WiFi_Platform_RequestHtClock() != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
   if (dataLength == 1U)
   {
     return APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN2, 0U, data);
@@ -1384,6 +1397,9 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Read(uint8_t *data, uint16_t dataLength)
 
   SDMMC1->MASK = 0U;
   SDMMC1->ICR = 0xFFFFFFFFU;
+  SDMMC1->DLEN = 0U;
+  SDMMC1->DCTRL = 0U;
+  SDMMC1->IDMACTRL = SDMMC_DISABLE_IDMA;
   SDMMC1->DTIMER = SDMMC_DATATIMEOUT;
   SDMMC1->DLEN = dataLength;
   SDMMC1->DCTRL = SDMMC_DATABLOCK_SIZE_64B |
@@ -1423,6 +1439,11 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataL
   {
     g_wifiLastSdioStatus = 0U;
     g_wifiLastSdioError = SDMMC_ERROR_INVALID_PARAMETER;
+    return HAL_ERROR;
+  }
+
+  if (APP_WiFi_Platform_RequestHtClock() != HAL_OK)
+  {
     return HAL_ERROR;
   }
 
@@ -1472,6 +1493,9 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataL
 
   SDMMC1->MASK = 0U;
   SDMMC1->ICR = 0xFFFFFFFFU;
+  SDMMC1->DLEN = 0U;
+  SDMMC1->DCTRL = 0U;
+  SDMMC1->IDMACTRL = SDMMC_DISABLE_IDMA;
   SDMMC1->DTIMER = SDMMC_DATATIMEOUT;
   SDMMC1->DLEN = dmaTransferLength;
   SDMMC1->DCTRL = dctrlBlockSize |
@@ -1800,7 +1824,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void)
       g_wifiLastSdioError = SDMMC_ERROR_GENERAL_UNKNOWN_ERR;
       SDMMC1->ICR = 0xFFFFFFFFU;
       SDMMC1->DLEN = 0U;
-      SDMMC1->DCTRL = SDMMC_DCTRL_SDIOEN;
+      SDMMC1->DCTRL = 0U;
       SDMMC1->IDMACTRL = SDMMC_DISABLE_IDMA;
       SDMMC1->CMD = 0U;
       return HAL_ERROR;
@@ -1811,7 +1835,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void)
       g_wifiLastSdioError = SDMMC_ERROR_NONE;
       SDMMC1->ICR = 0xFFFFFFFFU;
       SDMMC1->DLEN = 0U;
-      SDMMC1->DCTRL = SDMMC_DCTRL_SDIOEN;
+      SDMMC1->DCTRL = 0U;
       SDMMC1->IDMACTRL = SDMMC_DISABLE_IDMA;
       SDMMC1->CMD = 0U;
       return HAL_OK;
@@ -1822,7 +1846,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void)
       g_wifiLastSdioError = SDMMC_ERROR_TIMEOUT;
       SDMMC1->ICR = 0xFFFFFFFFU;
       SDMMC1->DLEN = 0U;
-      SDMMC1->DCTRL = SDMMC_DCTRL_SDIOEN;
+      SDMMC1->DCTRL = 0U;
       SDMMC1->IDMACTRL = SDMMC_DISABLE_IDMA;
       SDMMC1->CMD = 0U;
       return HAL_TIMEOUT;

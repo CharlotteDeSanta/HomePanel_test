@@ -53,6 +53,49 @@ set_source_files_properties(
     PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
+set(APP_WIFI_LWIP_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/lwip_sys_arch.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi_lwip.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/api_lib.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/api_msg.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/err.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/netbuf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/netdb.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/netifapi.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/sockets.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/api/tcpip.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/def.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/dns.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/inet_chksum.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/init.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ip.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/mem.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/memp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/netif.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/pbuf.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/raw.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/stats.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/sys.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/tcp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/tcp_in.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/tcp_out.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/timeouts.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/udp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/autoip.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/dhcp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/etharp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/icmp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/igmp.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/ip4.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/ip4_addr.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/core/ipv4/ip4_frag.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/netif/ethernet.c
+)
+
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    ${APP_WIFI_LWIP_SOURCES}
+)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -76,6 +119,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/platform/GCC
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Examples/wifi-ap6181-h743pro-code-master/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/include/posix
 )
 
 # Add project symbols (macros)
