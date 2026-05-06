@@ -5,6 +5,7 @@
 #include <gui/common/CustomKeyboard.hpp>
 #include <gui/wifi_screen/WifiPresenter.hpp>
 #include <touchgfx/Unicode.hpp>
+#include <touchgfx/events/ClickEvent.hpp>
 
 class WifiView : public WifiViewBase
 {
@@ -16,17 +17,32 @@ public:
     virtual ~WifiView() {}
     virtual void setupScreen();
     virtual void tearDownScreen();
+    virtual void handleClickEvent(const touchgfx::ClickEvent& event);
     virtual void handleTickEvent();
 protected:
+    enum InputFocus
+    {
+        FOCUS_SSID,
+        FOCUS_PASSWORD
+    };
+
     void actionButtonHandler(const touchgfx::AbstractButton& src);
     void keyboardBufferChangedHandler();
+    void setInputFocus(InputFocus focus);
+    void loadFocusedTextToKeyboard();
+    void syncKeyboardBufferToFocusedText();
+    void syncKeyboardBufferToSsidText();
     void syncKeyboardBufferToPasswordText();
     void syncSelectedSsidToTextArea();
+    void clearTextBuffers();
 
     CustomKeyboard keyboard;
     touchgfx::Callback<WifiView, const touchgfx::AbstractButton&> actionButtonCallback;
     touchgfx::Callback<WifiView> keyboardBufferChangedCallback;
-    bool passwordTextDirty;
+    InputFocus inputFocus;
+    // Tracks the last SSID text mirrored from the scroll wheel so manual edits are not
+    // overwritten unless the wheel selection actually changes.
+    char lastSelectedSsidText[MAX_SELECTED_SSID_TEXT_SIZE];
     touchgfx::Unicode::UnicodeChar selectedSsidTextBuffer[MAX_SELECTED_SSID_TEXT_SIZE];
     touchgfx::Unicode::UnicodeChar passwordTextBuffer[MAX_PASSWORD_TEXT_SIZE];
 };

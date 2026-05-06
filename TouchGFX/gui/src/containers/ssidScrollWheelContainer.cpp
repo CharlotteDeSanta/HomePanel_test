@@ -31,6 +31,9 @@ void ssidScrollWheelContainer::initialize()
 {
     ssidScrollWheelContainerBase::initialize();
     ssidscrollWheel.setSelectedItemOffset(65);
+#if defined(STM32H743xx)
+    (void)APP_WiFi_RequestScan();
+#endif
     refreshScanResults();
 }
 

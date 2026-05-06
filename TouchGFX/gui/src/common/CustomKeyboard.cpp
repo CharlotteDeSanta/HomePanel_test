@@ -54,6 +54,32 @@ void CustomKeyboard::clearBuffer()
     firstCharacterEntry = true;
     uppercaseKeys = true;
     setKeyMappingList();
+    keyboard.invalidate();
+    notifyBufferChanged();
+}
+
+void CustomKeyboard::setBufferText(const Unicode::UnicodeChar* text, uint16_t maxLength)
+{
+    const uint16_t sourceLimit = (maxLength > 0U) ? static_cast<uint16_t>(maxLength - 1U) : 0U;
+    const uint16_t copyLimit = (sourceLimit < BUFFER_SIZE) ? sourceLimit : (BUFFER_SIZE - 1U);
+    uint16_t position = 0U;
+
+    memset(buffer, 0, sizeof(buffer));
+
+    if (text != 0)
+    {
+        while ((position < copyLimit) && (text[position] != 0))
+        {
+            buffer[position] = text[position];
+            position++;
+        }
+    }
+
+    keyboard.setBufferPosition(position);
+    firstCharacterEntry = (position == 0U);
+    uppercaseKeys = firstCharacterEntry;
+    setKeyMappingList();
+    keyboard.invalidate();
     notifyBufferChanged();
 }
 

@@ -1,6 +1,7 @@
 #include <gui/wifi_screen/WifiView.hpp>
 #include <stdio.h>
 #include <string.h>
+#include <touchgfx/Drawable.hpp>
 
 #if defined(STM32H743xx)
 extern "C"
@@ -55,25 +56,10 @@ void copyUnicodeToAscii(char* destination,
     }
 }
 
-bool splitManualJoinText(char* typedText, char** ssid, char** password)
+bool isPointInsideDrawable(const touchgfx::Drawable& drawable, int16_t x, int16_t y)
 {
-    char* separator = 0;
-
-    if ((typedText == 0) || (ssid == 0) || (password == 0))
-    {
-        return false;
-    }
-
-    separator = strchr(typedText, '|');
-    if ((separator == 0) || (separator == typedText))
-    {
-        return false;
-    }
-
-    *separator = '\0';
-    *ssid = typedText;
-    *password = separator + 1;
-    return true;
+    const touchgfx::Rect rect = drawable.getAbsoluteRect();
+    return rect.intersect(x, y);
 }
 
 #if defined(STM32H743xx)
@@ -94,8 +80,9 @@ void wifiUiLogConfirm(const char* ssid, uint16_t passwordLength, const char* res
 WifiView::WifiView() :
     actionButtonCallback(this, &WifiView::actionButtonHandler),
     keyboardBufferChangedCallback(this, &WifiView::keyboardBufferChangedHandler),
-    passwordTextDirty(false)
+    inputFocus(FOCUS_SSID)
 {
+    memset(lastSelectedSsidText, 0, sizeof(lastSelectedSsidText));
     memset(selectedSsidTextBuffer, 0, sizeof(selectedSsidTextBuffer));
     memset(passwordTextBuffer, 0, sizeof(passwordTextBuffer));
     keyboard.setPosition(392, 220, 320, 240);
@@ -117,6 +104,7 @@ void WifiView::setupScreen()
     passwordtextArea.setWildcard(passwordTextBuffer);
     passwordtextArea.setPosition(400, 109, 386, 36);
     passwordtextArea.invalidate();
+    setInputFocus(FOCUS_SSID);
 }
 
 void WifiView::tearDownScreen()
@@ -124,45 +112,55 @@ void WifiView::tearDownScreen()
     WifiViewBase::tearDownScreen();
 }
 
+void WifiView::handleClickEvent(const touchgfx::ClickEvent& event)
+{
+    if (event.getType() == touchgfx::ClickEvent::PRESSED)
+    {
+        const int16_t x = event.getX();
+        const int16_t y = event.getY();
+
+        if (isPointInsideDrawable(boxWithBorder2, x, y))
+        {
+            setInputFocus(FOCUS_SSID);
+        }
+        else if (isPointInsideDrawable(boxWithBorder1, x, y))
+        {
+            setInputFocus(FOCUS_PASSWORD);
+        }
+    }
+
+    WifiViewBase::handleClickEvent(event);
+}
+
 void WifiView::actionButtonHandler(const touchgfx::AbstractButton& src)
 {
     if (&src == &clearButton)
     {
+        clearTextBuffers();
         keyboard.clearBuffer();
-        syncKeyboardBufferToPasswordText();
     }
     else if (&src == &confirmButton)
     {
 #if defined(STM32H743xx)
-        const char* selectedSsid = ssidScrollWheelContainer1.getSelectedSSID();
-        const char* joinSsid = selectedSsid;
-        const char* joinPassword = 0;
-        char typedText[98] = {0};
-        char* manualSsid = 0;
-        char* manualPassword = 0;
+        char joinSsid[MAX_SELECTED_SSID_TEXT_SIZE] = {0};
+        char joinPassword[MAX_PASSWORD_TEXT_SIZE] = {0};
 
-        copyUnicodeToAscii(typedText,
-                           static_cast<uint16_t>(sizeof(typedText)),
-                           keyboard.getBuffer(),
-                           keyboard.getBufferPosition());
+        syncKeyboardBufferToFocusedText();
+        copyUnicodeToAscii(joinSsid,
+                           static_cast<uint16_t>(sizeof(joinSsid)),
+                           selectedSsidTextBuffer,
+                           MAX_SELECTED_SSID_TEXT_SIZE);
+        copyUnicodeToAscii(joinPassword,
+                           static_cast<uint16_t>(sizeof(joinPassword)),
+                           passwordTextBuffer,
+                           MAX_PASSWORD_TEXT_SIZE);
 
         if (!isConnectableSsid(joinSsid))
         {
-            if (!splitManualJoinText(typedText, &manualSsid, &manualPassword))
-            {
-                wifiUiLogConfirm(joinSsid, keyboard.getBufferPosition(), "blocked-invalid-ssid");
-                return;
-            }
-
-            joinSsid = manualSsid;
-            joinPassword = manualPassword;
-            wifiUiLogConfirm(joinSsid,
-                             static_cast<uint16_t>(strlen(joinPassword)),
-                             (APP_WiFi_RequestJoin(joinSsid, joinPassword) != 0U) ? "manual-join-requested" : "manual-join-rejected");
+            wifiUiLogConfirm(joinSsid, static_cast<uint16_t>(strlen(joinPassword)), "blocked-invalid-ssid");
             return;
         }
 
-        joinPassword = typedText;
         wifiUiLogConfirm(joinSsid,
                          static_cast<uint16_t>(strlen(joinPassword)),
                          (APP_WiFi_RequestJoin(joinSsid, joinPassword) != 0U) ? "join-requested" : "join-rejected");
@@ -174,23 +172,82 @@ void WifiView::handleTickEvent()
 {
     ssidScrollWheelContainer1.refreshScanResults();
     syncSelectedSsidToTextArea();
-    syncKeyboardBufferToPasswordText();
+    syncKeyboardBufferToFocusedText();
 }
 
 void WifiView::keyboardBufferChangedHandler()
 {
-    passwordTextDirty = true;
+    syncKeyboardBufferToFocusedText();
+}
+
+void WifiView::setInputFocus(InputFocus focus)
+{
+    if (inputFocus != focus)
+    {
+        syncKeyboardBufferToFocusedText();
+        inputFocus = focus;
+    }
+
+    loadFocusedTextToKeyboard();
+}
+
+void WifiView::loadFocusedTextToKeyboard()
+{
+    if (inputFocus == FOCUS_SSID)
+    {
+        keyboard.setBufferText(selectedSsidTextBuffer, MAX_SELECTED_SSID_TEXT_SIZE);
+    }
+    else
+    {
+        keyboard.setBufferText(passwordTextBuffer, MAX_PASSWORD_TEXT_SIZE);
+    }
+}
+
+void WifiView::syncKeyboardBufferToFocusedText()
+{
+    if (inputFocus == FOCUS_SSID)
+    {
+        syncKeyboardBufferToSsidText();
+    }
+    else
+    {
+        syncKeyboardBufferToPasswordText();
+    }
+}
+
+void WifiView::syncKeyboardBufferToSsidText()
+{
+    const touchgfx::Unicode::UnicodeChar* keyboardBuffer = keyboard.getBuffer();
+    const uint16_t keyboardLength = keyboard.getBufferPosition();
+    const uint16_t textLimit = MAX_SELECTED_SSID_TEXT_SIZE - 1U;
+    bool changed = false;
+
+    for (uint16_t i = 0; i < MAX_SELECTED_SSID_TEXT_SIZE; i++)
+    {
+        touchgfx::Unicode::UnicodeChar nextChar = ((i < keyboardLength) && (i < textLimit)) ? keyboardBuffer[i] : 0;
+        if (selectedSsidTextBuffer[i] != nextChar)
+        {
+            changed = true;
+        }
+        selectedSsidTextBuffer[i] = nextChar;
+    }
+
+    if (changed)
+    {
+        ssidtextArea.invalidate();
+    }
 }
 
 void WifiView::syncKeyboardBufferToPasswordText()
 {
     const touchgfx::Unicode::UnicodeChar* keyboardBuffer = keyboard.getBuffer();
     const uint16_t keyboardLength = keyboard.getBufferPosition();
+    const uint16_t textLimit = MAX_PASSWORD_TEXT_SIZE - 1U;
     bool changed = false;
 
     for (uint16_t i = 0; i < MAX_PASSWORD_TEXT_SIZE; i++)
     {
-        touchgfx::Unicode::UnicodeChar nextChar = (i < keyboardLength) ? keyboardBuffer[i] : 0;
+        touchgfx::Unicode::UnicodeChar nextChar = ((i < keyboardLength) && (i < textLimit)) ? keyboardBuffer[i] : 0;
         if (passwordTextBuffer[i] != nextChar)
         {
             changed = true;
@@ -204,17 +261,40 @@ void WifiView::syncKeyboardBufferToPasswordText()
     }
 }
 
+void WifiView::clearTextBuffers()
+{
+    const char* selectedSsid = ssidScrollWheelContainer1.getSelectedSSID();
+    const char* safeSsid = isConnectableSsid(selectedSsid) ? selectedSsid : "";
+
+    memset(selectedSsidTextBuffer, 0, sizeof(selectedSsidTextBuffer));
+    memset(passwordTextBuffer, 0, sizeof(passwordTextBuffer));
+    memset(lastSelectedSsidText, 0, sizeof(lastSelectedSsidText));
+    strncpy(lastSelectedSsidText, safeSsid, sizeof(lastSelectedSsidText) - 1U);
+    lastSelectedSsidText[sizeof(lastSelectedSsidText) - 1U] = '\0';
+    ssidtextArea.invalidate();
+    passwordtextArea.invalidate();
+}
+
 void WifiView::syncSelectedSsidToTextArea()
 {
     const char* selectedSsid = ssidScrollWheelContainer1.getSelectedSSID();
-    const char* safeSsid = (selectedSsid != 0) ? selectedSsid : "";
+    const char* safeSsid = isConnectableSsid(selectedSsid) ? selectedSsid : "";
+    if (strcmp(safeSsid, lastSelectedSsidText) == 0)
+    {
+        return;
+    }
+
     bool changed = false;
+
+    memset(lastSelectedSsidText, 0, sizeof(lastSelectedSsidText));
+    strncpy(lastSelectedSsidText, safeSsid, sizeof(lastSelectedSsidText) - 1U);
+    lastSelectedSsidText[sizeof(lastSelectedSsidText) - 1U] = '\0';
 
     for (uint16_t i = 0; i < MAX_SELECTED_SSID_TEXT_SIZE; i++)
     {
         touchgfx::Unicode::UnicodeChar nextChar = 0;
 
-        if (safeSsid[i] != '\0')
+        if ((i < (MAX_SELECTED_SSID_TEXT_SIZE - 1U)) && (safeSsid[i] != '\0'))
         {
             nextChar = static_cast<touchgfx::Unicode::UnicodeChar>(safeSsid[i]);
         }
@@ -229,5 +309,10 @@ void WifiView::syncSelectedSsidToTextArea()
     if (changed)
     {
         ssidtextArea.invalidate();
+    }
+
+    if (inputFocus == FOCUS_SSID)
+    {
+        keyboard.setBufferText(selectedSsidTextBuffer, MAX_SELECTED_SSID_TEXT_SIZE);
     }
 }

@@ -66,6 +66,7 @@ uint8_t APP_WiFi_IsScanComplete(void);
 uint8_t APP_WiFi_IsScanAborted(void);
 uint32_t APP_WiFi_GetCachedScanResultCount(void);
 uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t maxResults);
+uint8_t APP_WiFi_RequestScan(void);
 uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password);
 APP_WiFiLinkState_t APP_WiFi_GetLinkState(void);
 

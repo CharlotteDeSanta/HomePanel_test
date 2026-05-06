@@ -28,6 +28,7 @@ public:
     const Unicode::UnicodeChar* getBuffer() const;
     uint16_t getBufferPosition();
     void clearBuffer();
+    void setBufferText(const Unicode::UnicodeChar* text, uint16_t maxLength);
     void setBufferChangedCallback(GenericCallback<>& callback);
 
     /*

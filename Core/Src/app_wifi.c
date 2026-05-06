@@ -17,6 +17,8 @@
 #define APP_WIFI_POLL_MS                1000U
 #define APP_WIFI_HEARTBEAT_MS           5000U
 #define APP_WIFI_SCAN_ACTIVE_POLL_MS    100U
+#define APP_WIFI_SCAN_TIMEOUT_MS        15000U
+#define APP_WIFI_SCAN_STEP_TIMEOUT_MS   3000U
 #define APP_WIFI_LOG_BUFFER_SIZE        1024U
 #define APP_WIFI_SDIO_FN2               2U
 #define APP_WIFI_SDPCM_FRAME_AVAILABLE_MASK 0x000000F0U
@@ -94,6 +96,7 @@
 #define APP_WIFI_WSEC_PASSPHRASE        0x0001U
 #define APP_WIFI_WSEC_AES               0x0004UL
 #define APP_WIFI_EAPOL_KEY_TIMEOUT_MS   2500L
+#define APP_WIFI_LOCAL_STATUS_TIMEOUT   0xFFFFFFFEUL
 #define APP_WIFI_BCME_UNSUPPORTED       ((uint32_t)(int32_t)-23)
 #define APP_WIFI_WPA_AUTH_DISABLED      0x0000UL
 #define APP_WIFI_WPA2_AUTH_PSK          0x0080UL
@@ -213,6 +216,20 @@ typedef enum
   APP_WIFI_JOIN_STEP_WAIT_SSID_ACK,
   APP_WIFI_JOIN_STEP_WAIT_EVENTS
 } APP_WiFi_JoinStep_t;
+
+typedef enum
+{
+  APP_WIFI_SCAN_STEP_IDLE = 0,
+  APP_WIFI_SCAN_STEP_SEND_EVENT_MASK,
+  APP_WIFI_SCAN_STEP_WAIT_EVENT_MASK,
+  APP_WIFI_SCAN_STEP_SEND_SCAN_SUPPRESS,
+  APP_WIFI_SCAN_STEP_WAIT_SCAN_SUPPRESS,
+  APP_WIFI_SCAN_STEP_SEND_PM_OFF,
+  APP_WIFI_SCAN_STEP_WAIT_PM_OFF,
+  APP_WIFI_SCAN_STEP_SEND_ESCAN,
+  APP_WIFI_SCAN_STEP_WAIT_ESCAN_ACK,
+  APP_WIFI_SCAN_STEP_WAIT_RESULTS
+} APP_WiFi_ScanStep_t;
 
 typedef struct
 {
@@ -334,6 +351,10 @@ static uint8_t g_wifiScanSent = 0U;
 static uint8_t g_wifiScanIoctlCompleted = 0U;
 static uint8_t g_wifiScanCompleted = 0U;
 static uint8_t g_wifiScanAborted = 0U;
+static volatile uint8_t g_wifiScanRequested = 0U;
+static APP_WiFi_ScanStep_t g_wifiScanStep = APP_WIFI_SCAN_STEP_IDLE;
+static uint32_t g_wifiScanStepStartTick = 0U;
+static uint32_t g_wifiScanStartTick = 0U;
 static uint8_t g_wifiLastMacAddress[APP_WIFI_MAC_ADDRESS_SIZE] = {0U};
 static uint8_t g_wifiLastBssid[APP_WIFI_MAC_ADDRESS_SIZE] = {0U};
 static char g_wifiLastScanSsid[33] = {0};
@@ -435,6 +456,9 @@ static uint8_t APP_WiFi_TryProbeSdpcmRxInternal(uint8_t requireInterruptHint);
 static uint32_t APP_WiFi_DrainSdpcmRxQueue(uint8_t maxFrames);
 static void APP_WiFi_PollPendingIoctlResponse(void);
 static void APP_WiFi_PollActiveScanResults(void);
+static void APP_WiFi_ProcessScanRequest(void);
+static void APP_WiFi_StartScanRequest(void);
+static void APP_WiFi_FailScan(const char *reason);
 static void APP_WiFi_ProcessJoinRequest(void);
 static void APP_WiFi_ResetJoinProgress(void);
 static void APP_WiFi_EvaluateJoinCompletion(void);
@@ -497,6 +521,10 @@ void APP_WiFi_Init(void)
   g_wifiScanIoctlCompleted = 0U;
   g_wifiScanCompleted = 0U;
   g_wifiScanAborted = 0U;
+  g_wifiScanRequested = 0U;
+  g_wifiScanStep = APP_WIFI_SCAN_STEP_IDLE;
+  g_wifiScanStepStartTick = 0U;
+  g_wifiScanStartTick = 0U;
   memset(g_wifiLastMacAddress, 0, sizeof(g_wifiLastMacAddress));
   memset(g_wifiLastScanSsid, 0, sizeof(g_wifiLastScanSsid));
   APP_WiFi_ClearCachedScanResults();
@@ -571,6 +599,31 @@ uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t 
 
   memcpy(results, g_wifiCachedScanResults, resultCount * sizeof(APP_WiFiScanResult_t));
   return resultCount;
+}
+
+uint8_t APP_WiFi_RequestScan(void)
+{
+  const uint8_t scanActive = ((g_wifiScanStep != APP_WIFI_SCAN_STEP_IDLE) ||
+                              ((g_wifiScanIoctlCompleted != 0U) &&
+                               (g_wifiScanCompleted == 0U) &&
+                               (g_wifiScanAborted == 0U))) ? 1U : 0U;
+
+  if (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTING)
+  {
+    APP_WiFi_Logf("[wifi] scan: request ignored while join is in progress\n");
+    return 0U;
+  }
+
+  if (scanActive != 0U)
+  {
+    return 1U;
+  }
+
+  g_wifiScanRequested = 1U;
+  g_wifiScanCompleted = 0U;
+  g_wifiScanAborted = 0U;
+  APP_WiFi_Logf("[wifi] scan: requested\n");
+  return 1U;
 }
 
 uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password)
@@ -1992,6 +2045,19 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
     APP_WiFi_Logf("[wifi] scan: scan_complete status=%lu reason=%lu\n",
                   (unsigned long)status,
                   (unsigned long)reason);
+    if ((g_wifiScanIoctlCompleted != 0U) &&
+        (g_wifiScanCompleted == 0U) &&
+        (g_wifiScanAborted == 0U))
+    {
+      if (status == APP_WIFI_WLC_E_STATUS_SUCCESS)
+      {
+        g_wifiScanCompleted = 1U;
+      }
+      else
+      {
+        g_wifiScanAborted = 1U;
+      }
+    }
     return;
   }
 
@@ -2875,6 +2941,205 @@ static void APP_WiFi_PollActiveScanResults(void)
   {
     framesDrained++;
   }
+
+  if ((now - g_wifiScanStartTick) > APP_WIFI_SCAN_TIMEOUT_MS)
+  {
+    APP_WiFi_FailScan("timeout waiting for escan events");
+  }
+}
+
+static void APP_WiFi_StartScanRequest(void)
+{
+  g_wifiScanRequested = 0U;
+  g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_EVENT_MASK;
+  g_wifiScanStepStartTick = HAL_GetTick();
+  g_wifiScanStartTick = 0U;
+  g_wifiScanSent = 0U;
+  g_wifiScanIoctlCompleted = 0U;
+  g_wifiScanCompleted = 0U;
+  g_wifiScanAborted = 0U;
+  g_wifiScanPartialCount = 0U;
+  g_wifiScanResultCount = 0U;
+  g_wifiLastScanSyncId = 0U;
+  g_wifiLastScanBssCount = 0U;
+  g_wifiLastScanRssi = 0;
+  g_wifiLastScanChannel = 0U;
+  memset(g_wifiLastScanSsid, 0, sizeof(g_wifiLastScanSsid));
+  APP_WiFi_ClearCachedScanResults();
+  APP_WiFi_Logf("[wifi] scan: starting requested escan sequence\n");
+}
+
+static void APP_WiFi_FailScan(const char *reason)
+{
+  if (g_wifiScanStep == APP_WIFI_SCAN_STEP_IDLE)
+  {
+    return;
+  }
+
+  (void)APP_WiFi_Platform_AbortFunction2Read();
+  g_wifiScanStep = APP_WIFI_SCAN_STEP_IDLE;
+  g_wifiScanRequested = 0U;
+  g_wifiScanAborted = (g_wifiCachedScanResultCount == 0U) ? 1U : 0U;
+  g_wifiScanCompleted = (g_wifiCachedScanResultCount != 0U) ? 1U : 0U;
+  g_wifiScanIoctlCompleted = 0U;
+  g_wifiIoctlProbeCompleted = 1U;
+  g_wifiPendingIovarRequest = APP_WIFI_IOVAR_REQUEST_NONE;
+  g_wifiLastIoctlStatus = APP_WIFI_LOCAL_STATUS_TIMEOUT;
+  APP_WiFi_Logf("[wifi] scan: %s reason=\"%s\" cached=%lu\n",
+                (g_wifiScanCompleted != 0U) ? "completed with partial cache" : "aborted",
+                (reason != NULL) ? reason : "unknown",
+                (unsigned long)g_wifiCachedScanResultCount);
+}
+
+static void APP_WiFi_ProcessScanRequest(void)
+{
+  const uint32_t now = HAL_GetTick();
+
+  if (g_wifiState != APP_WIFI_STATE_MAILBOX_READY)
+  {
+    return;
+  }
+
+  if ((g_wifiScanRequested != 0U) &&
+      (g_wifiScanStep == APP_WIFI_SCAN_STEP_IDLE) &&
+      (g_wifiLinkState != APP_WIFI_LINK_STATE_CONNECTING) &&
+      (g_wifiUpProbeCompleted != 0U) &&
+      ((g_wifiIoctlProbeSent == 0U) || (g_wifiIoctlProbeCompleted != 0U)))
+  {
+    APP_WiFi_StartScanRequest();
+  }
+
+  if (g_wifiScanStep == APP_WIFI_SCAN_STEP_IDLE)
+  {
+    return;
+  }
+
+  if ((g_wifiIoctlProbeSent != 0U) &&
+      (g_wifiIoctlProbeCompleted == 0U))
+  {
+    if ((now - g_wifiScanStepStartTick) > APP_WIFI_SCAN_STEP_TIMEOUT_MS)
+    {
+      APP_WiFi_FailScan("timeout waiting for setup ioctl response");
+    }
+    return;
+  }
+
+  switch (g_wifiScanStep)
+  {
+    case APP_WIFI_SCAN_STEP_SEND_EVENT_MASK:
+      if (APP_WiFi_SendSetEventMsgsIovar() == HAL_OK)
+      {
+        g_wifiEventMaskSent = 1U;
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_WAIT_EVENT_MASK;
+        g_wifiScanStepStartTick = now;
+      }
+      else
+      {
+        APP_WiFi_Logf("[wifi] scan: event_msgs setup send failed, continuing with defaults\n");
+        (void)APP_WiFi_Platform_AbortFunction2Read();
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_SCAN_SUPPRESS;
+        g_wifiScanStepStartTick = now;
+      }
+      break;
+
+    case APP_WIFI_SCAN_STEP_WAIT_EVENT_MASK:
+      APP_WiFi_Logf("[wifi] scan: event_msgs setup status=0x%08lX\n",
+                    (unsigned long)g_wifiLastIoctlStatus);
+      g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_SCAN_SUPPRESS;
+      g_wifiScanStepStartTick = now;
+      break;
+
+    case APP_WIFI_SCAN_STEP_SEND_SCAN_SUPPRESS:
+      if (APP_WiFi_SendClearScanSuppressIoctl() == HAL_OK)
+      {
+        g_wifiScanSuppressSent = 1U;
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_WAIT_SCAN_SUPPRESS;
+        g_wifiScanStepStartTick = now;
+      }
+      else
+      {
+        APP_WiFi_Logf("[wifi] scan: scansuppress setup send failed, continuing\n");
+        (void)APP_WiFi_Platform_AbortFunction2Read();
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_PM_OFF;
+        g_wifiScanStepStartTick = now;
+      }
+      break;
+
+    case APP_WIFI_SCAN_STEP_WAIT_SCAN_SUPPRESS:
+      APP_WiFi_Logf("[wifi] scan: scansuppress setup status=0x%08lX\n",
+                    (unsigned long)g_wifiLastIoctlStatus);
+      g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_PM_OFF;
+      g_wifiScanStepStartTick = now;
+      break;
+
+    case APP_WIFI_SCAN_STEP_SEND_PM_OFF:
+      if (APP_WiFi_SendSetPmOffIoctl() == HAL_OK)
+      {
+        g_wifiPmProbeSent = 1U;
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_WAIT_PM_OFF;
+        g_wifiScanStepStartTick = now;
+      }
+      else
+      {
+        APP_WiFi_Logf("[wifi] scan: PM_OFF setup send failed, continuing\n");
+        (void)APP_WiFi_Platform_AbortFunction2Read();
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_ESCAN;
+        g_wifiScanStepStartTick = now;
+      }
+      break;
+
+    case APP_WIFI_SCAN_STEP_WAIT_PM_OFF:
+      APP_WiFi_Logf("[wifi] scan: PM_OFF setup status=0x%08lX\n",
+                    (unsigned long)g_wifiLastIoctlStatus);
+      g_wifiScanStep = APP_WIFI_SCAN_STEP_SEND_ESCAN;
+      g_wifiScanStepStartTick = now;
+      break;
+
+    case APP_WIFI_SCAN_STEP_SEND_ESCAN:
+      if (APP_WiFi_SendEscanIovar() == HAL_OK)
+      {
+        g_wifiScanSent = 1U;
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_WAIT_ESCAN_ACK;
+        g_wifiScanStepStartTick = now;
+        g_wifiScanStartTick = now;
+      }
+      else
+      {
+        APP_WiFi_FailScan("send escan failed");
+      }
+      break;
+
+    case APP_WIFI_SCAN_STEP_WAIT_ESCAN_ACK:
+      if (g_wifiScanIoctlCompleted != 0U)
+      {
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_WAIT_RESULTS;
+        g_wifiScanStepStartTick = now;
+      }
+      else if ((g_wifiIoctlProbeCompleted != 0U) &&
+               (g_wifiLastIoctlCommand == APP_WIFI_WLC_SET_VAR))
+      {
+        APP_WiFi_FailScan("escan ioctl rejected");
+      }
+      break;
+
+    case APP_WIFI_SCAN_STEP_WAIT_RESULTS:
+      if (g_wifiScanCompleted != 0U)
+      {
+        APP_WiFi_Logf("[wifi] scan: cached results=%lu\n",
+                      (unsigned long)g_wifiCachedScanResultCount);
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_IDLE;
+      }
+      else if (g_wifiScanAborted != 0U)
+      {
+        g_wifiScanStep = APP_WIFI_SCAN_STEP_IDLE;
+      }
+      break;
+
+    case APP_WIFI_SCAN_STEP_IDLE:
+    default:
+      g_wifiScanStep = APP_WIFI_SCAN_STEP_IDLE;
+      break;
+  }
 }
 
 static void APP_WiFi_LogStateDetails(APP_WiFiState_t state)
@@ -3056,11 +3321,11 @@ static void APP_WiFi_LogPeriodicHeartbeat(void)
       g_wifiScanSuppressCompleted = 1U;
       g_wifiPmProbeSent = 1U;
       g_wifiPmProbeCompleted = 1U;
-      g_wifiScanSent = 1U;
-      g_wifiScanAborted = 1U;
+      g_wifiScanSent = 0U;
+      g_wifiScanAborted = 0U;
       g_wifiScanCompleted = 0U;
       g_wifiScanIoctlCompleted = 0U;
-      APP_WiFi_Logf("[wifi] pre-join: skipped optional mac/event/scan/pm setup to keep tx path clean for manual join\n");
+      APP_WiFi_Logf("[wifi] pre-join: skipped optional setup; scan waits for explicit UI request\n");
     }
     else if ((g_wifiMacProbeCompleted != 0U) &&
              (g_wifiEventMaskSent == 0U) &&
@@ -3110,23 +3375,12 @@ static void APP_WiFi_LogPeriodicHeartbeat(void)
         APP_WiFi_Logf("[wifi] ioctl: WLC_SET_PM bypassed after send failure, continuing bring-up\n");
       }
     }
-    else if ((g_wifiPmProbeCompleted != 0U) &&
+    else if ((g_wifiScanRequested != 0U) &&
+             (g_wifiPmProbeCompleted != 0U) &&
              (g_wifiScanSent == 0U) &&
              (g_wifiIoctlProbeCompleted != 0U))
     {
-      if (APP_WiFi_SendEscanIovar() == HAL_OK)
-      {
-        g_wifiScanSent = 1U;
-      }
-      else
-      {
-        (void)APP_WiFi_Platform_AbortFunction2Read();
-        g_wifiScanSent = 1U;
-        g_wifiScanAborted = 1U;
-        g_wifiScanCompleted = 0U;
-        g_wifiScanIoctlCompleted = 0U;
-        APP_WiFi_Logf("[wifi] scan: escan disabled after send failure, keeping cached results and waiting for join request\n");
-      }
+      APP_WiFi_ProcessScanRequest();
     }
 
     (void)APP_WiFi_Platform_ProbeConsole();
@@ -3629,6 +3883,7 @@ void APP_WiFi_Task(void *argument)
       case APP_WIFI_STATE_MAILBOX_READY:
         APP_WiFi_ProcessJoinRequest();
         APP_WiFi_PollPendingIoctlResponse();
+        APP_WiFi_ProcessScanRequest();
         APP_WiFi_PollActiveScanResults();
         APP_WiFi_LogPeriodicHeartbeat();
         osDelay(APP_WIFI_STACK_WAIT_MS);
