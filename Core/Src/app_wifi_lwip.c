@@ -18,6 +18,8 @@
 #include "lwip/sockets.h"
 #include "lwip/tcpip.h"
 
+#include "app_home_data.h"
+#include "app_home_protocol.h"
 #include "app_wifi.h"
 
 #define APP_WIFI_LWIP_TCP_SERVER_PORT      5000U
@@ -50,6 +52,11 @@ static uint32_t g_linkOutputCount = 0U;
 static uint32_t g_txOkCount = 0U;
 static uint32_t g_txBusyCount = 0U;
 static uint32_t g_txErrorCount = 0U;
+static uint32_t g_serverRxCount = 0U;
+static uint32_t g_serverFrameCount = 0U;
+static uint32_t g_serverAckCount = 0U;
+static uint32_t g_serverErrCount = 0U;
+static uint32_t g_serverSendErrorCount = 0U;
 
 static void APP_WiFi_LwIP_TcpipInitDone(void *arg);
 static err_t APP_WiFi_LwIP_NetifInit(struct netif *netif);
@@ -63,6 +70,18 @@ static void APP_WiFi_LwIP_StartServerTask(void);
 static void APP_WiFi_LwIP_ServerTask(void *argument);
 static void APP_WiFi_LwIP_EnsureInitialized(void);
 static err_t APP_WiFi_LwIP_RefreshNetifMacAddress(struct netif *netif);
+static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint16_t length);
+static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket, const APP_HomeProtocolFrame_t *frame);
+static void APP_WiFi_LwIP_SendProtocolAck(int clientSocket, const APP_HomeProtocolFrame_t *frame);
+static void APP_WiFi_LwIP_SendProtocolError(int clientSocket,
+                                            uint8_t node,
+                                            uint16_t sequence,
+                                            uint8_t command,
+                                            APP_HomeProtocolError_t error);
+static uint8_t APP_WiFi_LwIP_IsKnownProtocolCommand(uint8_t command);
+static uint8_t APP_WiFi_LwIP_IsKnownNode(uint8_t node);
+static uint16_t APP_WiFi_LwIP_ReadLe16(const uint8_t *data);
+static int16_t APP_WiFi_LwIP_ReadI16(const uint8_t *data);
 
 static void APP_WiFi_LwIP_TcpipInitDone(void *arg)
 {
@@ -329,6 +348,297 @@ static void APP_WiFi_LwIP_FlushTxQueue(void)
   }
 }
 
+static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint16_t length)
+{
+  uint16_t offset = 0U;
+
+  if ((socketHandle < 0) || (data == NULL) || (length == 0U))
+  {
+    return 0U;
+  }
+
+  while (offset < length)
+  {
+    int sent = send(socketHandle,
+                    &data[offset],
+                    (size_t)(length - offset),
+                    0);
+    if (sent <= 0)
+    {
+      g_serverSendErrorCount++;
+      printf("[proto] send failed #%lu after=%u len=%u\n",
+             (unsigned long)g_serverSendErrorCount,
+             (unsigned int)offset,
+             (unsigned int)length);
+      return 0U;
+    }
+
+    offset = (uint16_t)(offset + (uint16_t)sent);
+  }
+
+  return 1U;
+}
+
+static void APP_WiFi_LwIP_SendProtocolAck(int clientSocket, const APP_HomeProtocolFrame_t *frame)
+{
+  uint8_t payload[1] = {0U};
+  uint8_t txFrame[APP_HOME_PROTOCOL_MAX_FRAME_LEN] = {0U};
+  uint16_t txLength = 0U;
+
+  if (frame == NULL)
+  {
+    return;
+  }
+
+  payload[0] = frame->command;
+  txLength = APP_HomeProtocol_BuildFrame(frame->node,
+                                         APP_HOME_CMD_ACK,
+                                         frame->sequence,
+                                         payload,
+                                         (uint16_t)sizeof(payload),
+                                         txFrame,
+                                         (uint16_t)sizeof(txFrame));
+  if ((txLength != 0U) && (APP_WiFi_LwIP_SendAll(clientSocket, txFrame, txLength) != 0U))
+  {
+    g_serverAckCount++;
+    printf("[proto] ack #%lu node=%u seq=%u cmd=%s\n",
+           (unsigned long)g_serverAckCount,
+           (unsigned int)frame->node,
+           (unsigned int)frame->sequence,
+           APP_HomeProtocol_CommandToString(frame->command));
+  }
+}
+
+static void APP_WiFi_LwIP_SendProtocolError(int clientSocket,
+                                            uint8_t node,
+                                            uint16_t sequence,
+                                            uint8_t command,
+                                            APP_HomeProtocolError_t error)
+{
+  uint8_t payload[2] = {0U};
+  uint8_t txFrame[APP_HOME_PROTOCOL_MAX_FRAME_LEN] = {0U};
+  uint16_t txLength = 0U;
+
+  payload[0] = command;
+  payload[1] = (uint8_t)error;
+  txLength = APP_HomeProtocol_BuildFrame(node,
+                                         APP_HOME_CMD_ERR,
+                                         sequence,
+                                         payload,
+                                         (uint16_t)sizeof(payload),
+                                         txFrame,
+                                         (uint16_t)sizeof(txFrame));
+  if ((txLength != 0U) && (APP_WiFi_LwIP_SendAll(clientSocket, txFrame, txLength) != 0U))
+  {
+    g_serverErrCount++;
+    printf("[proto] err #%lu node=%u seq=%u cmd=0x%02X err=%u\n",
+           (unsigned long)g_serverErrCount,
+           (unsigned int)node,
+           (unsigned int)sequence,
+           (unsigned int)command,
+           (unsigned int)error);
+  }
+}
+
+static uint8_t APP_WiFi_LwIP_IsKnownProtocolCommand(uint8_t command)
+{
+  switch (command)
+  {
+    case APP_HOME_CMD_HELLO:
+    case APP_HOME_CMD_TELEMETRY:
+    case APP_HOME_CMD_CONTROL:
+    case APP_HOME_CMD_STATUS:
+    case APP_HOME_CMD_HEARTBEAT:
+    case APP_HOME_CMD_ACK:
+    case APP_HOME_CMD_ERR:
+      return 1U;
+    default:
+      return 0U;
+  }
+}
+
+static uint8_t APP_WiFi_LwIP_IsKnownNode(uint8_t node)
+{
+  uint8_t roomIndex = 0U;
+  return APP_HomeData_NodeToRoomIndex(node, &roomIndex);
+}
+
+static uint16_t APP_WiFi_LwIP_ReadLe16(const uint8_t *data)
+{
+  return (uint16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8));
+}
+
+static int16_t APP_WiFi_LwIP_ReadI16(const uint8_t *data)
+{
+  return (int16_t)APP_WiFi_LwIP_ReadLe16(data);
+}
+
+static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket, const APP_HomeProtocolFrame_t *frame)
+{
+  uint8_t shouldAck = 1U;
+  APP_HomeProtocolError_t error = APP_HOME_ERR_NONE;
+
+  if (frame == NULL)
+  {
+    return;
+  }
+
+  g_serverFrameCount++;
+  printf("[proto] frame #%lu node=%u cmd=%s(0x%02X) seq=%u len=%u\n",
+         (unsigned long)g_serverFrameCount,
+         (unsigned int)frame->node,
+         APP_HomeProtocol_CommandToString(frame->command),
+         (unsigned int)frame->command,
+         (unsigned int)frame->sequence,
+         (unsigned int)frame->length);
+
+  if (APP_WiFi_LwIP_IsKnownProtocolCommand(frame->command) == 0U)
+  {
+    APP_WiFi_LwIP_SendProtocolError(clientSocket,
+                                    frame->node,
+                                    frame->sequence,
+                                    frame->command,
+                                    APP_HOME_ERR_BAD_COMMAND);
+    return;
+  }
+
+  switch (frame->command)
+  {
+    case APP_HOME_CMD_HELLO:
+      if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
+      {
+        error = APP_HOME_ERR_BAD_NODE;
+      }
+      else if (frame->length > 32U)
+      {
+        error = APP_HOME_ERR_BAD_LENGTH;
+      }
+      else
+      {
+        printf("[proto] hello node=%u nameLen=%u\n",
+               (unsigned int)frame->node,
+               (unsigned int)frame->length);
+      }
+      break;
+
+    case APP_HOME_CMD_TELEMETRY:
+      if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
+      {
+        error = APP_HOME_ERR_BAD_NODE;
+      }
+      else if (frame->length != 8U)
+      {
+        error = APP_HOME_ERR_BAD_LENGTH;
+      }
+      else
+      {
+        const int16_t temperature = APP_WiFi_LwIP_ReadI16(&frame->payload[0]);
+        const uint16_t humidity = APP_WiFi_LwIP_ReadLe16(&frame->payload[2]);
+        (void)APP_HomeData_UpdateTelemetry(frame->node,
+                                           frame->sequence,
+                                           temperature,
+                                           humidity,
+                                           frame->payload[4],
+                                           frame->payload[5],
+                                           frame->payload[6]);
+        printf("[proto] telemetry node=%u temp_x10=%d hum_x10=%u mode=%u fan=%u online=%u\n",
+               (unsigned int)frame->node,
+               (int)temperature,
+               (unsigned int)humidity,
+               (unsigned int)frame->payload[4],
+               (unsigned int)frame->payload[5],
+               (unsigned int)frame->payload[6]);
+      }
+      break;
+
+    case APP_HOME_CMD_CONTROL:
+      if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
+      {
+        error = APP_HOME_ERR_BAD_NODE;
+      }
+      else if (frame->length != 5U)
+      {
+        error = APP_HOME_ERR_BAD_LENGTH;
+      }
+      else
+      {
+        const int16_t target = APP_WiFi_LwIP_ReadI16(&frame->payload[0]);
+        printf("[proto] control node=%u target_x10=%d mode=%u fan=%u flags=0x%02X\n",
+               (unsigned int)frame->node,
+               (int)target,
+               (unsigned int)frame->payload[2],
+               (unsigned int)frame->payload[3],
+               (unsigned int)frame->payload[4]);
+      }
+      break;
+
+    case APP_HOME_CMD_STATUS:
+      if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
+      {
+        error = APP_HOME_ERR_BAD_NODE;
+      }
+      else if (frame->length < 1U)
+      {
+        error = APP_HOME_ERR_BAD_LENGTH;
+      }
+      else
+      {
+        printf("[proto] status node=%u code=%u\n",
+               (unsigned int)frame->node,
+               (unsigned int)frame->payload[0]);
+      }
+      break;
+
+    case APP_HOME_CMD_HEARTBEAT:
+      if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
+      {
+        error = APP_HOME_ERR_BAD_NODE;
+      }
+      else if (frame->length != 0U)
+      {
+        error = APP_HOME_ERR_BAD_LENGTH;
+      }
+      else
+      {
+        printf("[proto] heartbeat node=%u\n", (unsigned int)frame->node);
+      }
+      break;
+
+    case APP_HOME_CMD_ACK:
+      shouldAck = 0U;
+      printf("[proto] peer ack node=%u seq=%u\n",
+             (unsigned int)frame->node,
+             (unsigned int)frame->sequence);
+      break;
+
+    case APP_HOME_CMD_ERR:
+      shouldAck = 0U;
+      printf("[proto] peer err node=%u seq=%u\n",
+             (unsigned int)frame->node,
+             (unsigned int)frame->sequence);
+      break;
+
+    default:
+      error = APP_HOME_ERR_BAD_COMMAND;
+      break;
+  }
+
+  if (error != APP_HOME_ERR_NONE)
+  {
+    APP_WiFi_LwIP_SendProtocolError(clientSocket,
+                                    frame->node,
+                                    frame->sequence,
+                                    frame->command,
+                                    error);
+    return;
+  }
+
+  if (shouldAck != 0U)
+  {
+    APP_WiFi_LwIP_SendProtocolAck(clientSocket, frame);
+  }
+}
+
 static void APP_WiFi_LwIP_StartServerTask(void)
 {
   if (g_serverStarted != 0U)
@@ -405,36 +715,49 @@ static void APP_WiFi_LwIP_ServerTask(void *argument)
 
       printf("[lwip] client connected\n");
 
-      for (;;)
       {
-        char buffer[256];
-        int received = recv(clientSocket, buffer, (int)sizeof(buffer), 0);
+        APP_HomeProtocolParser_t parser;
+        APP_HomeProtocolFrame_t frame;
 
-        if (received <= 0)
+        APP_HomeProtocol_InitParser(&parser);
+        memset(&frame, 0, sizeof(frame));
+
+        for (;;)
         {
-          break;
-        }
+          uint8_t buffer[256];
+          int received = recv(clientSocket, buffer, (int)sizeof(buffer), 0);
 
-        {
-          int offset = 0;
-          while (offset < received)
-          {
-            int sent = send(clientSocket,
-                            &buffer[offset],
-                            (size_t)(received - offset),
-                            0);
-            if (sent <= 0)
-            {
-              offset = -1;
-              break;
-            }
-
-            offset += sent;
-          }
-
-          if (offset < 0)
+          if (received <= 0)
           {
             break;
+          }
+
+          g_serverRxCount++;
+          if (g_serverRxCount <= 16U)
+          {
+            printf("[lwip] recv #%lu len=%d\n",
+                   (unsigned long)g_serverRxCount,
+                   received);
+          }
+
+          for (int index = 0; index < received; index++)
+          {
+            APP_HomeProtocolParseResult_t parseResult =
+              APP_HomeProtocol_PushByte(&parser, buffer[index], &frame);
+
+            if (parseResult == APP_HOME_PARSE_FRAME)
+            {
+              APP_WiFi_LwIP_HandleProtocolFrame(clientSocket, &frame);
+            }
+            else if (parseResult == APP_HOME_PARSE_ERROR)
+            {
+              printf("[proto] parse error=%u\n", (unsigned int)parser.lastError);
+              APP_WiFi_LwIP_SendProtocolError(clientSocket,
+                                              APP_HOME_NODE_NONE,
+                                              0U,
+                                              0U,
+                                              parser.lastError);
+            }
           }
         }
       }

@@ -116,10 +116,10 @@
 #define APP_WIFI_WLC_E_STATUS_PARTIAL   8UL
 #define APP_WIFI_WLC_E_STATUS_NEWSCAN   9UL
 #define APP_WIFI_WLC_E_STATUS_NEWASSOC  10UL
-#define APP_WIFI_WLC_SUP_KEYED          262UL
-#define APP_WIFI_WLC_SUP_KEYXCHANGE_WAIT_M1 259UL
-#define APP_WIFI_WLC_SUP_KEYXCHANGE_WAIT_M3 264UL
-#define APP_WIFI_WLC_SUP_KEYXCHANGE_WAIT_G1 266UL
+#define APP_WIFI_WLC_SUP_KEYED          6UL
+#define APP_WIFI_WLC_SUP_KEYXCHANGE_WAIT_M1 4UL
+#define APP_WIFI_WLC_SUP_KEYXCHANGE_WAIT_M3 8UL
+#define APP_WIFI_WLC_SUP_KEYXCHANGE_WAIT_G1 10UL
 #define APP_WIFI_WLC_E_SUP_WPA_PSK_TMO  15UL
 
 typedef struct
@@ -2014,6 +2014,7 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   static uint32_t dataTxAttemptCount = 0U;
   static uint32_t dataTxOkCount = 0U;
   static uint32_t dataTxFailCount = 0U;
+  static uint32_t dataTxBusyCount = 0U;
   uint8_t txFrame[APP_WIFI_SDPCM_HEADER_SIZE +
                   APP_WIFI_SDPCM_DATA_PADDING_SIZE +
                   APP_WIFI_SDPCM_BDC_HEADER_SIZE +
@@ -2044,13 +2045,15 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
   if (availableCredits == 0U)
   {
-    dataTxAttemptCount++;
-    if (dataTxAttemptCount <= 8U)
+    dataTxBusyCount++;
+    if (dataTxBusyCount <= 16U)
     {
-      APP_WiFi_Logf("[wifi] data tx busy len=%u txseq=%u credit=%u\n",
+      APP_WiFi_Logf("[wifi] data tx busy #%lu len=%u txseq=%u credit=%u flow=%u\n",
+                    (unsigned long)dataTxBusyCount,
                     (unsigned int)length,
                     (unsigned int)g_wifiTxSequence,
-                    (unsigned int)g_wifiBusCredit);
+                    (unsigned int)g_wifiBusCredit,
+                    (unsigned int)g_wifiLastSdpcmFlowControl);
     }
     return APP_WIFI_TX_STATUS_BUSY;
   }

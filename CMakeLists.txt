@@ -104,6 +104,8 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_debug_uart.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_home_data.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_home_protocol.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi_platform.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/app_wifi_resources.c

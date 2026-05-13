@@ -24,6 +24,9 @@ public:
     HVAC_FanMode_t getSelectedFanButton();
 
 private:
+    void usbButtonClicked(const touchgfx::AbstractButton& src);
+    void applyUsbButtonStates();
+
     bool startupAnimationFlag;
     bool closeAnimationFlag;
     bool showFlag;
@@ -34,6 +37,8 @@ private:
     uint8_t moveRate;
     bool isInitialized;
     float newTemp;
+    bool usbButtonStates[3][3];
+    touchgfx::Callback<SetTempAndFan, const touchgfx::AbstractButton&> usbButtonCallback;
 };
 
 #endif // SETTEMPANDFAN_HPP

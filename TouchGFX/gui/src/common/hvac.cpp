@@ -1,5 +1,6 @@
 #include "gui/common/hvac.hpp"
 #include "gui/common/GuiTime.hpp"
+#include "app_home_data.h"
 
 #include <math.h>
 #include <string.h>
@@ -59,6 +60,71 @@ float clampFloat(float value, float minValue, float maxValue)
 float roundToSingleDecimal(float value)
 {
     return floorf(value * 10.0f + 0.5f) / 10.0f;
+}
+
+float protocolX10ToFloat(int16_t value)
+{
+    return (float)value / 10.0f;
+}
+
+HVAC_Mode_t protocolModeToHvac(uint8_t mode)
+{
+    switch (mode)
+    {
+    case HVAC_MODE_OFF:
+    case HVAC_MODE_COOL:
+    case HVAC_MODE_HEAT:
+    case HVAC_MODE_AUTO:
+        return (HVAC_Mode_t)mode;
+    default:
+        return HVAC_MODE_UNKNOWN;
+    }
+}
+
+HVAC_FanMode_t protocolFanToHvac(uint8_t fan)
+{
+    switch (fan)
+    {
+    case HVAC_FAN_OFF:
+    case HVAC_FAN_LOW:
+    case HVAC_FAN_MED:
+    case HVAC_FAN_HIGH:
+    case HVAC_FAN_AUTO:
+        return (HVAC_FanMode_t)fan;
+    default:
+        return HVAC_FAN_UNKNOWN;
+    }
+}
+
+bool syncNetworkTelemetryForRoom(uint8_t roomIndex)
+{
+    APP_HomeDataTelemetry_t telemetry = {};
+
+    if ((roomIndex >= kRoomCount) ||
+        (APP_HomeData_CopyTelemetryByRoomIndex(roomIndex, &telemetry) == 0U) ||
+        (telemetry.online == 0U))
+    {
+        return false;
+    }
+
+    SimRoomState& room = g_rooms[roomIndex];
+    const HVAC_Mode_t mode = protocolModeToHvac(telemetry.mode);
+    const HVAC_FanMode_t fan = protocolFanToHvac(telemetry.fan);
+
+    room.currentTemperature = roundToSingleDecimal(clampFloat(protocolX10ToFloat(telemetry.temperature_x10), -40.0f, 85.0f));
+    room.currentHumidity = roundToSingleDecimal(clampFloat(protocolX10ToFloat((int16_t)telemetry.humidity_x10), 0.0f, 100.0f));
+
+    if (mode != HVAC_MODE_UNKNOWN)
+    {
+        room.mode = mode;
+    }
+
+    if (fan != HVAC_FAN_UNKNOWN)
+    {
+        room.fanMode = fan;
+    }
+
+    return true;
 }
 
 void copyLabel(char* destination, const char* source)
@@ -243,7 +309,10 @@ void stepController(uint32_t nowMs)
 
     for (uint8_t i = 0U; i < kRoomCount; i++)
     {
-        stepRoomState(g_rooms[i], effectiveStepMs, i, nowMs);
+        if (!syncNetworkTelemetryForRoom(i))
+        {
+            stepRoomState(g_rooms[i], effectiveStepMs, i, nowMs);
+        }
     }
 
     if ((g_lastWeatherRefreshMs == 0U) || ((nowMs - g_lastWeatherRefreshMs) >= kWeatherRefreshPeriodMs))
@@ -367,6 +436,7 @@ bool xHVAC_GetRoomData(uint16_t idx, HVAC_Room_t* pxRoom, uint32_t xTicksToWait)
         return false;
     }
 
+    (void)syncNetworkTelemetryForRoom((uint8_t)idx);
     const SimRoomState& room = g_rooms[idx];
     *pxRoom = HVAC_Room_t{};
     pxRoom->telemetry.temperature = room.currentTemperature;

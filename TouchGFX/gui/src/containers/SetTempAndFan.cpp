@@ -12,7 +12,9 @@ SetTempAndFan::SetTempAndFan() :
     idleTime(0),
     moveRate(12),
     isInitialized(false),
-    newTemp(0)
+    newTemp(0),
+    usbButtonStates{},
+    usbButtonCallback(this, &SetTempAndFan::usbButtonClicked)
 {
 
 }
@@ -21,6 +23,10 @@ void SetTempAndFan::initialize()
 {
     Application::getInstance()->registerTimerWidget(this);
     SetTempAndFanBase::initialize();
+
+    usbButton1.setAction(usbButtonCallback);
+    usbButton2.setAction(usbButtonCallback);
+    usbButton3.setAction(usbButtonCallback);
 }
 
 void SetTempAndFan::startupAnimation()
@@ -177,6 +183,7 @@ void SetTempAndFan::showContainer(Rooms roomID, HVAC_FanMode_t fanMode, float te
     }
     headerText.invalidate();
     headerImage.invalidate();
+    applyUsbButtonStates();
 
     showFlag = true;
 
@@ -271,6 +278,47 @@ void SetTempAndFan::tempUpdated(float value)
 {
     idleTime = 0;
     newTemp = value;
+}
+
+void SetTempAndFan::usbButtonClicked(const touchgfx::AbstractButton& src)
+{
+    idleTime = 0;
+
+    const uint8_t roomIndex = static_cast<uint8_t>(openRoom);
+    if (roomIndex >= 3)
+    {
+        return;
+    }
+
+    if (&src == &usbButton1)
+    {
+        usbButtonStates[roomIndex][0] = usbButton1.getState();
+    }
+    else if (&src == &usbButton2)
+    {
+        usbButtonStates[roomIndex][1] = usbButton2.getState();
+    }
+    else if (&src == &usbButton3)
+    {
+        usbButtonStates[roomIndex][2] = usbButton3.getState();
+    }
+}
+
+void SetTempAndFan::applyUsbButtonStates()
+{
+    const uint8_t roomIndex = static_cast<uint8_t>(openRoom);
+    if (roomIndex >= 3)
+    {
+        return;
+    }
+
+    usbButton1.forceState(usbButtonStates[roomIndex][0]);
+    usbButton2.forceState(usbButtonStates[roomIndex][1]);
+    usbButton3.forceState(usbButtonStates[roomIndex][2]);
+
+    usbButton1.invalidate();
+    usbButton2.invalidate();
+    usbButton3.invalidate();
 }
 
 HVAC_FanMode_t SetTempAndFan::getSelectedFanButton()
