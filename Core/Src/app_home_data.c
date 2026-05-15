@@ -27,7 +27,8 @@ uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
                                      uint16_t humidity_x10,
                                      uint8_t mode,
                                      uint8_t fan,
-                                     uint8_t online)
+                                     uint8_t online,
+                                     uint8_t output_flags)
 {
   uint8_t roomIndex = 0U;
   APP_HomeDataTelemetry_t telemetry = {0};
@@ -45,6 +46,7 @@ uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
   telemetry.mode = mode;
   telemetry.fan = fan;
   telemetry.online = online;
+  telemetry.output_flags = output_flags;
   telemetry.updated_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
 
   taskENTER_CRITICAL();

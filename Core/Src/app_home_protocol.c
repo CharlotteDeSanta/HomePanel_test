@@ -1,5 +1,6 @@
 #include "app_home_protocol.h"
 
+#include <stdio.h>
 #include <string.h>
 
 static uint16_t APP_HomeProtocol_ReadLe16(const uint8_t *data)
@@ -127,6 +128,10 @@ APP_HomeProtocolParseResult_t APP_HomeProtocol_PushByte(APP_HomeProtocolParser_t
   actualCrc = APP_HomeProtocol_Crc16(&parser->buffer[2], (uint16_t)(7U + payloadLength));
   if (expectedCrc != actualCrc)
   {
+    printf("[proto] bad crc expected=0x%04X actual=0x%04X payloadLen=%u\n",
+           (unsigned int)expectedCrc,
+           (unsigned int)actualCrc,
+           (unsigned int)payloadLength);
     APP_HomeProtocol_ResetParser(parser, APP_HOME_ERR_BAD_CRC);
     return APP_HOME_PARSE_ERROR;
   }

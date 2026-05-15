@@ -32,6 +32,11 @@ void MainPresenter::updateFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
     view.updateRoomFanMode(roomId, fanMode);
 }
 
+void MainPresenter::updateUsbFlags(Rooms roomId, uint8_t usbFlags)
+{
+    view.updateRoomUsbFlags(roomId, usbFlags);
+}
+
 void MainPresenter::updateClock(uint8_t clockHour, uint8_t clockMinute)
 {
     view.updateClock(clockHour, clockMinute);
@@ -62,6 +67,11 @@ HVAC_FanMode_t MainPresenter::getRoomFanMode(Rooms roomId)
     return model->getRoomFanMode(roomId);
 }
 
+uint8_t MainPresenter::getRoomUsbFlags(Rooms roomId)
+{
+    return model->getRoomUsbFlags(roomId);
+}
+
 void MainPresenter::setRoomTempSetPoint(Rooms roomId, float temperature)
 {
     model->setRoomTempSetPoint(roomId, temperature);
@@ -70,6 +80,11 @@ void MainPresenter::setRoomTempSetPoint(Rooms roomId, float temperature)
 void MainPresenter::setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode)
 {
     model->setRoomFanSetPoint(roomId, fanMode);
+}
+
+void MainPresenter::setRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
+{
+    model->setRoomUsbFlags(roomId, usbFlags);
 }
 
 bool MainPresenter::getIsFahrenheit()

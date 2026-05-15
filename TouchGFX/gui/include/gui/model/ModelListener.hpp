@@ -18,6 +18,7 @@ public:
     virtual void updateTemperature(Rooms roomId, float temperature) {}
     virtual void updateHumidity(Rooms roomId, float humidity) {}
     virtual void updateFanMode(Rooms roomId, HVAC_FanMode_t fanMode) {}
+    virtual void updateUsbFlags(Rooms roomId, uint8_t usbFlags) {}
     virtual void transmissionIsDone() {}
     virtual void updateClock(uint8_t clockHour, uint8_t clockMinute) {}
     virtual void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday) {}

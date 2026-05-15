@@ -71,6 +71,12 @@ uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
 const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 1000U;
 const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
 const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
+
+bool temperatureEquals(float lhs, float rhs)
+{
+    const float diff = lhs - rhs;
+    return (diff > -0.05f) && (diff < 0.05f);
+}
 }
 
 Model::Model() :
@@ -91,6 +97,9 @@ Model::Model() :
     kitchenFanSetPoint(HVAC_FAN_AUTO),
     livingRoomFanSetPoint(HVAC_FAN_AUTO),
     bedRoomFanSetPoint(HVAC_FAN_AUTO),
+    kitchenUsbFlags(0U),
+    livingRoomUsbFlags(0U),
+    bedRoomUsbFlags(0U),
     clockYear(parseBuildYear()),
     clockMonth(parseBuildMonth()),
     clockDay(parseBuildDay()),
@@ -248,84 +257,170 @@ HVAC_FanMode_t Model::getRoomFanMode(Rooms roomId)
     }
 }
 
+uint8_t Model::getRoomUsbFlags(Rooms roomId)
+{
+    switch (roomId)
+    {
+    case KITCHEN:
+        return kitchenUsbFlags;
+    case LIVINGROOM:
+        return livingRoomUsbFlags;
+    case BEDROOM:
+        return bedRoomUsbFlags;
+    default:
+        return 0U;
+    }
+}
+
 void Model::setRoomTempSetPoint(Rooms roomId, float temperature)
 {
+    HVAC_FanMode_t fanSetPoint = HVAC_FAN_UNKNOWN;
+    uint8_t usbFlags = 0U;
+
     // Set model variable
     switch (roomId)
     {
     case KITCHEN:
+        if (temperatureEquals(kitchenTempSetPoint, temperature))
+        {
+            return;
+        }
         kitchenTempSetPoint = temperature;
+        fanSetPoint = kitchenFanSetPoint;
+        usbFlags = kitchenUsbFlags;
         break;
     case LIVINGROOM:
+        if (temperatureEquals(livingRoomTempSetPoint, temperature))
+        {
+            return;
+        }
         livingRoomTempSetPoint = temperature;
+        fanSetPoint = livingRoomFanSetPoint;
+        usbFlags = livingRoomUsbFlags;
         break;
     case BEDROOM:
+        if (temperatureEquals(bedRoomTempSetPoint, temperature))
+        {
+            return;
+        }
         bedRoomTempSetPoint = temperature;
+        fanSetPoint = bedRoomFanSetPoint;
+        usbFlags = bedRoomUsbFlags;
         break;
     default:
-        break;
+        return;
     }
 
     // Send event
     //outgoingEvent.timestamp = ;
+    outgoingEvent = HVAC_Event_t{};
     outgoingEvent.roomId = (uint16_t)roomId;
     outgoingEvent.type = HVAC_EVENT_SETTINGS;
     outgoingEvent.room.settings.temperature = temperature;
-
-    // Use the current fan mode
-    switch (roomId)
-    {
-    case KITCHEN:
-        outgoingEvent.room.settings.fan = kitchenFanSetPoint;
-        break;
-    case LIVINGROOM:
-        outgoingEvent.room.settings.fan = livingRoomFanSetPoint;
-        break;
-    case BEDROOM:
-        outgoingEvent.room.settings.fan = bedRoomFanSetPoint;
-        break;
-    }
+    outgoingEvent.room.settings.mode = HVAC_MODE_UNKNOWN;
+    outgoingEvent.room.settings.fan = fanSetPoint;
+    outgoingEvent.room.settings.outputFlags = usbFlags;
 
     xHVAC_SendToController(&outgoingEvent, 10);
 }
 
 void Model::setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode)
 {
-    //outgoingEvent.timestamp = ;
-    outgoingEvent.roomId = (uint16_t)roomId;
-    outgoingEvent.type = HVAC_EVENT_SETTINGS;
-    outgoingEvent.room.settings.fan = fanMode;
-
-    // Use the current temperature
-    switch (roomId)
-    {
-    case KITCHEN:
-        outgoingEvent.room.settings.temperature = kitchenTempSetPoint;
-        break;
-    case LIVINGROOM:
-        outgoingEvent.room.settings.temperature = livingRoomTempSetPoint;
-        break;
-    case BEDROOM:
-        outgoingEvent.room.settings.temperature = bedRoomTempSetPoint;
-        break;
-    }
-
-    xHVAC_SendToController(&outgoingEvent, 10);
+    float temperature = 0.0f;
+    uint8_t usbFlags = 0U;
 
     switch (roomId)
     {
     case KITCHEN:
+        if (kitchenFanSetPoint == fanMode)
+        {
+            return;
+        }
         kitchenFanSetPoint = fanMode;
+        temperature = kitchenTempSetPoint;
+        usbFlags = kitchenUsbFlags;
         break;
     case LIVINGROOM:
+        if (livingRoomFanSetPoint == fanMode)
+        {
+            return;
+        }
         livingRoomFanSetPoint = fanMode;
+        temperature = livingRoomTempSetPoint;
+        usbFlags = livingRoomUsbFlags;
         break;
     case BEDROOM:
+        if (bedRoomFanSetPoint == fanMode)
+        {
+            return;
+        }
         bedRoomFanSetPoint = fanMode;
+        temperature = bedRoomTempSetPoint;
+        usbFlags = bedRoomUsbFlags;
         break;
     default:
-        break;
+        return;
     }
+
+    //outgoingEvent.timestamp = ;
+    outgoingEvent = HVAC_Event_t{};
+    outgoingEvent.roomId = (uint16_t)roomId;
+    outgoingEvent.type = HVAC_EVENT_SETTINGS;
+    outgoingEvent.room.settings.temperature = temperature;
+    outgoingEvent.room.settings.mode = HVAC_MODE_UNKNOWN;
+    outgoingEvent.room.settings.fan = fanMode;
+    outgoingEvent.room.settings.outputFlags = usbFlags;
+
+    xHVAC_SendToController(&outgoingEvent, 10);
+}
+
+void Model::setRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
+{
+    float temperature = 0.0f;
+    HVAC_FanMode_t fanSetPoint = HVAC_FAN_UNKNOWN;
+
+    switch (roomId)
+    {
+    case KITCHEN:
+        if (kitchenUsbFlags == usbFlags)
+        {
+            return;
+        }
+        kitchenUsbFlags = usbFlags;
+        temperature = kitchenTempSetPoint;
+        fanSetPoint = kitchenFanSetPoint;
+        break;
+    case LIVINGROOM:
+        if (livingRoomUsbFlags == usbFlags)
+        {
+            return;
+        }
+        livingRoomUsbFlags = usbFlags;
+        temperature = livingRoomTempSetPoint;
+        fanSetPoint = livingRoomFanSetPoint;
+        break;
+    case BEDROOM:
+        if (bedRoomUsbFlags == usbFlags)
+        {
+            return;
+        }
+        bedRoomUsbFlags = usbFlags;
+        temperature = bedRoomTempSetPoint;
+        fanSetPoint = bedRoomFanSetPoint;
+        break;
+    default:
+        return;
+    }
+
+    outgoingEvent = HVAC_Event_t{};
+    outgoingEvent.roomId = (uint16_t)roomId;
+    outgoingEvent.type = HVAC_EVENT_SETTINGS;
+    outgoingEvent.room.settings.temperature = temperature;
+    outgoingEvent.room.settings.mode = HVAC_MODE_UNKNOWN;
+    outgoingEvent.room.settings.fan = fanSetPoint;
+    outgoingEvent.room.settings.outputFlags = usbFlags;
+
+    xHVAC_SendToController(&outgoingEvent, 10);
 }
 
 bool Model::getIsFahrenheit()
@@ -507,6 +602,11 @@ void Model::checkForIncomingData()
                     modelListener->updateFanMode((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.fan);
                     kitchenFanMode = incomingEvent.room.telemetry.fan;
                 }
+                if (incomingEvent.room.telemetry.outputFlags != kitchenUsbFlags)
+                {
+                    kitchenUsbFlags = incomingEvent.room.telemetry.outputFlags;
+                    modelListener->updateUsbFlags((Rooms)incomingEvent.roomId, kitchenUsbFlags);
+                }
                 break;
             case LIVINGROOM:
                 if (incomingEvent.room.telemetry.temperature != livingRoomTemperature)
@@ -524,6 +624,11 @@ void Model::checkForIncomingData()
                     modelListener->updateFanMode((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.fan);
                     livingRoomFanMode = incomingEvent.room.telemetry.fan;
                 }
+                if (incomingEvent.room.telemetry.outputFlags != livingRoomUsbFlags)
+                {
+                    livingRoomUsbFlags = incomingEvent.room.telemetry.outputFlags;
+                    modelListener->updateUsbFlags((Rooms)incomingEvent.roomId, livingRoomUsbFlags);
+                }
                 break;
             case BEDROOM:
                 if (incomingEvent.room.telemetry.temperature != bedRoomTemperature)
@@ -540,6 +645,11 @@ void Model::checkForIncomingData()
                 {
                     modelListener->updateFanMode((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.fan);
                     bedRoomFanMode = incomingEvent.room.telemetry.fan;
+                }
+                if (incomingEvent.room.telemetry.outputFlags != bedRoomUsbFlags)
+                {
+                    bedRoomUsbFlags = incomingEvent.room.telemetry.outputFlags;
+                    modelListener->updateUsbFlags((Rooms)incomingEvent.roomId, bedRoomUsbFlags);
                 }
                 break;
             }

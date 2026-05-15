@@ -76,8 +76,10 @@ public:
     float getRoomTemperature(Rooms roomId);
     float getRoomHumidity(Rooms roomId);
     HVAC_FanMode_t getRoomFanMode(Rooms roomId);
+    uint8_t getRoomUsbFlags(Rooms roomId);
     void setRoomTempSetPoint(Rooms roomId, float temperature);
     void setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode);
+    void setRoomUsbFlags(Rooms roomId, uint8_t usbFlags);
     bool getIsFahrenheit();
     void setIsFahrenheit(bool isFahrenheit);
     Rooms getSelectedRoom();
@@ -117,6 +119,9 @@ private:
     HVAC_FanMode_t kitchenFanSetPoint;
     HVAC_FanMode_t livingRoomFanSetPoint;
     HVAC_FanMode_t bedRoomFanSetPoint;
+    uint8_t kitchenUsbFlags;
+    uint8_t livingRoomUsbFlags;
+    uint8_t bedRoomUsbFlags;
     uint16_t clockYear;
     uint8_t clockMonth;
     uint8_t clockDay;

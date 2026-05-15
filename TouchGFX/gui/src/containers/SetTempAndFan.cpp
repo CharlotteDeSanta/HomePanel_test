@@ -1,4 +1,5 @@
 #include <gui/containers/SetTempAndFan.hpp>
+#include <app_home_protocol.h>
 #include <texts/TextKeysAndLanguages.hpp>
 #include <images/BitmapDatabase.hpp>
 
@@ -14,6 +15,7 @@ SetTempAndFan::SetTempAndFan() :
     isInitialized(false),
     newTemp(0),
     usbButtonStates{},
+    usbSettingChangedCallback(0),
     usbButtonCallback(this, &SetTempAndFan::usbButtonClicked)
 {
 
@@ -280,6 +282,29 @@ void SetTempAndFan::tempUpdated(float value)
     newTemp = value;
 }
 
+void SetTempAndFan::setUsbSettingChangedCallback(touchgfx::GenericCallback<uint8_t>& callback)
+{
+    usbSettingChangedCallback = &callback;
+}
+
+void SetTempAndFan::setUsbFlags(Rooms roomID, uint8_t flags)
+{
+    const uint8_t roomIndex = static_cast<uint8_t>(roomID);
+    if (roomIndex >= 3)
+    {
+        return;
+    }
+
+    usbButtonStates[roomIndex][0] = ((flags & APP_HOME_CONTROL_FLAG_USB1) != 0U);
+    usbButtonStates[roomIndex][1] = ((flags & APP_HOME_CONTROL_FLAG_USB2) != 0U);
+    usbButtonStates[roomIndex][2] = ((flags & APP_HOME_CONTROL_FLAG_USB3) != 0U);
+
+    if (openRoom == roomID)
+    {
+        applyUsbButtonStates();
+    }
+}
+
 void SetTempAndFan::usbButtonClicked(const touchgfx::AbstractButton& src)
 {
     idleTime = 0;
@@ -302,6 +327,8 @@ void SetTempAndFan::usbButtonClicked(const touchgfx::AbstractButton& src)
     {
         usbButtonStates[roomIndex][2] = usbButton3.getState();
     }
+
+    emitUsbSettingChangedCallback(getUsbFlags());
 }
 
 void SetTempAndFan::applyUsbButtonStates()
@@ -319,6 +346,42 @@ void SetTempAndFan::applyUsbButtonStates()
     usbButton1.invalidate();
     usbButton2.invalidate();
     usbButton3.invalidate();
+}
+
+void SetTempAndFan::emitUsbSettingChangedCallback(uint8_t flags)
+{
+    if (usbSettingChangedCallback && usbSettingChangedCallback->isValid())
+    {
+        usbSettingChangedCallback->execute(flags);
+    }
+}
+
+uint8_t SetTempAndFan::getUsbFlags() const
+{
+    const uint8_t roomIndex = static_cast<uint8_t>(openRoom);
+    uint8_t flags = 0U;
+
+    if (roomIndex >= 3)
+    {
+        return 0U;
+    }
+
+    if (usbButtonStates[roomIndex][0])
+    {
+        flags |= APP_HOME_CONTROL_FLAG_USB1;
+    }
+
+    if (usbButtonStates[roomIndex][1])
+    {
+        flags |= APP_HOME_CONTROL_FLAG_USB2;
+    }
+
+    if (usbButtonStates[roomIndex][2])
+    {
+        flags |= APP_HOME_CONTROL_FLAG_USB3;
+    }
+
+    return flags;
 }
 
 HVAC_FanMode_t SetTempAndFan::getSelectedFanButton()

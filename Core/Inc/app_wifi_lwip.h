@@ -9,6 +9,11 @@ extern "C" {
 
 void APP_WiFi_LwIP_Service(void);
 void APP_WiFi_LwIP_ProcessEthernetFrame(const uint8_t *frame, uint16_t length);
+uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
+                                  int16_t targetTemperature_x10,
+                                  uint8_t mode,
+                                  uint8_t fan,
+                                  uint8_t flags);
 
 #ifdef __cplusplus
 }

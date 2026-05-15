@@ -3,9 +3,10 @@
 
 MainView::MainView() :
     tickCount(0),
-    waitingToFlip(false)
+    waitingToFlip(false),
+    setTempAndFanUsbSettingChangedCallback(this, &MainView::usbSettingsChanged)
 {
-
+    setTempAndFan.setUsbSettingChangedCallback(setTempAndFanUsbSettingChangedCallback);
 }
 
 void MainView::setupScreen()
@@ -23,6 +24,9 @@ void MainView::setupScreen()
     kitchenFan.setFanMode(presenter->getRoomFanMode(KITCHEN));
     livingRoomFan.setFanMode(presenter->getRoomFanMode(LIVINGROOM));
     bedRoomFan.setFanMode(presenter->getRoomFanMode(BEDROOM));
+    setTempAndFan.setUsbFlags(KITCHEN, presenter->getRoomUsbFlags(KITCHEN));
+    setTempAndFan.setUsbFlags(LIVINGROOM, presenter->getRoomUsbFlags(LIVINGROOM));
+    setTempAndFan.setUsbFlags(BEDROOM, presenter->getRoomUsbFlags(BEDROOM));
     kitchenCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(KITCHEN));
     livingroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(LIVINGROOM));
     bedroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(BEDROOM));
@@ -90,6 +94,7 @@ void MainView::kitchenCardButtonClicked()
 {
     livingroomCardContainer.flipOut(FLIP_DURATION);
     bedroomCardContainer.flipOut(FLIP_DURATION);
+    setTempAndFan.setUsbFlags(KITCHEN, presenter->getRoomUsbFlags(KITCHEN));
     setTempAndFan.showContainer(KITCHEN, presenter->getRoomFanSetPoint(KITCHEN), presenter->getRoomTempSetPoint(KITCHEN), presenter->getIsFahrenheit());
 
     setSelectedRoom(KITCHEN);
@@ -99,6 +104,7 @@ void MainView::livingroomCardButtonClicked()
 {
     kitchenCardContainer.flipOut(FLIP_DURATION);
     bedroomCardContainer.flipOut(FLIP_DURATION);
+    setTempAndFan.setUsbFlags(LIVINGROOM, presenter->getRoomUsbFlags(LIVINGROOM));
     setTempAndFan.showContainer(LIVINGROOM, presenter->getRoomFanSetPoint(LIVINGROOM), presenter->getRoomTempSetPoint(LIVINGROOM), presenter->getIsFahrenheit());
 
     setSelectedRoom(LIVINGROOM);
@@ -108,6 +114,7 @@ void MainView::bedroomCardButtonClicked()
 {
     kitchenCardContainer.flipOut(FLIP_DURATION);
     livingroomCardContainer.flipOut(FLIP_DURATION);
+    setTempAndFan.setUsbFlags(BEDROOM, presenter->getRoomUsbFlags(BEDROOM));
     setTempAndFan.showContainer(BEDROOM, presenter->getRoomFanSetPoint(BEDROOM), presenter->getRoomTempSetPoint(BEDROOM), presenter->getIsFahrenheit());
 
     setSelectedRoom(BEDROOM);
@@ -157,6 +164,11 @@ void MainView::fanModeChanged(HVAC_FanMode_t fanMode)
     default:
         break;
     }
+}
+
+void MainView::usbSettingsChanged(uint8_t flags)
+{
+    presenter->setRoomUsbFlags(presenter->getSelectedRoom(), flags);
 }
 
 void MainView::temperatureChanged(float temperature)
@@ -230,6 +242,11 @@ void MainView::updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
     default:
         break;
     }
+}
+
+void MainView::updateRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
+{
+    setTempAndFan.setUsbFlags(roomId, usbFlags);
 }
 
 void MainView::updateClock(uint8_t hour, uint8_t minute)

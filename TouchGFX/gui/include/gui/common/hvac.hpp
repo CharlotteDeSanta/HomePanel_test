@@ -103,6 +103,7 @@ typedef struct
     float          humidity;
     HVAC_Mode_t    mode;
     HVAC_FanMode_t fan;
+    uint8_t        outputFlags;
 } HVAC_Telemetry_t;
 
 typedef struct
@@ -111,6 +112,7 @@ typedef struct
     float           temperature;
     HVAC_Mode_t     mode;
     HVAC_FanMode_t  fan;
+    uint8_t         outputFlags;
 } HVAC_Settings_t;
 
 typedef struct

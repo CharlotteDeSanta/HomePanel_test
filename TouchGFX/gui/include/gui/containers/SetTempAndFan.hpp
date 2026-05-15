@@ -21,11 +21,15 @@ public:
     virtual void fanModeChanged();
     virtual void tempUpdated(float value);
 
+    void setUsbSettingChangedCallback(touchgfx::GenericCallback<uint8_t>& callback);
+    void setUsbFlags(Rooms roomID, uint8_t flags);
     HVAC_FanMode_t getSelectedFanButton();
+    uint8_t getUsbFlags() const;
 
 private:
     void usbButtonClicked(const touchgfx::AbstractButton& src);
     void applyUsbButtonStates();
+    void emitUsbSettingChangedCallback(uint8_t flags);
 
     bool startupAnimationFlag;
     bool closeAnimationFlag;
@@ -38,6 +42,7 @@ private:
     bool isInitialized;
     float newTemp;
     bool usbButtonStates[3][3];
+    touchgfx::GenericCallback<uint8_t>* usbSettingChangedCallback;
     touchgfx::Callback<SetTempAndFan, const touchgfx::AbstractButton&> usbButtonCallback;
 };
 

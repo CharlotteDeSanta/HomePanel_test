@@ -18,6 +18,7 @@ public:
     virtual void bedroomCardButtonClicked();
     virtual void resetRoomCards();
     virtual void fanModeChanged(HVAC_FanMode_t fanMode);
+    virtual void usbSettingsChanged(uint8_t flags);
     virtual void temperatureChanged(float temperature);
     virtual void temperatureAnimationDone();
     virtual void graphButtonClicked(Rooms room);
@@ -25,6 +26,7 @@ public:
     void updateRoomTemperature(Rooms roomId, float temp);
     void updateRoomHumidity(Rooms roomId, float hum);
     void updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode);
+    void updateRoomUsbFlags(Rooms roomId, uint8_t usbFlags);
     void updateClock(uint8_t hour, uint8_t minute);
     void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday);
     void updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit);
@@ -48,6 +50,7 @@ private:
 
     int tickCount;
     bool waitingToFlip;
+    touchgfx::Callback<MainView, uint8_t> setTempAndFanUsbSettingChangedCallback;
 };
 
 #endif // MAINVIEW_HPP

@@ -1,6 +1,7 @@
 #include "gui/common/hvac.hpp"
 #include "gui/common/GuiTime.hpp"
 #include "app_home_data.h"
+#include "app_wifi_lwip.h"
 
 #include <math.h>
 #include <string.h>
@@ -15,6 +16,7 @@ struct SimRoomState
     float targetTemperature;
     HVAC_Mode_t mode;
     HVAC_FanMode_t fanMode;
+    uint8_t outputFlags;
     float ambientTemperature;
     float ambientHumidity;
 };
@@ -30,9 +32,9 @@ constexpr uint8_t kRoomCount = HVAC_MAX_ROOM_COUNT;
 constexpr uint32_t kWeatherRefreshPeriodMs = 5U * 60U * 1000U;
 
 SimRoomState g_rooms[kRoomCount] = {
-    { "Kitchen",    22.2f, 55.0f, 22.0f, HVAC_MODE_AUTO, HVAC_FAN_MED, 24.0f, 56.0f },
-    { "LivingRoom", 23.4f, 46.0f, 23.5f, HVAC_MODE_AUTO, HVAC_FAN_HIGH, 25.0f, 47.0f },
-    { "Bedroom",    21.6f, 49.0f, 21.5f, HVAC_MODE_AUTO, HVAC_FAN_LOW, 23.0f, 50.0f }
+    { "Kitchen",    22.2f, 55.0f, 22.0f, HVAC_MODE_AUTO, HVAC_FAN_MED, 0U, 24.0f, 56.0f },
+    { "LivingRoom", 23.4f, 46.0f, 23.5f, HVAC_MODE_AUTO, HVAC_FAN_HIGH, 0U, 25.0f, 47.0f },
+    { "Bedroom",    21.6f, 49.0f, 21.5f, HVAC_MODE_AUTO, HVAC_FAN_LOW, 0U, 23.0f, 50.0f }
 };
 
 const WeatherTemplate g_weeklyWeather[7] = {
@@ -65,6 +67,12 @@ float roundToSingleDecimal(float value)
 float protocolX10ToFloat(int16_t value)
 {
     return (float)value / 10.0f;
+}
+
+int16_t floatToProtocolX10(float value)
+{
+    const float scaled = clampFloat(value, 16.0f, 30.0f) * 10.0f;
+    return (int16_t)floorf(scaled + 0.5f);
 }
 
 HVAC_Mode_t protocolModeToHvac(uint8_t mode)
@@ -123,6 +131,8 @@ bool syncNetworkTelemetryForRoom(uint8_t roomIndex)
     {
         room.fanMode = fan;
     }
+
+    room.outputFlags = telemetry.output_flags;
 
     return true;
 }
@@ -345,6 +355,7 @@ void fillTelemetryEvent(HVAC_Event_t* event, uint32_t nowMs)
     event->room.telemetry.humidity = room.currentHumidity;
     event->room.telemetry.mode = room.mode;
     event->room.telemetry.fan = room.fanMode;
+    event->room.telemetry.outputFlags = room.outputFlags;
 
     g_nextTelemetryRoom = (uint8_t)((roomIndex + 1U) % kRoomCount);
 }
@@ -388,9 +399,19 @@ bool xHVAC_SendToController(const HVAC_Event_t* event, uint32_t xTicksToWait)
 
     if (event->type == HVAC_EVENT_SETTINGS)
     {
+        const HVAC_Mode_t mode = (event->room.settings.mode == HVAC_MODE_UNKNOWN) ? room.mode : event->room.settings.mode;
+        const HVAC_FanMode_t fan = (event->room.settings.fan == HVAC_FAN_UNKNOWN) ? room.fanMode : event->room.settings.fan;
+
         room.targetTemperature = clampFloat(event->room.settings.temperature, 16.0f, 30.0f);
-        room.mode = (event->room.settings.mode == HVAC_MODE_UNKNOWN) ? room.mode : event->room.settings.mode;
-        room.fanMode = (event->room.settings.fan == HVAC_FAN_UNKNOWN) ? room.fanMode : event->room.settings.fan;
+        room.mode = mode;
+        room.fanMode = fan;
+        room.outputFlags = event->room.settings.outputFlags;
+
+        (void)APP_WiFi_LwIP_SendControl((uint8_t)(event->roomId + 1U),
+                                        floatToProtocolX10(room.targetTemperature),
+                                        (uint8_t)mode,
+                                        (uint8_t)fan,
+                                        event->room.settings.outputFlags);
         return true;
     }
 
@@ -443,9 +464,11 @@ bool xHVAC_GetRoomData(uint16_t idx, HVAC_Room_t* pxRoom, uint32_t xTicksToWait)
     pxRoom->telemetry.humidity = room.currentHumidity;
     pxRoom->telemetry.mode = room.mode;
     pxRoom->telemetry.fan = room.fanMode;
+    pxRoom->telemetry.outputFlags = room.outputFlags;
     pxRoom->settings.temperature = room.targetTemperature;
     pxRoom->settings.mode = room.mode;
     pxRoom->settings.fan = room.fanMode;
+    pxRoom->settings.outputFlags = room.outputFlags;
     copyLabel(pxRoom->metadata.label, room.label);
     return true;
 }
@@ -463,6 +486,7 @@ bool xHVAC_SetRoomData(uint16_t idx, const HVAC_Room_t* pxRoom, uint32_t xTicksT
     room.targetTemperature = clampFloat(pxRoom->settings.temperature, 16.0f, 30.0f);
     room.mode = (pxRoom->settings.mode == HVAC_MODE_UNKNOWN) ? room.mode : pxRoom->settings.mode;
     room.fanMode = (pxRoom->settings.fan == HVAC_FAN_UNKNOWN) ? room.fanMode : pxRoom->settings.fan;
+    room.outputFlags = pxRoom->settings.outputFlags;
     return true;
 }
 

@@ -30,6 +30,7 @@ public:
     virtual void updateTemperature(Rooms roomId, float temperature);
     virtual void updateHumidity(Rooms roomId, float humidity);
     virtual void updateFanMode(Rooms roomId, HVAC_FanMode_t fanMode);
+    virtual void updateUsbFlags(Rooms roomId, uint8_t usbFlags);
     virtual void updateClock(uint8_t clockHour, uint8_t clockMinute);
     virtual void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday);
     virtual void updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit);
@@ -37,8 +38,10 @@ public:
     float getRoomTemperature(Rooms roomId);
     float getRoomHumidity(Rooms roomId);
     HVAC_FanMode_t getRoomFanMode(Rooms roomId);
+    uint8_t getRoomUsbFlags(Rooms roomId);
     void setRoomTempSetPoint(Rooms roomId, float temperature);
     void setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode);
+    void setRoomUsbFlags(Rooms roomId, uint8_t usbFlags);
     bool getIsFahrenheit();
     void setIsFahrenheit(bool isFahrenheit);
     Rooms getSelectedRoom();

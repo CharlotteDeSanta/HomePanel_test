@@ -19,6 +19,7 @@ typedef struct
   uint8_t mode;
   uint8_t fan;
   uint8_t online;
+  uint8_t output_flags;
   uint32_t updated_ms;
 } APP_HomeDataTelemetry_t;
 
@@ -29,7 +30,8 @@ uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
                                      uint16_t humidity_x10,
                                      uint8_t mode,
                                      uint8_t fan,
-                                     uint8_t online);
+                                     uint8_t online,
+                                     uint8_t output_flags);
 uint8_t APP_HomeData_CopyTelemetryByRoomIndex(uint8_t roomIndex,
                                               APP_HomeDataTelemetry_t *telemetry);
 

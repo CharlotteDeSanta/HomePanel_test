@@ -16,6 +16,10 @@ extern "C" {
 #define APP_HOME_PROTOCOL_MAX_FRAME_LEN        (APP_HOME_PROTOCOL_HEADER_LEN + \
                                                 APP_HOME_PROTOCOL_MAX_PAYLOAD_LEN + \
                                                 APP_HOME_PROTOCOL_CRC_LEN)
+#define APP_HOME_CONTROL_PAYLOAD_LEN           5U
+#define APP_HOME_CONTROL_FLAG_USB1             0x01U
+#define APP_HOME_CONTROL_FLAG_USB2             0x02U
+#define APP_HOME_CONTROL_FLAG_USB3             0x04U
 
 typedef enum
 {

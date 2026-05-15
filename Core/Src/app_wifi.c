@@ -11,12 +11,15 @@
 #include "app_wifi_platform.h"
 #include "main.h"
 
-#define APP_WIFI_STACK_WAIT_MS          50U
+#define APP_WIFI_STACK_WAIT_MS          5U
 #define APP_WIFI_RESET_ASSERT_MS        20U
 #define APP_WIFI_RESET_RELEASE_GUARD_MS 50U
 #define APP_WIFI_MODULE_SETTLE_MS       200U
 #define APP_WIFI_POLL_MS                1000U
 #define APP_WIFI_HEARTBEAT_MS           5000U
+#define APP_WIFI_HEARTBEAT_LOG_ENABLE   0U
+#define APP_WIFI_SDPCM_TRACE_ENABLE     0U
+#define APP_WIFI_DATA_TX_LOG_ENABLE     0U
 #define APP_WIFI_SCAN_ACTIVE_POLL_MS    100U
 #define APP_WIFI_SCAN_TIMEOUT_MS        15000U
 #define APP_WIFI_SCAN_STEP_TIMEOUT_MS   3000U
@@ -109,6 +112,8 @@
 #define APP_WIFI_WLC_EVENT_MSG_LINK     0x0001UL
 #define APP_WIFI_JOIN_LINK_POLL_INTERVAL_MS 1000U
 #define APP_WIFI_JOIN_LINK_TIMEOUT_MS   15000U
+#define APP_WIFI_JOIN_RETRY_DELAY_MS    5000U
+#define APP_WIFI_JOIN_RETRY_MAX         4U
 #define APP_WIFI_WLC_E_STATUS_SUCCESS   0UL
 #define APP_WIFI_WLC_E_STATUS_NO_NETWORKS 3UL
 #define APP_WIFI_WLC_E_STATUS_ABORT     4UL
@@ -382,6 +387,8 @@ static uint32_t g_wifiLastJoinEventStatus = 0U;
 static uint32_t g_wifiLastJoinEventReason = 0U;
 static uint32_t g_wifiJoinStartTick = 0U;
 static uint32_t g_wifiJoinLastPollTick = 0U;
+static uint32_t g_wifiJoinRetryAtTick = 0U;
+static uint8_t g_wifiJoinRetryCount = 0U;
 static uint32_t g_wifiScanPartialCount = 0U;
 static uint32_t g_wifiScanResultCount = 0U;
 static uint16_t g_wifiLastScanSyncId = 0U;
@@ -470,6 +477,8 @@ static void APP_WiFi_StartScanRequest(void);
 static void APP_WiFi_FailScan(const char *reason);
 static void APP_WiFi_ProcessJoinRequest(void);
 static void APP_WiFi_ResetJoinProgress(void);
+static void APP_WiFi_StartJoinAttempt(uint32_t now);
+static void APP_WiFi_ProcessJoinRetry(void);
 static void APP_WiFi_EvaluateJoinCompletion(void);
 static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t detail);
 
@@ -704,20 +713,9 @@ uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password)
   g_wifiJoinRequestedPassphraseLength = (uint8_t)passwordLength;
 
   g_wifiJoinSecurity = (passwordLength == 0U) ? APP_WIFI_JOIN_SECURITY_OPEN : APP_WIFI_JOIN_SECURITY_WPA2_PSK;
-  APP_WiFi_ResetJoinProgress();
-  g_wifiLinkState = APP_WIFI_LINK_STATE_CONNECTING;
-  g_wifiJoinStartTick = HAL_GetTick();
-  g_wifiJoinLastPollTick = 0U;
-  if (g_wifiJoinSecurity == APP_WIFI_JOIN_SECURITY_OPEN)
-  {
-    g_wifiJoinAuthenticated = 1U;
-    g_wifiJoinSecurityComplete = 1U;
-    g_wifiJoinStep = APP_WIFI_JOIN_STEP_SEND_WSEC;
-  }
-  else
-  {
-    g_wifiJoinStep = APP_WIFI_JOIN_STEP_SEND_WSEC;
-  }
+  g_wifiJoinRetryCount = 0U;
+  g_wifiJoinRetryAtTick = 0U;
+  APP_WiFi_StartJoinAttempt(HAL_GetTick());
 
   APP_WiFi_Logf("[wifi] join: requested ssid=\"%s\" security=%s passLen=%u\n",
                 g_wifiJoinRequestedSsid,
@@ -938,17 +936,20 @@ static void APP_WiFi_RecordSdpcmHeader(const uint8_t *header, uint16_t frameLeng
   g_wifiLastSdpcmFlowControl = header[8];
   g_wifiLastSdpcmBusCredit = header[9];
 
-  APP_WiFi_Logf("[wifi] sdpcm: #%lu irq=0x%08lX len=%u seq=%u ch=%s(%u) hdr=%u next=%u credit=%u flow=%u\n",
-                (unsigned long)g_wifiSdpcmFrameCount,
-                (unsigned long)frameInterrupt,
-                (unsigned int)frameLength,
-                (unsigned int)g_wifiLastSdpcmSequence,
-                APP_WiFi_SdpcmChannelToString(g_wifiLastSdpcmChannel),
-                (unsigned int)g_wifiLastSdpcmChannel,
-                (unsigned int)g_wifiLastSdpcmHeaderLength,
-                (unsigned int)g_wifiLastSdpcmNextLength,
-                (unsigned int)g_wifiLastSdpcmBusCredit,
-                (unsigned int)g_wifiLastSdpcmFlowControl);
+  if (APP_WIFI_SDPCM_TRACE_ENABLE != 0U)
+  {
+    APP_WiFi_Logf("[wifi] sdpcm: #%lu irq=0x%08lX len=%u seq=%u ch=%s(%u) hdr=%u next=%u credit=%u flow=%u\n",
+                  (unsigned long)g_wifiSdpcmFrameCount,
+                  (unsigned long)frameInterrupt,
+                  (unsigned int)frameLength,
+                  (unsigned int)g_wifiLastSdpcmSequence,
+                  APP_WiFi_SdpcmChannelToString(g_wifiLastSdpcmChannel),
+                  (unsigned int)g_wifiLastSdpcmChannel,
+                  (unsigned int)g_wifiLastSdpcmHeaderLength,
+                  (unsigned int)g_wifiLastSdpcmNextLength,
+                  (unsigned int)g_wifiLastSdpcmBusCredit,
+                  (unsigned int)g_wifiLastSdpcmFlowControl);
+  }
 }
 
 static void APP_WiFi_UpdateSdpcmCredit(const uint8_t *header)
@@ -2046,9 +2047,9 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   if (availableCredits == 0U)
   {
     dataTxBusyCount++;
-    if (dataTxBusyCount <= 16U)
-    {
-      APP_WiFi_Logf("[wifi] data tx busy #%lu len=%u txseq=%u credit=%u flow=%u\n",
+      if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxBusyCount <= 32U))
+      {
+        APP_WiFi_Logf("[wifi] data tx busy #%lu len=%u txseq=%u credit=%u flow=%u\n",
                     (unsigned long)dataTxBusyCount,
                     (unsigned int)length,
                     (unsigned int)g_wifiTxSequence,
@@ -2077,7 +2078,7 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   }
 
   dataTxAttemptCount++;
-  if (dataTxAttemptCount <= 8U)
+  if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxAttemptCount <= 32U))
   {
     APP_WiFi_Logf("[wifi] data tx try #%lu len=%u frameLen=%u txseq=%u credit=%u eth=0x%02X%02X\n",
                   (unsigned long)dataTxAttemptCount,
@@ -2092,7 +2093,7 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   if (APP_WiFi_Platform_Fn2Write(txFrame, frameLength) != HAL_OK)
   {
     dataTxFailCount++;
-    if (dataTxFailCount <= 8U)
+    if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxFailCount <= 32U))
     {
       APP_WiFi_Logf("[wifi] data tx failed #%lu len=%u sta=0x%08lX err=0x%08lX\n",
                     (unsigned long)dataTxFailCount,
@@ -2105,7 +2106,7 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
 
   g_wifiTxSequence = (uint8_t)(txSequence + 1U);
   dataTxOkCount++;
-  if (dataTxOkCount <= 8U)
+  if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxOkCount <= 32U))
   {
     APP_WiFi_Logf("[wifi] data tx ok #%lu len=%u txseq=%u\n",
                   (unsigned long)dataTxOkCount,
@@ -2235,8 +2236,11 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
       {
         APP_WiFi_EvaluateJoinCompletion();
       }
-      else if ((g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTING) ||
-               (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED))
+      else if (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED)
+      {
+        APP_WiFi_Logf("[wifi] join: transient link down ignored while connected\n");
+      }
+      else if (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTING)
       {
         APP_WiFi_FailJoin("link dropped", status, reason);
       }
@@ -2415,6 +2419,47 @@ static void APP_WiFi_ResetJoinProgress(void)
   memset(g_wifiLastBssid, 0, sizeof(g_wifiLastBssid));
 }
 
+static void APP_WiFi_StartJoinAttempt(uint32_t now)
+{
+  APP_WiFi_ResetJoinProgress();
+  g_wifiLinkState = APP_WIFI_LINK_STATE_CONNECTING;
+  g_wifiJoinStartTick = now;
+  g_wifiJoinLastPollTick = 0U;
+
+  if (g_wifiJoinSecurity == APP_WIFI_JOIN_SECURITY_OPEN)
+  {
+    g_wifiJoinAuthenticated = 1U;
+    g_wifiJoinSecurityComplete = 1U;
+  }
+
+  g_wifiJoinStep = APP_WIFI_JOIN_STEP_SEND_WSEC;
+}
+
+static void APP_WiFi_ProcessJoinRetry(void)
+{
+  const uint32_t now = HAL_GetTick();
+
+  if ((g_wifiState != APP_WIFI_STATE_MAILBOX_READY) ||
+      (g_wifiLinkState != APP_WIFI_LINK_STATE_FAILED) ||
+      (g_wifiJoinRetryAtTick == 0U) ||
+      (g_wifiJoinRequestedSsidLength == 0U))
+  {
+    return;
+  }
+
+  if ((int32_t)(now - g_wifiJoinRetryAtTick) < 0)
+  {
+    return;
+  }
+
+  APP_WiFi_Logf("[wifi] join: retry %u/%u ssid=\"%s\"\n",
+                (unsigned int)g_wifiJoinRetryCount,
+                (unsigned int)APP_WIFI_JOIN_RETRY_MAX,
+                g_wifiJoinRequestedSsid);
+  g_wifiJoinRetryAtTick = 0U;
+  APP_WiFi_StartJoinAttempt(now);
+}
+
 static void APP_WiFi_EvaluateJoinCompletion(void)
 {
   if (g_wifiLinkState != APP_WIFI_LINK_STATE_CONNECTING)
@@ -2440,6 +2485,8 @@ static void APP_WiFi_EvaluateJoinCompletion(void)
 
   g_wifiLinkState = APP_WIFI_LINK_STATE_CONNECTED;
   g_wifiJoinStep = APP_WIFI_JOIN_STEP_IDLE;
+  g_wifiJoinRetryAtTick = 0U;
+  g_wifiJoinRetryCount = 0U;
   APP_WiFi_Logf("[wifi] join: connected ssid=\"%s\" auth=%u link=%u security=%u\n",
                 g_wifiJoinRequestedSsid,
                 (unsigned int)g_wifiJoinAuthenticated,
@@ -2461,11 +2508,28 @@ static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t deta
   g_wifiJoinAuthenticated = 0U;
   g_wifiJoinLinkReady = 0U;
   g_wifiJoinSecurityComplete = 0U;
+  if ((g_wifiJoinRequestedSsidLength != 0U) &&
+      (g_wifiJoinRetryCount < APP_WIFI_JOIN_RETRY_MAX))
+  {
+    g_wifiJoinRetryCount++;
+    g_wifiJoinRetryAtTick = HAL_GetTick() + APP_WIFI_JOIN_RETRY_DELAY_MS;
+  }
+  else
+  {
+    g_wifiJoinRetryAtTick = 0U;
+  }
   APP_WiFi_Logf("[wifi] join: failed ssid=\"%s\" reason=\"%s\" status=%lu detail=%lu\n",
                 g_wifiJoinRequestedSsid,
                 (reason != NULL) ? reason : "unknown",
                 (unsigned long)status,
                 (unsigned long)detail);
+  if (g_wifiJoinRetryAtTick != 0U)
+  {
+    APP_WiFi_Logf("[wifi] join: retry scheduled in %lu ms (%u/%u)\n",
+                  (unsigned long)APP_WIFI_JOIN_RETRY_DELAY_MS,
+                  (unsigned int)g_wifiJoinRetryCount,
+                  (unsigned int)APP_WIFI_JOIN_RETRY_MAX);
+  }
 }
 
 static void APP_WiFi_ProcessJoinRequest(void)
@@ -2808,8 +2872,11 @@ static uint8_t APP_WiFi_TryProbeSdpcmRxInternal(uint8_t requireInterruptHint)
              (size_t)(captured - APP_WIFI_SDPCM_HW_TAG_SIZE));
     }
 
-    APP_WiFi_Logf("[wifi] sdpcm: hwtag fallback used irq=0x%08lX\n",
-                  (unsigned long)frameInterrupt);
+    if (APP_WIFI_SDPCM_TRACE_ENABLE != 0U)
+    {
+      APP_WiFi_Logf("[wifi] sdpcm: hwtag fallback used irq=0x%08lX\n",
+                    (unsigned long)frameInterrupt);
+    }
   }
 
   frameLength = APP_WiFi_ReadLe16(&header[0]);
@@ -3146,12 +3213,15 @@ static uint8_t APP_WiFi_TryProbeSdpcmRxInternal(uint8_t requireInterruptHint)
   if ((frameLength == APP_WIFI_SDPCM_HEADER_SIZE) &&
       (g_wifiLastSdpcmHeaderLength == APP_WIFI_SDPCM_HEADER_SIZE))
   {
-    APP_WiFi_Logf("[wifi] sdpcm: credit-only seq=%u ch=%s credit=%u diff=%u flow=%u\n",
-                  (unsigned int)g_wifiLastSdpcmSequence,
-                  APP_WiFi_SdpcmChannelToString(g_wifiLastSdpcmChannel),
-                  (unsigned int)g_wifiBusCredit,
-                  (unsigned int)g_wifiBusCreditDiff,
-                  (unsigned int)g_wifiLastSdpcmFlowControl);
+    if (APP_WIFI_SDPCM_TRACE_ENABLE != 0U)
+    {
+      APP_WiFi_Logf("[wifi] sdpcm: credit-only seq=%u ch=%s credit=%u diff=%u flow=%u\n",
+                    (unsigned int)g_wifiLastSdpcmSequence,
+                    APP_WiFi_SdpcmChannelToString(g_wifiLastSdpcmChannel),
+                    (unsigned int)g_wifiBusCredit,
+                    (unsigned int)g_wifiBusCreditDiff,
+                    (unsigned int)g_wifiLastSdpcmFlowControl);
+    }
   }
   (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
   return 1U;
@@ -3690,67 +3760,76 @@ static void APP_WiFi_LogPeriodicHeartbeat(void)
     (void)APP_WiFi_Platform_ProbeConsole();
     (void)APP_WiFi_Platform_ProbeMailbox();
 
-    APP_WiFi_Logf("[wifi] heartbeat: state=%s sdioIrq=%lu oob=%lu mailbox=0x%08lX int=0x%08lX consoleWr=%lu consoleOut=%lu sdpcm=%lu len=%u ch=%u seq=%u credit=%u flow=%u ioctlSent=%u ioctlDone=%u ioctlCmd=%lu ioctlStatus=0x%08lX verOk=%u glomSent=%u glomOk=%u apstaSent=%u apstaOk=%u countrySent=%u countryOk=%u upSent=%u upOk=%u gmSent=%u gmOk=%u macSent=%u macOk=%u evtSent=%u evtOk=%u supSent=%u supOk=%u pmSent=%u pmOk=%u scanSent=%u scanIoctl=%u scanDone=%u scanAbort=%u scanPart=%lu scanRes=%lu\n",
-                  APP_WiFi_StateToString(g_wifiState),
-                  (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
-                  (unsigned long)APP_WiFi_GetOobInterruptCount(),
-                  (unsigned long)APP_WiFi_Platform_GetHostMailboxData(),
-                  (unsigned long)APP_WiFi_Platform_GetInterruptStatus(),
-                  (unsigned long)APP_WiFi_Platform_GetConsoleWriteIndex(),
-                  (unsigned long)APP_WiFi_Platform_GetConsoleOutIndex(),
-                  (unsigned long)g_wifiSdpcmFrameCount,
-                  (unsigned int)g_wifiLastSdpcmFrameLength,
-                  (unsigned int)g_wifiLastSdpcmChannel,
-                  (unsigned int)g_wifiLastSdpcmSequence,
-                  (unsigned int)g_wifiBusCredit,
-                  (unsigned int)g_wifiLastSdpcmFlowControl,
-                  (unsigned int)g_wifiIoctlProbeSent,
-                  (unsigned int)g_wifiIoctlProbeCompleted,
-                  (unsigned long)g_wifiLastIoctlCommand,
-                  (unsigned long)g_wifiLastIoctlStatus,
-                  (unsigned int)g_wifiVersionProbeCompleted,
-                  (unsigned int)g_wifiTxGlomSent,
-                  (unsigned int)g_wifiTxGlomCompleted,
-                  (unsigned int)g_wifiApstaSent,
-                  (unsigned int)g_wifiApstaCompleted,
-                  (unsigned int)g_wifiCountrySent,
-                  (unsigned int)g_wifiCountryCompleted,
-                  (unsigned int)g_wifiUpProbeSent,
-                  (unsigned int)g_wifiUpProbeCompleted,
-                  (unsigned int)g_wifiGmodeSent,
-                  (unsigned int)g_wifiGmodeCompleted,
-                  (unsigned int)g_wifiMacProbeSent,
-                  (unsigned int)g_wifiMacProbeCompleted,
-                  (unsigned int)g_wifiEventMaskSent,
-                  (unsigned int)g_wifiEventMaskCompleted,
-                  (unsigned int)g_wifiScanSuppressSent,
-                  (unsigned int)g_wifiScanSuppressCompleted,
-                  (unsigned int)g_wifiPmProbeSent,
-                  (unsigned int)g_wifiPmProbeCompleted,
-                  (unsigned int)g_wifiScanSent,
-                  (unsigned int)g_wifiScanIoctlCompleted,
-                  (unsigned int)g_wifiScanCompleted,
-                  (unsigned int)g_wifiScanAborted,
-                  (unsigned long)g_wifiScanPartialCount,
-                  (unsigned long)g_wifiScanResultCount);
+    if (APP_WIFI_HEARTBEAT_LOG_ENABLE != 0U)
+    {
+      APP_WiFi_Logf("[wifi] heartbeat: state=%s sdioIrq=%lu oob=%lu mailbox=0x%08lX int=0x%08lX consoleWr=%lu consoleOut=%lu sdpcm=%lu len=%u ch=%u seq=%u credit=%u flow=%u ioctlSent=%u ioctlDone=%u ioctlCmd=%lu ioctlStatus=0x%08lX verOk=%u glomSent=%u glomOk=%u apstaSent=%u apstaOk=%u countrySent=%u countryOk=%u upSent=%u upOk=%u gmSent=%u gmOk=%u macSent=%u macOk=%u evtSent=%u evtOk=%u supSent=%u supOk=%u pmSent=%u pmOk=%u scanSent=%u scanIoctl=%u scanDone=%u scanAbort=%u scanPart=%lu scanRes=%lu\n",
+                    APP_WiFi_StateToString(g_wifiState),
+                    (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
+                    (unsigned long)APP_WiFi_GetOobInterruptCount(),
+                    (unsigned long)APP_WiFi_Platform_GetHostMailboxData(),
+                    (unsigned long)APP_WiFi_Platform_GetInterruptStatus(),
+                    (unsigned long)APP_WiFi_Platform_GetConsoleWriteIndex(),
+                    (unsigned long)APP_WiFi_Platform_GetConsoleOutIndex(),
+                    (unsigned long)g_wifiSdpcmFrameCount,
+                    (unsigned int)g_wifiLastSdpcmFrameLength,
+                    (unsigned int)g_wifiLastSdpcmChannel,
+                    (unsigned int)g_wifiLastSdpcmSequence,
+                    (unsigned int)g_wifiBusCredit,
+                    (unsigned int)g_wifiLastSdpcmFlowControl,
+                    (unsigned int)g_wifiIoctlProbeSent,
+                    (unsigned int)g_wifiIoctlProbeCompleted,
+                    (unsigned long)g_wifiLastIoctlCommand,
+                    (unsigned long)g_wifiLastIoctlStatus,
+                    (unsigned int)g_wifiVersionProbeCompleted,
+                    (unsigned int)g_wifiTxGlomSent,
+                    (unsigned int)g_wifiTxGlomCompleted,
+                    (unsigned int)g_wifiApstaSent,
+                    (unsigned int)g_wifiApstaCompleted,
+                    (unsigned int)g_wifiCountrySent,
+                    (unsigned int)g_wifiCountryCompleted,
+                    (unsigned int)g_wifiUpProbeSent,
+                    (unsigned int)g_wifiUpProbeCompleted,
+                    (unsigned int)g_wifiGmodeSent,
+                    (unsigned int)g_wifiGmodeCompleted,
+                    (unsigned int)g_wifiMacProbeSent,
+                    (unsigned int)g_wifiMacProbeCompleted,
+                    (unsigned int)g_wifiEventMaskSent,
+                    (unsigned int)g_wifiEventMaskCompleted,
+                    (unsigned int)g_wifiScanSuppressSent,
+                    (unsigned int)g_wifiScanSuppressCompleted,
+                    (unsigned int)g_wifiPmProbeSent,
+                    (unsigned int)g_wifiPmProbeCompleted,
+                    (unsigned int)g_wifiScanSent,
+                    (unsigned int)g_wifiScanIoctlCompleted,
+                    (unsigned int)g_wifiScanCompleted,
+                    (unsigned int)g_wifiScanAborted,
+                    (unsigned long)g_wifiScanPartialCount,
+                    (unsigned long)g_wifiScanResultCount);
+    }
     return;
   }
 
   if (g_wifiState == APP_WIFI_STATE_ERROR)
   {
-    APP_WiFi_Logf("[wifi] heartbeat: state=%s lastStatus=0x%08lX lastError=0x%08lX sdioIrq=%lu oob=%lu\n",
-                  APP_WiFi_StateToString(g_wifiState),
-                  (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
-                  (unsigned long)APP_WiFi_Platform_GetLastSdioError(),
-                  (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
-                  (unsigned long)APP_WiFi_GetOobInterruptCount());
+    if (APP_WIFI_HEARTBEAT_LOG_ENABLE != 0U)
+    {
+      APP_WiFi_Logf("[wifi] heartbeat: state=%s lastStatus=0x%08lX lastError=0x%08lX sdioIrq=%lu oob=%lu\n",
+                    APP_WiFi_StateToString(g_wifiState),
+                    (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
+                    (unsigned long)APP_WiFi_Platform_GetLastSdioError(),
+                    (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
+                    (unsigned long)APP_WiFi_GetOobInterruptCount());
+    }
     return;
   }
 
-  APP_WiFi_Logf("[wifi] heartbeat: state=%s sdioIrq=%lu oob=%lu\n",
-                APP_WiFi_StateToString(g_wifiState),
-                (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
-                (unsigned long)APP_WiFi_GetOobInterruptCount());
+  if (APP_WIFI_HEARTBEAT_LOG_ENABLE != 0U)
+  {
+    APP_WiFi_Logf("[wifi] heartbeat: state=%s sdioIrq=%lu oob=%lu\n",
+                  APP_WiFi_StateToString(g_wifiState),
+                  (unsigned long)APP_WiFi_Platform_GetSdioInterruptCount(),
+                  (unsigned long)APP_WiFi_GetOobInterruptCount());
+  }
 }
 
 void APP_WiFi_Task(void *argument)
@@ -4185,11 +4264,19 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_MAILBOX_READY:
+        APP_WiFi_ProcessJoinRetry();
         APP_WiFi_ProcessJoinRequest();
         APP_WiFi_PollPendingIoctlResponse();
         APP_WiFi_ProcessScanRequest();
         APP_WiFi_PollActiveScanResults();
-        (void)APP_WiFi_DrainSdpcmRxQueue(8U);
+        (void)APP_WiFi_DrainSdpcmRxQueue(16U);
+        APP_WiFi_LwIP_Service();
+        /*
+         * TCP handshakes are timing-sensitive on ESP01S AT firmware. LwIP may
+         * enqueue SYN-ACK/ARP replies while we are draining RX frames, so drain
+         * once more and immediately retry TX after fresh SDPCM credits arrive.
+         */
+        (void)APP_WiFi_DrainSdpcmRxQueue(16U);
         APP_WiFi_LwIP_Service();
         APP_WiFi_LogPeriodicHeartbeat();
         osDelay(APP_WIFI_STACK_WAIT_MS);
