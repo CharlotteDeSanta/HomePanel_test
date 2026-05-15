@@ -71,6 +71,12 @@ uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
 const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 1000U;
 const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
 const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
+const uint32_t MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS = 45000U;
+
+bool tickReached(uint32_t nowMs, uint32_t deadlineMs)
+{
+    return static_cast<int32_t>(nowMs - deadlineMs) >= 0;
+}
 
 bool temperatureEquals(float lhs, float rhs)
 {
@@ -100,6 +106,9 @@ Model::Model() :
     kitchenUsbFlags(0U),
     livingRoomUsbFlags(0U),
     bedRoomUsbFlags(0U),
+    pendingUsbFlags{},
+    usbFlagsPending{},
+    usbFlagsPendingUntilMs{},
     clockYear(parseBuildYear()),
     clockMonth(parseBuildMonth()),
     clockDay(parseBuildDay()),
@@ -420,7 +429,51 @@ void Model::setRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
     outgoingEvent.room.settings.fan = fanSetPoint;
     outgoingEvent.room.settings.outputFlags = usbFlags;
 
-    xHVAC_SendToController(&outgoingEvent, 10);
+    if (xHVAC_SendToController(&outgoingEvent, 10))
+    {
+        markUsbFlagsPending(roomId, usbFlags);
+    }
+}
+
+void Model::markUsbFlagsPending(Rooms roomId, uint8_t usbFlags)
+{
+    const uint8_t roomIndex = static_cast<uint8_t>(roomId);
+    if (roomIndex >= 3U)
+    {
+        return;
+    }
+
+    pendingUsbFlags[roomIndex] = usbFlags;
+    usbFlagsPending[roomIndex] = true;
+    usbFlagsPendingUntilMs[roomIndex] = GUI_Time_GetTickMs() + MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS;
+}
+
+bool Model::shouldApplyUsbTelemetry(Rooms roomId, uint8_t usbFlags)
+{
+    const uint8_t roomIndex = static_cast<uint8_t>(roomId);
+    if (roomIndex >= 3U)
+    {
+        return true;
+    }
+
+    if (!usbFlagsPending[roomIndex])
+    {
+        return true;
+    }
+
+    if (usbFlags == pendingUsbFlags[roomIndex])
+    {
+        usbFlagsPending[roomIndex] = false;
+        return true;
+    }
+
+    if (!tickReached(GUI_Time_GetTickMs(), usbFlagsPendingUntilMs[roomIndex]))
+    {
+        return false;
+    }
+
+    usbFlagsPending[roomIndex] = false;
+    return true;
 }
 
 bool Model::getIsFahrenheit()
@@ -602,7 +655,8 @@ void Model::checkForIncomingData()
                     modelListener->updateFanMode((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.fan);
                     kitchenFanMode = incomingEvent.room.telemetry.fan;
                 }
-                if (incomingEvent.room.telemetry.outputFlags != kitchenUsbFlags)
+                if (shouldApplyUsbTelemetry((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.outputFlags) &&
+                    (incomingEvent.room.telemetry.outputFlags != kitchenUsbFlags))
                 {
                     kitchenUsbFlags = incomingEvent.room.telemetry.outputFlags;
                     modelListener->updateUsbFlags((Rooms)incomingEvent.roomId, kitchenUsbFlags);
@@ -624,7 +678,8 @@ void Model::checkForIncomingData()
                     modelListener->updateFanMode((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.fan);
                     livingRoomFanMode = incomingEvent.room.telemetry.fan;
                 }
-                if (incomingEvent.room.telemetry.outputFlags != livingRoomUsbFlags)
+                if (shouldApplyUsbTelemetry((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.outputFlags) &&
+                    (incomingEvent.room.telemetry.outputFlags != livingRoomUsbFlags))
                 {
                     livingRoomUsbFlags = incomingEvent.room.telemetry.outputFlags;
                     modelListener->updateUsbFlags((Rooms)incomingEvent.roomId, livingRoomUsbFlags);
@@ -646,7 +701,8 @@ void Model::checkForIncomingData()
                     modelListener->updateFanMode((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.fan);
                     bedRoomFanMode = incomingEvent.room.telemetry.fan;
                 }
-                if (incomingEvent.room.telemetry.outputFlags != bedRoomUsbFlags)
+                if (shouldApplyUsbTelemetry((Rooms)incomingEvent.roomId, incomingEvent.room.telemetry.outputFlags) &&
+                    (incomingEvent.room.telemetry.outputFlags != bedRoomUsbFlags))
                 {
                     bedRoomUsbFlags = incomingEvent.room.telemetry.outputFlags;
                     modelListener->updateUsbFlags((Rooms)incomingEvent.roomId, bedRoomUsbFlags);

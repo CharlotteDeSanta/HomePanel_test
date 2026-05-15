@@ -19,6 +19,8 @@ struct SimRoomState
     uint8_t outputFlags;
     float ambientTemperature;
     float ambientHumidity;
+    uint16_t lastTelemetrySequence;
+    bool hasTelemetrySequence;
 };
 
 struct WeatherTemplate
@@ -32,9 +34,9 @@ constexpr uint8_t kRoomCount = HVAC_MAX_ROOM_COUNT;
 constexpr uint32_t kWeatherRefreshPeriodMs = 5U * 60U * 1000U;
 
 SimRoomState g_rooms[kRoomCount] = {
-    { "Kitchen",    22.2f, 55.0f, 22.0f, HVAC_MODE_AUTO, HVAC_FAN_MED, 0U, 24.0f, 56.0f },
-    { "LivingRoom", 23.4f, 46.0f, 23.5f, HVAC_MODE_AUTO, HVAC_FAN_HIGH, 0U, 25.0f, 47.0f },
-    { "Bedroom",    21.6f, 49.0f, 21.5f, HVAC_MODE_AUTO, HVAC_FAN_LOW, 0U, 23.0f, 50.0f }
+    { "Kitchen",    22.2f, 55.0f, 22.0f, HVAC_MODE_AUTO, HVAC_FAN_MED, 0U, 24.0f, 56.0f, 0U, false },
+    { "LivingRoom", 23.4f, 46.0f, 23.5f, HVAC_MODE_AUTO, HVAC_FAN_HIGH, 0U, 25.0f, 47.0f, 0U, false },
+    { "Bedroom",    21.6f, 49.0f, 21.5f, HVAC_MODE_AUTO, HVAC_FAN_LOW, 0U, 23.0f, 50.0f, 0U, false }
 };
 
 const WeatherTemplate g_weeklyWeather[7] = {
@@ -116,6 +118,14 @@ bool syncNetworkTelemetryForRoom(uint8_t roomIndex)
     }
 
     SimRoomState& room = g_rooms[roomIndex];
+    if ((room.hasTelemetrySequence) && (room.lastTelemetrySequence == telemetry.sequence))
+    {
+        return true;
+    }
+
+    room.lastTelemetrySequence = telemetry.sequence;
+    room.hasTelemetrySequence = true;
+
     const HVAC_Mode_t mode = protocolModeToHvac(telemetry.mode);
     const HVAC_FanMode_t fan = protocolFanToHvac(telemetry.fan);
 

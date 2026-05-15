@@ -97,6 +97,8 @@ public:
 
 private:
     void checkForIncomingData();
+    void markUsbFlagsPending(Rooms roomId, uint8_t usbFlags);
+    bool shouldApplyUsbTelemetry(Rooms roomId, uint8_t usbFlags);
     uint16_t getBitmapFromWeatherCode(uint16_t weatherCode, bool iconIsSmall);
     uint16_t getTextFromWeatherCode(uint16_t weatherCode);
     void insertBufferSample(BufferSample buffer[], uint8_t& bufferCount, const BufferSample& sample);
@@ -122,6 +124,9 @@ private:
     uint8_t kitchenUsbFlags;
     uint8_t livingRoomUsbFlags;
     uint8_t bedRoomUsbFlags;
+    uint8_t pendingUsbFlags[3];
+    bool usbFlagsPending[3];
+    uint32_t usbFlagsPendingUntilMs[3];
     uint16_t clockYear;
     uint8_t clockMonth;
     uint8_t clockDay;
