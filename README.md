@@ -7,7 +7,6 @@
 - TCP Socket 服务端
 - 与多个下位机节点的协议通信与状态展示
 
-本仓库当前重点是“可稳定联调”的工程形态，适配毕业设计阶段的快速迭代。
 
 ---
 
@@ -149,7 +148,7 @@ cmake --build --preset Release
 
 ### 5.2 VS Code / cube-cmake
 
-仓库也兼容你当前使用的 `cube-cmake --build ...` 工作流。
+仓库也兼容STM32Cube插件使用的 `cube-cmake --build ...` 工作流。
 
 ---
 
@@ -175,6 +174,6 @@ cmake --build --preset Release
 
 ## 8. 对应下位机仓库
 
-下位机工程：`C:\Users\20953\Documents\MCUProjects\HomeNode`
+下位机工程：`https://github.com/CharlotteDeSanta/HomeNode`
 
 已支持编译期节点角色选择（厨房/起居室/卧室），详见下位机仓库 README。
