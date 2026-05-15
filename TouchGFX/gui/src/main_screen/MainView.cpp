@@ -4,7 +4,8 @@
 MainView::MainView() :
     tickCount(0),
     waitingToFlip(false),
-    setTempAndFanUsbSettingChangedCallback(this, &MainView::usbSettingsChanged)
+    setTempAndFanUsbSettingChangedCallback(this, &MainView::usbSettingsChanged),
+    roomStatusNoopCallback(this, &MainView::roomStatusNoopHandler)
 {
     setTempAndFan.setUsbSettingChangedCallback(setTempAndFanUsbSettingChangedCallback);
 }
@@ -30,6 +31,17 @@ void MainView::setupScreen()
     kitchenCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(KITCHEN));
     livingroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(LIVINGROOM));
     bedroomCardContainer.setFanSetPoint(presenter->getRoomFanSetPoint(BEDROOM));
+    kitchenStat.setTouchable(false);
+    livingStat.setTouchable(false);
+    bedroomStat.setTouchable(false);
+    kitchenStat.setAction(roomStatusNoopCallback);
+    livingStat.setAction(roomStatusNoopCallback);
+    bedroomStat.setAction(roomStatusNoopCallback);
+    wifistatText.setTypedText(TypedText(T_ENTEREDTEXT));
+    updateWiFiOnline(presenter->getWiFiOnline());
+    updateRoomOnline(KITCHEN, presenter->getRoomOnline(KITCHEN));
+    updateRoomOnline(LIVINGROOM, presenter->getRoomOnline(LIVINGROOM));
+    updateRoomOnline(BEDROOM, presenter->getRoomOnline(BEDROOM));
 
     // Setup start animations
     startupAnimation(wificonfButton, FADE_DURATION, 0);
@@ -247,6 +259,40 @@ void MainView::updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
 void MainView::updateRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
 {
     setTempAndFan.setUsbFlags(roomId, usbFlags);
+}
+
+void MainView::updateWiFiOnline(bool online)
+{
+    const char* status = online ? "Online" : "Offline";
+    Unicode::strncpy(wifistatTextBuffer, status, WIFISTATTEXT_SIZE);
+    wifistatTextBuffer[WIFISTATTEXT_SIZE - 1U] = 0;
+    wifistatText.resizeToCurrentText();
+    wifistatText.invalidate();
+}
+
+void MainView::updateRoomOnline(Rooms roomId, bool online)
+{
+    switch (roomId)
+    {
+    case KITCHEN:
+        kitchenStat.setSelected(online);
+        kitchenStat.invalidate();
+        break;
+    case LIVINGROOM:
+        livingStat.setSelected(online);
+        livingStat.invalidate();
+        break;
+    case BEDROOM:
+        bedroomStat.setSelected(online);
+        bedroomStat.invalidate();
+        break;
+    default:
+        break;
+    }
+}
+
+void MainView::roomStatusNoopHandler(const touchgfx::AbstractButton&)
+{
 }
 
 void MainView::updateClock(uint8_t hour, uint8_t minute)

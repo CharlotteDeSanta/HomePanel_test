@@ -23,7 +23,15 @@ typedef struct
   uint32_t updated_ms;
 } APP_HomeDataTelemetry_t;
 
+typedef struct
+{
+  uint8_t known;
+  uint8_t online;
+  uint32_t updated_ms;
+} APP_HomeDataNodeStatus_t;
+
 uint8_t APP_HomeData_NodeToRoomIndex(uint8_t node, uint8_t *roomIndex);
+uint8_t APP_HomeData_UpdateNodeOnline(uint8_t node, uint8_t online);
 uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
                                      uint16_t sequence,
                                      int16_t temperature_x10,
@@ -34,6 +42,8 @@ uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
                                      uint8_t output_flags);
 uint8_t APP_HomeData_CopyTelemetryByRoomIndex(uint8_t roomIndex,
                                               APP_HomeDataTelemetry_t *telemetry);
+uint8_t APP_HomeData_CopyNodeStatusByRoomIndex(uint8_t roomIndex,
+                                               APP_HomeDataNodeStatus_t *status);
 
 #ifdef __cplusplus
 }

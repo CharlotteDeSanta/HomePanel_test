@@ -27,6 +27,8 @@ public:
     void updateRoomHumidity(Rooms roomId, float hum);
     void updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode);
     void updateRoomUsbFlags(Rooms roomId, uint8_t usbFlags);
+    void updateWiFiOnline(bool online);
+    void updateRoomOnline(Rooms roomId, bool online);
     void updateClock(uint8_t hour, uint8_t minute);
     void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday);
     void updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit);
@@ -41,6 +43,7 @@ private:
     }
     void setTemperatures();
     void setSelectedRoom(Rooms room);
+    void roomStatusNoopHandler(const touchgfx::AbstractButton&);
 
     const uint8_t FADE_DURATION = 30;
     const uint8_t FLIP_DURATION = 20;
@@ -51,6 +54,7 @@ private:
     int tickCount;
     bool waitingToFlip;
     touchgfx::Callback<MainView, uint8_t> setTempAndFanUsbSettingChangedCallback;
+    touchgfx::Callback<MainView, const touchgfx::AbstractButton&> roomStatusNoopCallback;
 };
 
 #endif // MAINVIEW_HPP

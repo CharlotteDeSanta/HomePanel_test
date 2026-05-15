@@ -94,9 +94,12 @@ public:
     uint8_t getClockDay();
     uint8_t getClockWeekday();
     void getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& returnBufferSize);
+    bool getWiFiOnline() const;
+    bool getRoomOnline(Rooms roomId) const;
 
 private:
     void checkForIncomingData();
+    void refreshConnectivityStatus();
     void markUsbFlagsPending(Rooms roomId, uint8_t usbFlags);
     bool shouldApplyUsbTelemetry(Rooms roomId, uint8_t usbFlags);
     uint16_t getBitmapFromWeatherCode(uint16_t weatherCode, bool iconIsSmall);
@@ -113,6 +116,8 @@ private:
     float bedRoomTemperature;
     float bedRoomHumidity;
     HVAC_FanMode_t bedRoomFanMode;
+    bool wifiOnline;
+    bool roomOnline[3];
     bool unitIsFahrenheit;
     Rooms selectedRoom;
     float kitchenTempSetPoint;

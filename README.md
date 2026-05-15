@@ -1,193 +1,180 @@
-# HomePanel Test
+# HomePanel_test
 
-基于 `STM32H743` 的家庭控制面板实验工程，当前已经完成显示、外部资源、TouchGFX 和 GT911 触摸的基础适配，可以作为后续界面与业务功能开发的工作底座。
+`HomePanel_test` 是智能家居系统的上位机工程，运行在 `STM32H743`，负责：
 
-## 当前状态
+- 图形界面与触摸交互（TouchGFX）
+- AP6181 WiFi 入网（SDIO）
+- TCP Socket 服务端
+- 与多个下位机节点的协议通信与状态展示
 
-当前代码已验证通过的内容：
+本仓库当前重点是“可稳定联调”的工程形态，适配毕业设计阶段的快速迭代。
 
-- `800x480 RGB` 屏幕可稳定显示完整 TouchGFX 界面
-- `SDRAM + LTDC` 双帧缓冲工作正常
-- 外部 `QSPI Flash` 图片资源可正常读取和显示
-- `GT911` 触摸已接通，TouchGFX 可正常响应点击
-- 主界面帧率稳定，重动画场景也已做过一轮性能优化
+---
 
-当前结论：
+## 1. 当前进度（与代码一致）
 
-- 外部资源方案按 **单片 `W25Q256`** 工作，不是双闪
-- 原生 `STM32Cube` VS Code 调试/下载在当前环境已验证可用
-- 自定义 `J-Link` 配置仍保留，作为显式、可复现的备用方案
+当前已经跑通并在持续联调的能力：
 
-## 硬件适配摘要
+- 主界面（Main Screen）可显示三房间温湿度、风速、USB 状态。
+- WiFi 配网界面已改造完成：
+  - SSID 滚轮列表
+  - SSID / Password 文本输入
+  - 内嵌键盘输入与同步
+- AP6181 驱动已接入，支持扫描、入网、DHCP。
+- 手工接入 lwIP + sockets（未依赖 CubeMX 的 lwIP 开关）。
+- 上位机 TCP 服务端已跑通（端口 `5000`）。
+- 自定义协议收发已跑通：
+  - 下位机上报 `TELEMETRY`
+  - 上位机下发 `CONTROL`
+  - `ACK/ERR` 回应
+- 主界面在线状态联动已实现：
+  - WiFi 在线状态：`Offline / Online`
+  - 节点在线状态：`kitchenStat / livingStat / bedroomStat`
 
-### 显示
+---
 
-- 分辨率：`800 x 480`
-- 像素格式：`ARGB8888`
-- 主帧缓冲地址：`0xD0000000`
-- 第二帧缓冲地址：`0xD0177000`
-- 帧缓冲位于外部 `SDRAM`
+## 2. 系统架构
 
-相关定义见：
+### 2.1 核心层次
 
-- [bsp_config.h](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Inc/bsp_config.h)
-- [TouchGFXHAL.cpp](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/TouchGFX/target/TouchGFXHAL.cpp)
+- UI 层：`TouchGFX/gui/...`
+  - 显示、交互、动画、输入。
+- 模型层：`TouchGFX/gui/src/model/Model.cpp`
+  - 每秒轮询网络状态与节点数据并刷新 UI。
+- 协议/数据层：`Core/Src/app_home_protocol.c`、`Core/Src/app_home_data.c`
+  - 协议编解码、节点数据缓存、在线状态缓存。
+- 网络层：`Core/Src/app_wifi_lwip.c`
+  - lwIP netif、DHCP、TCP server、协议帧处理与控制下发队列。
+- WiFi 设备层：`Core/Src/app_wifi.c`
+  - AP6181 bring-up、扫描、入网、以太帧收发。
 
-### SDRAM
+### 2.2 上下行链路
 
-- 基地址：`0xD0000000`
-- 容量：`64 MB`
+- 下位机 -> 上位机：`TELEMETRY` 上报（温湿度、模式、风速、输出位）。
+- 上位机 -> 下位机：`CONTROL` 下发（目标温度、模式、风速、USB 标志位）。
+- 双向：`ACK/ERR`。
 
-### QSPI 外部资源
+---
 
-- 基地址：`0x90000000`
-- 容量：`32 MB`
-- 当前按 **单片 `W25Q256`** 配置
-- TouchGFX 图片资源通过 `memory-mapped` 模式读取
+## 3. 协议定义（当前版本）
 
-相关实现见：
+协议实现位于：
 
-- [bsp_qspi_flash.c](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Src/bsp_qspi_flash.c)
-- [STM32H743XX_FLASH.ld](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/STM32H743XX_FLASH.ld)
+- `Core/Inc/app_home_protocol.h`
+- `Core/Src/app_home_protocol.c`
 
-### GT911 触摸
+帧格式：
 
-- 芯片：`GT911`
-- 当前探测地址：`0xBA`
-- 软件 I2C 引脚：
-  - `PH4` -> `SCL`
-  - `PH5` -> `SDA`
-- 控制引脚：
-  - `PG7` -> `RST`
-  - `PG3` -> `INT`
+```text
+SOF0 SOF1 VER NODE CMD SEQ_L SEQ_H LEN_L LEN_H PAYLOAD CRC_L CRC_H
+```
 
-相关实现见：
+- `SOF0/SOF1` = `0xAA 0x55`
+- `VER` = `0x01`
+- `CRC16`（Modbus 风格）计算范围：`VER` 到 `PAYLOAD` 末尾
 
-- [bsp_touch_gt911.h](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Inc/bsp_touch_gt911.h)
-- [bsp_touch_gt911.c](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Src/bsp_touch_gt911.c)
-- [STM32TouchController.cpp](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/TouchGFX/target/STM32TouchController.cpp)
+命令字：
 
-## 工程结构
+- `0x01 HELLO`
+- `0x02 TELEMETRY`
+- `0x03 CONTROL`
+- `0x04 STATUS`
+- `0x05 HEARTBEAT`
+- `0x06 ACK`
+- `0x07 ERR`
 
-- `BSP/`
-  - 板级驱动与适配层，包含显示、SDRAM、QSPI、触摸等实现
-- `Core/`
-  - CubeMX 生成的基础工程与应用入口
-- `TouchGFX/`
-  - TouchGFX 界面代码、生成代码与目标层对接
-- `Docs/`
-  - 项目开发中使用的手册、数据手册和参考资料
-- `Examples/`
-  - 参考例程，包括 QSPI 和触摸相关工程
-- `tools/`
-  - 调试辅助脚本和 J-Link 相关配置
+关键 payload：
 
-## 关键实现说明
+- `TELEMETRY`（8 字节）
+  - `temp_x10` `int16 LE`
+  - `hum_x10` `uint16 LE`
+  - `mode` `uint8`
+  - `fan` `uint8`
+  - `online` `uint8`
+  - `usb_flags` `uint8`
+- `CONTROL`（5 字节）
+  - `target_temp_x10` `int16 LE`
+  - `mode` `uint8`
+  - `fan` `uint8`
+  - `usb_flags` `uint8`
 
-### 双帧缓冲
+---
 
-当前显示链路使用 SDRAM 双帧缓冲，LTDC 在合适的行事件时机切换地址，避免了早期的闪烁和撕裂问题。
+## 4. UI 与状态映射
 
-核心文件：
+### 4.1 WiFi 在线状态
 
-- [TouchGFXHAL.cpp](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/TouchGFX/target/TouchGFXHAL.cpp)
+主界面的 `wifistatText` 由 wildcard buffer 驱动：
 
-### QSPI 稳定配置
+- 网络在线：`Online`
+- 网络离线：`Offline`
 
-当前稳定版本的 QSPI 关键点：
+在线判定来自 `APP_WiFi_LwIP_IsNetworkOnline()`。
 
-- 单片 `W25Q256`
-- `memory-mapped` 使用四线高速读取
-- 已验证当前参数可以兼顾稳定性和动画性能
+### 4.2 节点在线状态
 
-核心文件：
+主界面三个 RadioButton 仅做显示，不允许用户点击：
 
-- [bsp_qspi_flash.c](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/BSP/Src/bsp_qspi_flash.c)
+- `kitchenStat`
+- `livingStat`
+- `bedroomStat`
 
-### 触摸适配
+当收到对应节点有效通信后置为在线，超时后自动离线。
 
-GT911 当前采用软件 I2C + 轮询方案，已经加入了轻量轮询节流，减少空闲时对 UI 帧率的影响。
+### 4.3 USB 状态
 
-## 构建方式
+USB 状态已按房间独立：
 
-项目当前使用：
+- UI 的每个房间卡片独立维护 USB flags
+- 下位机回传状态后会同步到对应房间
+- 模型层包含 pending 策略，减少“刚下发就被旧状态覆盖”
 
-- `CMake`
-- `Ninja`
-- `gcc-arm-none-eabi`
+---
 
-配置与构建：
+## 5. 构建说明
+
+### 5.1 推荐方式（CMake Presets）
 
 ```powershell
 cmake --preset Debug
 cmake --build --preset Debug
 ```
 
-Release 构建：
+Release：
 
 ```powershell
 cmake --preset Release
 cmake --build --preset Release
 ```
 
-预设定义见：
+### 5.2 VS Code / cube-cmake
 
-- [CMakePresets.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/CMakePresets.json)
+仓库也兼容你当前使用的 `cube-cmake --build ...` 工作流。
 
-## 调试与下载
+---
 
-### 原生 STM32Cube 配置
+## 6. 联调建议（当前工程经验）
 
-当前环境下，VS Code 中的原生调试配置已经验证可用：
+1. 先让下位机入网，再启动上位机，成功率更高。
+2. 先验证上行（TELEMETRY），再压测下发（CONTROL）。
+3. 快速连点控制时，优先看串口是否出现发送风暴或重连风暴。
+4. 若出现异常，优先保留两端串口日志做时间对齐分析。
 
-- `STM32Cube: Launch JLink GDB Server`
+---
 
-配置位置：
+## 7. 关键文件索引
 
-- [launch.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/.vscode/launch.json)
+- WiFi 驱动主流程：`Core/Src/app_wifi.c`
+- lwIP + socket server：`Core/Src/app_wifi_lwip.c`
+- 协议编解码：`Core/Src/app_home_protocol.c`
+- 节点数据缓存：`Core/Src/app_home_data.c`
+- 主界面联动：`TouchGFX/gui/src/main_screen/MainView.cpp`
+- 模型轮询与状态同步：`TouchGFX/gui/src/model/Model.cpp`
 
-### 自定义 J-Link 备用配置
+---
 
-仓库中仍保留了自定义 `J-Link` 配置，用于以下场景：
+## 8. 对应下位机仓库
 
-- 新环境首次排障
-- 需要显式指定外部 QSPI loader
-- 原生下载行为不清晰时做对照验证
+下位机工程：`C:\Users\20953\Documents\MCUProjects\HomeNode`
 
-相关文件：
-
-- [launch.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/.vscode/launch.json)
-- [tools/jlink/README.md](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/tools/jlink/README.md)
-
-## 内存占用查看
-
-`CMake Tools` 的 `Build Analyzer` 对这种 MCU 工程的 `FLASH / EXTFLASH / RAM` 归类不够准确，项目里额外提供了一个更可靠的统计脚本。
-
-VS Code 任务：
-
-- `Memory Report (Debug)`
-
-相关文件：
-
-- [tasks.json](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/.vscode/tasks.json)
-- [report-memory-usage.ps1](/C:/Users/20953/Documents/MCUProjects/HomePanel_test/tools/report-memory-usage.ps1)
-
-## 参考资料
-
-开发中主要参考这些本地资料：
-
-- `Docs/` 中的芯片、屏幕、触摸相关手册
-- `Examples/` 中的 QSPI 和 GT911 参考工程
-
-## 后续建议
-
-比较适合继续推进的方向：
-
-- 完善触摸交互细节
-- 增加多点触控或手势支持
-- 接入实际传感器/联网数据
-- 继续打磨界面动画和业务逻辑
-
-## 备注
-
-这个仓库是毕业设计过程中的实验工程，当前更重视“可运行、可验证、可继续开发”的工程状态，而不是把所有实现都打磨成最终产品形态。
+已支持编译期节点角色选择（厨房/起居室/卧室），详见下位机仓库 README。

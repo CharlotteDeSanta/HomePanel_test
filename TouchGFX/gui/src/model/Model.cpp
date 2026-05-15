@@ -3,6 +3,8 @@
 #include <gui/common/GuiTime.hpp>
 #include <images/BitmapDatabase.hpp>
 #include <texts/TextKeysAndLanguages.hpp>
+#include "app_home_data.h"
+#include "app_wifi_lwip.h"
 #include <algorithm>
 
 namespace
@@ -72,6 +74,7 @@ const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 1000U;
 const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
 const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
 const uint32_t MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS = 45000U;
+const uint32_t MODEL_ROOM_ONLINE_TIMEOUT_MS = 12000U;
 
 bool tickReached(uint32_t nowMs, uint32_t deadlineMs)
 {
@@ -95,6 +98,8 @@ Model::Model() :
     bedRoomTemperature(-20.0f),
     bedRoomHumidity(-20.0f),
     bedRoomFanMode(HVAC_FAN_UNKNOWN),
+    wifiOnline(false),
+    roomOnline{ false, false, false },
     unitIsFahrenheit(false),
     selectedRoom(KITCHEN),
     kitchenTempSetPoint(22),
@@ -161,6 +166,7 @@ void Model::tick()
         lastGraphSampleMs = nowMs - MODEL_GRAPH_SAMPLE_PERIOD_MS;
         runtimeTimingInitialized = true;
         syncClockFromRtc(true);
+        refreshConnectivityStatus();
     }
 
     while ((uint32_t)(nowMs - lastClockUpdateMs) >= MODEL_CLOCK_UPDATE_PERIOD_MS)
@@ -173,6 +179,7 @@ void Model::tick()
     {
         lastIncomingDataPollMs += MODEL_CONTROLLER_POLL_PERIOD_MS;
         checkForIncomingData();
+        refreshConnectivityStatus();
     }
 
     if ((uint32_t)(nowMs - lastGraphSampleMs) >= MODEL_GRAPH_SAMPLE_PERIOD_MS)
@@ -585,6 +592,58 @@ void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& retu
         returnBufferSize = std::min((int)bedroomBufferCount, MAX_BUFFER_SIZE);
         std::copy(bedroomBuffer, bedroomBuffer + returnBufferSize, returnBuffer);
         break;
+    }
+}
+
+bool Model::getWiFiOnline() const
+{
+    return wifiOnline;
+}
+
+bool Model::getRoomOnline(Rooms roomId) const
+{
+    const uint8_t roomIndex = static_cast<uint8_t>(roomId);
+    if (roomIndex >= 3U)
+    {
+        return false;
+    }
+
+    return roomOnline[roomIndex];
+}
+
+void Model::refreshConnectivityStatus()
+{
+    const bool currentWiFiOnline = (APP_WiFi_LwIP_IsNetworkOnline() != 0U);
+
+    if (currentWiFiOnline != wifiOnline)
+    {
+        wifiOnline = currentWiFiOnline;
+        if (modelListener)
+        {
+            modelListener->updateWiFiOnline(wifiOnline);
+        }
+    }
+
+    const uint32_t nowMs = GUI_Time_GetTickMs();
+    for (uint8_t roomIndex = 0U; roomIndex < 3U; roomIndex++)
+    {
+        APP_HomeDataNodeStatus_t nodeStatus = {};
+        bool currentRoomOnline = false;
+
+        if (APP_HomeData_CopyNodeStatusByRoomIndex(roomIndex, &nodeStatus) != 0U)
+        {
+            const uint32_t ageMs = nowMs - nodeStatus.updated_ms;
+            currentRoomOnline = (nodeStatus.online != 0U) && (ageMs <= MODEL_ROOM_ONLINE_TIMEOUT_MS);
+        }
+
+        if (roomOnline[roomIndex] != currentRoomOnline)
+        {
+            roomOnline[roomIndex] = currentRoomOnline;
+            if (modelListener)
+            {
+                modelListener->updateRoomOnline(static_cast<Rooms>(roomIndex), currentRoomOnline);
+            }
+        }
     }
 }
 

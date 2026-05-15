@@ -34,6 +34,8 @@ public:
     virtual void updateClock(uint8_t clockHour, uint8_t clockMinute);
     virtual void updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday);
     virtual void updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit);
+    virtual void updateWiFiOnline(bool online);
+    virtual void updateRoomOnline(Rooms roomId, bool online);
 
     float getRoomTemperature(Rooms roomId);
     float getRoomHumidity(Rooms roomId);
@@ -55,6 +57,8 @@ public:
     uint8_t getClockMonth();
     uint8_t getClockDay();
     uint8_t getClockWeekday();
+    bool getWiFiOnline();
+    bool getRoomOnline(Rooms roomId);
 
 private:
     MainPresenter();

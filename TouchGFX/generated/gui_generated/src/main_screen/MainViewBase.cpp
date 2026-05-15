@@ -91,6 +91,9 @@ MainViewBase::MainViewBase() :
     wifistatText.setXY(96, 43);
     wifistatText.setColor(touchgfx::Color::getColorFromRGB(149, 163, 181));
     wifistatText.setLinespacing(0);
+    wifistatTextBuffer[0] = 0;
+    wifistatText.setWildcard(wifistatTextBuffer);
+    wifistatText.resizeToCurrentText();
     wifistatText.setTypedText(touchgfx::TypedText(T___SINGLEUSE_KBAT));
     add(wifistatText);
 
@@ -154,6 +157,27 @@ MainViewBase::MainViewBase() :
     closeSettingsButton.setAction(flexButtonCallback);
     closeSettingsButton.setPosition(0, 0, 500, 480);
     add(closeSettingsButton);
+
+    kitchenStat.setXY(773, 101);
+    kitchenStat.setBitmaps(touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_OFF_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_OFF_PRESSED_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_ON_DARK_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_ON_PRESSED_ID));
+    kitchenStat.setSelected(false);
+    kitchenStat.setDeselectionEnabled(false);
+    fanButtons.add(kitchenStat);
+    add(kitchenStat);
+
+    livingStat.setXY(773, 228);
+    livingStat.setBitmaps(touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_OFF_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_OFF_PRESSED_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_ON_DARK_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_ON_PRESSED_ID));
+    livingStat.setSelected(false);
+    livingStat.setDeselectionEnabled(false);
+    fanButtons.add(livingStat);
+    add(livingStat);
+
+    bedroomStat.setXY(773, 351);
+    bedroomStat.setBitmaps(touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_OFF_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_OFF_PRESSED_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_ON_DARK_ID), touchgfx::Bitmap(BITMAP_CLAY_THEME_IMAGES_WIDGETS_RADIOBUTTON_RADIO_SMALL_ROUND_ON_PRESSED_ID));
+    bedroomStat.setSelected(false);
+    bedroomStat.setDeselectionEnabled(false);
+    fanButtons.add(bedroomStat);
+    add(bedroomStat);
 }
 
 MainViewBase::~MainViewBase()

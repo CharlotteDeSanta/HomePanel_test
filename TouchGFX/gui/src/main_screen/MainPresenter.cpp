@@ -52,6 +52,16 @@ void MainPresenter::updateWeatherData(WeatherData weatherData, bool isUnitFahren
     view.updateCurrentWeather(weatherData, isUnitFahrenheit);
 }
 
+void MainPresenter::updateWiFiOnline(bool online)
+{
+    view.updateWiFiOnline(online);
+}
+
+void MainPresenter::updateRoomOnline(Rooms roomId, bool online)
+{
+    view.updateRoomOnline(roomId, online);
+}
+
 float MainPresenter::getRoomTemperature(Rooms roomId)
 {
     return model->getRoomTemperature(roomId);
@@ -150,4 +160,14 @@ uint8_t MainPresenter::getClockDay()
 uint8_t MainPresenter::getClockWeekday()
 {
     return model->getClockWeekday();
+}
+
+bool MainPresenter::getWiFiOnline()
+{
+    return model->getWiFiOnline();
+}
+
+bool MainPresenter::getRoomOnline(Rooms roomId)
+{
+    return model->getRoomOnline(roomId);
 }

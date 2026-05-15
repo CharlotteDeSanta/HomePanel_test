@@ -280,7 +280,7 @@
             "Name": "wifistatText",
             "X": 96,
             "Y": 43,
-            "Width": 92,
+            "Width": 18,
             "Height": 36,
             "TextId": "__SingleUse_KBAT",
             "TextRotation": "0",
@@ -289,7 +289,11 @@
               "Green": 163,
               "Blue": 181
             },
-            "AutoSize": true
+            "AutoSize": true,
+            "Wildcard1": {
+              "UseBuffer": true,
+              "BufferSize": 8
+            }
           },
           {
             "Type": "Image",
@@ -445,6 +449,48 @@
                 }
               }
             ]
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "kitchenStat",
+            "X": 773,
+            "Y": 101,
+            "Width": 24,
+            "Height": 24,
+            "FileNameSelected": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_on_dark.png",
+            "FileNameSelectedPressed": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_on_pressed.png",
+            "FileNameUnselected": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_off.png",
+            "FileNameUnselectedPressed": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_off_pressed.png",
+            "RadioButtonGroup": "fanButtons",
+            "Preset": "clay_theme\\presets\\radiobutton\\radio\\small_dark_round_small.json"
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "livingStat",
+            "X": 773,
+            "Y": 228,
+            "Width": 24,
+            "Height": 24,
+            "FileNameSelected": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_on_dark.png",
+            "FileNameSelectedPressed": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_on_pressed.png",
+            "FileNameUnselected": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_off.png",
+            "FileNameUnselectedPressed": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_off_pressed.png",
+            "RadioButtonGroup": "fanButtons",
+            "Preset": "clay_theme\\presets\\radiobutton\\radio\\small_dark_round_small.json"
+          },
+          {
+            "Type": "RadioButton",
+            "Name": "bedroomStat",
+            "X": 773,
+            "Y": 351,
+            "Width": 24,
+            "Height": 24,
+            "FileNameSelected": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_on_dark.png",
+            "FileNameSelectedPressed": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_on_pressed.png",
+            "FileNameUnselected": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_off.png",
+            "FileNameUnselectedPressed": "__generated\\clay_theme_images_widgets_radiobutton_radio_small_round_off_pressed.png",
+            "RadioButtonGroup": "fanButtons",
+            "Preset": "clay_theme\\presets\\radiobutton\\radio\\small_dark_round_small.json"
           }
         ],
         "Interactions": [

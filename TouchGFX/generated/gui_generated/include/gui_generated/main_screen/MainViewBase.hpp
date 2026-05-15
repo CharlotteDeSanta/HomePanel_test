@@ -15,12 +15,13 @@
 #include <touchgfx/containers/buttons/Buttons.hpp>
 #include <gui/containers/RoomCard.hpp>
 #include <touchgfx/mixins/FadeAnimator.hpp>
-#include <touchgfx/widgets/TextArea.hpp>
 #include <touchgfx/widgets/TextAreaWithWildcard.hpp>
 #include <gui/containers/PerformanceMeasure.hpp>
 #include <gui/containers/SpinningFanContainer.hpp>
 #include <gui/containers/SetTempAndFan.hpp>
 #include <gui/containers/TemperatureAnimation.hpp>
+#include <touchgfx/widgets/RadioButton.hpp>
+#include <touchgfx/widgets/RadioButtonGroup.hpp>
 
 class MainViewBase : public touchgfx::View<MainPresenter>
 {
@@ -95,7 +96,7 @@ protected:
     touchgfx::BoxWithBorderButtonStyle< touchgfx::ClickButtonTrigger >  livingRoomGraphButton;
     touchgfx::BoxWithBorderButtonStyle< touchgfx::ClickButtonTrigger >  bedRoomGraphButton;
     touchgfx::FadeAnimator< touchgfx::ImageButtonStyle< touchgfx::ClickButtonTrigger >  > wificonfButton;
-    touchgfx::TextArea wifistatText;
+    touchgfx::TextAreaWithOneWildcard wifistatText;
     touchgfx::FadeAnimator< touchgfx::Image > wificonfIcon;
     touchgfx::TextAreaWithTwoWildcards clockText;
     PerformanceMeasure performanceText;
@@ -108,10 +109,16 @@ protected:
     SetTempAndFan setTempAndFan;
     TemperatureAnimation temperatureAnimation;
     touchgfx::TextButtonStyle< touchgfx::ClickButtonTrigger >  closeSettingsButton;
+    touchgfx::RadioButtonGroup<3> fanButtons;
+    touchgfx::RadioButton kitchenStat;
+    touchgfx::RadioButton livingStat;
+    touchgfx::RadioButton bedroomStat;
 
     /*
      * Wildcard Buffers
      */
+    static const uint16_t WIFISTATTEXT_SIZE = 8;
+    touchgfx::Unicode::UnicodeChar wifistatTextBuffer[WIFISTATTEXT_SIZE];
     static const uint16_t CLOCKTEXTBUFFER1_SIZE = 14;
     touchgfx::Unicode::UnicodeChar clockTextBuffer1[CLOCKTEXTBUFFER1_SIZE];
     static const uint16_t CLOCKTEXTBUFFER2_SIZE = 3;

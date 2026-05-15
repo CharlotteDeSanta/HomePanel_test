@@ -22,22 +22,21 @@ KEEP extern const touchgfx::GlyphNode glyphs_GeogrotesqueCyr_SemiBold_30_4bpp[] 
     {  2099, 0x0046,  13,  20,  20,   2,  15,   0,   0, 0x00 }, // F
     {  2239, 0x004C,  12,  20,  20,   2,  14,   0,   0, 0x00 }, // L
     {  2359, 0x004E,  15,  20,  20,   2,  19,   0,   0, 0x00 }, // N
-    {  2519, 0x004F,  16,  20,  20,   1,  18,   0,   0, 0x00 }, // O
-    {  2679, 0x0057,  25,  20,  20,   0,  25,  19,  11, 0x00 }, // W
-    {  2939, 0x0061,  13,  15,  15,   1,  15,  30,   1, 0x00 }, // a
-    {  3044, 0x0065,  13,  15,  15,   1,  15,  31,   1, 0x00 }, // e
-    {  3149, 0x0066,  11,  21,  21,   0,  11,   0,   0, 0x00 }, // f
-    {  3275, 0x0067,  14,  21,  15,   1,  16,  32,   1, 0x00 }, // g
-    {  3422, 0x0069,   5,  21,  21,   1,   7,   0,   0, 0x00 }, // i
-    {  3485, 0x006A,   8,  27,  21,  -2,   7,   0,   0, 0x00 }, // j
-    {  3593, 0x006C,   5,  21,  21,   1,   7,   0,   0, 0x00 }, // l
-    {  3656, 0x006D,  23,  15,  15,   1,  25,  33,   1, 0x00 }, // m
-    {  3836, 0x006E,  14,  15,  15,   1,  16,  34,   1, 0x00 }, // n
-    {  3941, 0x006F,  14,  15,  15,   1,  16,  35,   1, 0x00 }, // o
-    {  4046, 0x0072,  10,  15,  15,   1,  11,  36,   1, 0x00 }, // r
-    {  4121, 0x0074,  11,  19,  19,   0,  11,  37,   2, 0x00 }, // t
-    {  4235, 0x0075,  14,  15,  15,   1,  16,  39,   1, 0x00 }, // u
-    {  4340, 0x00B0,  11,  10,  21,   1,  12,  40,   1, 0x00 }  // degree
+    {  2519, 0x0057,  25,  20,  20,   0,  25,  19,  11, 0x00 }, // W
+    {  2779, 0x0061,  13,  15,  15,   1,  15,  30,   1, 0x00 }, // a
+    {  2884, 0x0065,  13,  15,  15,   1,  15,  31,   1, 0x00 }, // e
+    {  2989, 0x0066,  11,  21,  21,   0,  11,   0,   0, 0x00 }, // f
+    {  3115, 0x0067,  14,  21,  15,   1,  16,  32,   1, 0x00 }, // g
+    {  3262, 0x0069,   5,  21,  21,   1,   7,   0,   0, 0x00 }, // i
+    {  3325, 0x006A,   8,  27,  21,  -2,   7,   0,   0, 0x00 }, // j
+    {  3433, 0x006C,   5,  21,  21,   1,   7,   0,   0, 0x00 }, // l
+    {  3496, 0x006D,  23,  15,  15,   1,  25,  33,   1, 0x00 }, // m
+    {  3676, 0x006E,  14,  15,  15,   1,  16,  34,   1, 0x00 }, // n
+    {  3781, 0x006F,  14,  15,  15,   1,  16,  35,   1, 0x00 }, // o
+    {  3886, 0x0072,  10,  15,  15,   1,  11,  36,   1, 0x00 }, // r
+    {  3961, 0x0074,  11,  19,  19,   0,  11,  37,   2, 0x00 }, // t
+    {  4075, 0x0075,  14,  15,  15,   1,  16,  39,   1, 0x00 }, // u
+    {  4180, 0x00B0,  11,  10,  21,   1,  12,  40,   1, 0x00 }  // degree
 };
 
 // GeogrotesqueCyr_SemiBold_30_4bpp
@@ -55,6 +54,6 @@ touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_SemiBold_30_4bpp();
 
 touchgfx::GeneratedFont& getFont_GeogrotesqueCyr_SemiBold_30_4bpp()
 {
-    static touchgfx::GeneratedFont GeogrotesqueCyr_SemiBold_30_4bpp(glyphs_GeogrotesqueCyr_SemiBold_30_4bpp, 34, 36, 30, 0, 0, 4, 1, 2, 0, unicodes_GeogrotesqueCyr_SemiBold_30_4bpp, kerning_GeogrotesqueCyr_SemiBold_30_4bpp, 63, 0, 0, 0);
+    static touchgfx::GeneratedFont GeogrotesqueCyr_SemiBold_30_4bpp(glyphs_GeogrotesqueCyr_SemiBold_30_4bpp, 33, 36, 30, 0, 0, 4, 1, 2, 0, unicodes_GeogrotesqueCyr_SemiBold_30_4bpp, kerning_GeogrotesqueCyr_SemiBold_30_4bpp, 63, 0, 0, 0);
     return GeogrotesqueCyr_SemiBold_30_4bpp;
 }

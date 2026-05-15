@@ -26,6 +26,8 @@ public:
     virtual void updateFanSetPoint(Rooms roomId, HVAC_FanMode_t fanSetPoint) {}
     virtual void updateWeatherData(WeatherData weatherData, bool isUnitFahrenheit) {}
     virtual void sampleGraphData(BufferSample graphSample) {}
+    virtual void updateWiFiOnline(bool online) {}
+    virtual void updateRoomOnline(Rooms roomId, bool online) {}
 
 protected:
     Model* model;

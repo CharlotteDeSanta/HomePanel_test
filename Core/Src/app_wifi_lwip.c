@@ -499,6 +499,16 @@ static uint8_t APP_WiFi_LwIP_TakePendingControl(APP_WiFi_LwIP_ControlCommand_t *
   return 0U;
 }
 
+uint8_t APP_WiFi_LwIP_IsNetworkOnline(void)
+{
+  if ((g_netifAdded == 0U) || (g_netifUp == 0U) || (g_dhcpStarted == 0U))
+  {
+    return 0U;
+  }
+
+  return (dhcp_supplied_address(&g_wifiNetif) != 0) ? 1U : 0U;
+}
+
 uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
                                   int16_t targetTemperature_x10,
                                   uint8_t mode,
@@ -1119,6 +1129,11 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket, const APP_HomePr
   {
     g_peerProtocolSeen = 1U;
     printf("[lwip] peer protocol seen, stop gratuitous arp\n");
+  }
+
+  if (APP_WiFi_LwIP_IsKnownNode(frame->node) != 0U)
+  {
+    (void)APP_HomeData_UpdateNodeOnline(frame->node, 1U);
   }
 
   if (APP_WiFi_LwIP_IsKnownProtocolCommand(frame->command) == 0U)

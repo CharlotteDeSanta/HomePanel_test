@@ -252,6 +252,10 @@ set(TouchGFX_Src
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w95_Thunder_slight_big.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w96_Thunserstorm_slight_big.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/Weather_Big/image_w99_Thunserstorm_heavy_hail_big.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_radiobutton_radio_small_round_off.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_radiobutton_radio_small_round_off_pressed.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_radiobutton_radio_small_round_on_dark.cpp
+    ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_radiobutton_radio_small_round_on_pressed.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_togglebutton_small_round_small_off_light.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_clay_theme_images_widgets_togglebutton_small_round_small_on_action.cpp
     ${CMAKE_SOURCE_DIR}/TouchGFX/generated/images/src/__generated/image_icon_theme_images_notification_wifi_50_50_002580.svg.cpp

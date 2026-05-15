@@ -316,7 +316,7 @@
         <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_KBAT" Alignment="Left" TypographyId="Semibold30">
-        <Translation Language="GB">OffLine</Translation>
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_1X7S" Alignment="Center" TypographyId="Semibold30">
         <Translation Language="GB">WLAN Configuration</Translation>
