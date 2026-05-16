@@ -75,6 +75,7 @@ const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
 const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
 const uint32_t MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS = 45000U;
 const uint32_t MODEL_ROOM_ONLINE_TIMEOUT_MS = 45000U;
+const float MODEL_DEFAULT_TARGET_TEMPERATURE_C = 25.0f;
 
 bool tickReached(uint32_t nowMs, uint32_t deadlineMs)
 {
@@ -102,9 +103,9 @@ Model::Model() :
     roomOnline{ false, false, false },
     unitIsFahrenheit(false),
     selectedRoom(KITCHEN),
-    kitchenTempSetPoint(22),
-    livingRoomTempSetPoint(23),
-    bedRoomTempSetPoint(24),
+    kitchenTempSetPoint(MODEL_DEFAULT_TARGET_TEMPERATURE_C),
+    livingRoomTempSetPoint(MODEL_DEFAULT_TARGET_TEMPERATURE_C),
+    bedRoomTempSetPoint(MODEL_DEFAULT_TARGET_TEMPERATURE_C),
     kitchenFanSetPoint(HVAC_FAN_AUTO),
     livingRoomFanSetPoint(HVAC_FAN_AUTO),
     bedRoomFanSetPoint(HVAC_FAN_AUTO),
@@ -297,30 +298,42 @@ void Model::setRoomTempSetPoint(Rooms roomId, float temperature)
     switch (roomId)
     {
     case KITCHEN:
+        fanSetPoint = kitchenFanSetPoint;
+        if (fanSetPoint != HVAC_FAN_AUTO)
+        {
+            return;
+        }
         if (temperatureEquals(kitchenTempSetPoint, temperature))
         {
             return;
         }
         kitchenTempSetPoint = temperature;
-        fanSetPoint = kitchenFanSetPoint;
         usbFlags = kitchenUsbFlags;
         break;
     case LIVINGROOM:
+        fanSetPoint = livingRoomFanSetPoint;
+        if (fanSetPoint != HVAC_FAN_AUTO)
+        {
+            return;
+        }
         if (temperatureEquals(livingRoomTempSetPoint, temperature))
         {
             return;
         }
         livingRoomTempSetPoint = temperature;
-        fanSetPoint = livingRoomFanSetPoint;
         usbFlags = livingRoomUsbFlags;
         break;
     case BEDROOM:
+        fanSetPoint = bedRoomFanSetPoint;
+        if (fanSetPoint != HVAC_FAN_AUTO)
+        {
+            return;
+        }
         if (temperatureEquals(bedRoomTempSetPoint, temperature))
         {
             return;
         }
         bedRoomTempSetPoint = temperature;
-        fanSetPoint = bedRoomFanSetPoint;
         usbFlags = bedRoomUsbFlags;
         break;
     default:
@@ -611,6 +624,67 @@ bool Model::getRoomOnline(Rooms roomId) const
     return roomOnline[roomIndex];
 }
 
+void Model::applyRoomDefaultAutoSetPoint(Rooms roomId)
+{
+    float* roomTempSetPoint = 0;
+    HVAC_FanMode_t* roomFanSetPoint = 0;
+    uint8_t usbFlags = 0U;
+
+    switch (roomId)
+    {
+    case KITCHEN:
+        roomTempSetPoint = &kitchenTempSetPoint;
+        roomFanSetPoint = &kitchenFanSetPoint;
+        usbFlags = kitchenUsbFlags;
+        break;
+    case LIVINGROOM:
+        roomTempSetPoint = &livingRoomTempSetPoint;
+        roomFanSetPoint = &livingRoomFanSetPoint;
+        usbFlags = livingRoomUsbFlags;
+        break;
+    case BEDROOM:
+        roomTempSetPoint = &bedRoomTempSetPoint;
+        roomFanSetPoint = &bedRoomFanSetPoint;
+        usbFlags = bedRoomUsbFlags;
+        break;
+    default:
+        return;
+    }
+
+    if (roomTempSetPoint == 0 || roomFanSetPoint == 0)
+    {
+        return;
+    }
+
+    if (!temperatureEquals(*roomTempSetPoint, MODEL_DEFAULT_TARGET_TEMPERATURE_C))
+    {
+        *roomTempSetPoint = MODEL_DEFAULT_TARGET_TEMPERATURE_C;
+        if (modelListener)
+        {
+            modelListener->updateTempSetPoint(roomId, *roomTempSetPoint);
+        }
+    }
+
+    if (*roomFanSetPoint != HVAC_FAN_AUTO)
+    {
+        *roomFanSetPoint = HVAC_FAN_AUTO;
+        if (modelListener)
+        {
+            modelListener->updateFanSetPoint(roomId, *roomFanSetPoint);
+        }
+    }
+
+    outgoingEvent = HVAC_Event_t{};
+    outgoingEvent.roomId = static_cast<uint16_t>(roomId);
+    outgoingEvent.type = HVAC_EVENT_SETTINGS;
+    outgoingEvent.room.settings.temperature = MODEL_DEFAULT_TARGET_TEMPERATURE_C;
+    outgoingEvent.room.settings.mode = HVAC_MODE_UNKNOWN;
+    outgoingEvent.room.settings.fan = HVAC_FAN_AUTO;
+    outgoingEvent.room.settings.outputFlags = usbFlags;
+
+    (void)xHVAC_SendToController(&outgoingEvent, 10);
+}
+
 void Model::refreshConnectivityStatus()
 {
     const bool currentWiFiOnline = (APP_WiFi_LwIP_IsNetworkOnline() != 0U);
@@ -636,12 +710,18 @@ void Model::refreshConnectivityStatus()
             currentRoomOnline = (nodeStatus.online != 0U) && (ageMs <= MODEL_ROOM_ONLINE_TIMEOUT_MS);
         }
 
-        if (roomOnline[roomIndex] != currentRoomOnline)
+        const bool previousRoomOnline = roomOnline[roomIndex];
+        if (previousRoomOnline != currentRoomOnline)
         {
             roomOnline[roomIndex] = currentRoomOnline;
             if (modelListener)
             {
                 modelListener->updateRoomOnline(static_cast<Rooms>(roomIndex), currentRoomOnline);
+            }
+
+            if (!previousRoomOnline && currentRoomOnline)
+            {
+                applyRoomDefaultAutoSetPoint(static_cast<Rooms>(roomIndex));
             }
         }
     }
