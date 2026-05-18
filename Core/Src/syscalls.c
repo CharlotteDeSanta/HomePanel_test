@@ -30,6 +30,7 @@
 #include <sys/time.h>
 #include <sys/times.h>
 
+#include "app_debug_uart.h"
 
 /* Variables */
 extern int __io_putchar(int ch) __attribute__((weak));
@@ -80,12 +81,17 @@ __attribute__((weak)) int _read(int file, char *ptr, int len)
 __attribute__((weak)) int _write(int file, char *ptr, int len)
 {
   (void)file;
-  int DataIdx;
 
-  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  if ((ptr == NULL) || (len <= 0))
   {
-    __io_putchar(*ptr++);
+    return 0;
   }
+
+  if (APP_DebugUart_Write((const uint8_t *)ptr, (uint16_t)len, HAL_MAX_DELAY) != HAL_OK)
+  {
+    return -1;
+  }
+
   return len;
 }
 

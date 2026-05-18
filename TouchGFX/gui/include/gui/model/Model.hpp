@@ -98,7 +98,6 @@ public:
     bool getRoomOnline(Rooms roomId) const;
 
 private:
-    void applyRoomDefaultAutoSetPoint(Rooms roomId);
     void checkForIncomingData();
     void refreshConnectivityStatus();
     void markUsbFlagsPending(Rooms roomId, uint8_t usbFlags);

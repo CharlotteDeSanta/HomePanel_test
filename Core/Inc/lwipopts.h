@@ -35,34 +35,34 @@
 
 #define MEM_ALIGNMENT                       4
 #define MEM_LIBC_MALLOC                     0
-#define MEM_SIZE                            (32 * 1024)
+#define MEM_SIZE                            (64 * 1024)
 
-#define PBUF_POOL_SIZE                      24
+#define PBUF_POOL_SIZE                      32
 #define PBUF_POOL_BUFSIZE                   1600
 
-#define MEMP_NUM_PBUF                       24
+#define MEMP_NUM_PBUF                       32
 #define MEMP_NUM_UDP_PCB                    6
-#define MEMP_NUM_TCP_PCB                    8
+#define MEMP_NUM_TCP_PCB                    10
 #define MEMP_NUM_TCP_PCB_LISTEN             4
-#define MEMP_NUM_TCP_SEG                    32
+#define MEMP_NUM_TCP_SEG                    64
 #define MEMP_NUM_REASSDATA                  4
-#define MEMP_NUM_NETCONN                    8
-#define MEMP_NUM_NETBUF                     8
-#define MEMP_NUM_SYS_TIMEOUT                12
-#define MEMP_NUM_TCPIP_MSG_API              16
-#define MEMP_NUM_TCPIP_MSG_INPKT            16
+#define MEMP_NUM_NETCONN                    12
+#define MEMP_NUM_NETBUF                     16
+#define MEMP_NUM_SYS_TIMEOUT                16
+#define MEMP_NUM_TCPIP_MSG_API              24
+#define MEMP_NUM_TCPIP_MSG_INPKT            32
 
-#define TCPIP_MBOX_SIZE                     16
+#define TCPIP_MBOX_SIZE                     32
 #define TCPIP_THREAD_STACKSIZE              4096
 #define TCPIP_THREAD_PRIO                   6
 #define DEFAULT_RAW_RECVMBOX_SIZE           8
-#define DEFAULT_TCP_RECVMBOX_SIZE           8
+#define DEFAULT_TCP_RECVMBOX_SIZE           16
 #define DEFAULT_UDP_RECVMBOX_SIZE           8
-#define DEFAULT_ACCEPTMBOX_SIZE             8
+#define DEFAULT_ACCEPTMBOX_SIZE             16
 
 #define TCP_MSS                             1460
-#define TCP_WND                             (4 * TCP_MSS)
-#define TCP_SND_BUF                         (4 * TCP_MSS)
+#define TCP_WND                             (6 * TCP_MSS)
+#define TCP_SND_BUF                         (6 * TCP_MSS)
 #define TCP_SND_QUEUELEN                    (2 * (TCP_SND_BUF / TCP_MSS))
 #define TCP_LISTEN_BACKLOG                  1
 

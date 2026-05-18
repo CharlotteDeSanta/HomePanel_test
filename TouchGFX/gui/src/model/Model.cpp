@@ -624,67 +624,6 @@ bool Model::getRoomOnline(Rooms roomId) const
     return roomOnline[roomIndex];
 }
 
-void Model::applyRoomDefaultAutoSetPoint(Rooms roomId)
-{
-    float* roomTempSetPoint = 0;
-    HVAC_FanMode_t* roomFanSetPoint = 0;
-    uint8_t usbFlags = 0U;
-
-    switch (roomId)
-    {
-    case KITCHEN:
-        roomTempSetPoint = &kitchenTempSetPoint;
-        roomFanSetPoint = &kitchenFanSetPoint;
-        usbFlags = kitchenUsbFlags;
-        break;
-    case LIVINGROOM:
-        roomTempSetPoint = &livingRoomTempSetPoint;
-        roomFanSetPoint = &livingRoomFanSetPoint;
-        usbFlags = livingRoomUsbFlags;
-        break;
-    case BEDROOM:
-        roomTempSetPoint = &bedRoomTempSetPoint;
-        roomFanSetPoint = &bedRoomFanSetPoint;
-        usbFlags = bedRoomUsbFlags;
-        break;
-    default:
-        return;
-    }
-
-    if (roomTempSetPoint == 0 || roomFanSetPoint == 0)
-    {
-        return;
-    }
-
-    if (!temperatureEquals(*roomTempSetPoint, MODEL_DEFAULT_TARGET_TEMPERATURE_C))
-    {
-        *roomTempSetPoint = MODEL_DEFAULT_TARGET_TEMPERATURE_C;
-        if (modelListener)
-        {
-            modelListener->updateTempSetPoint(roomId, *roomTempSetPoint);
-        }
-    }
-
-    if (*roomFanSetPoint != HVAC_FAN_AUTO)
-    {
-        *roomFanSetPoint = HVAC_FAN_AUTO;
-        if (modelListener)
-        {
-            modelListener->updateFanSetPoint(roomId, *roomFanSetPoint);
-        }
-    }
-
-    outgoingEvent = HVAC_Event_t{};
-    outgoingEvent.roomId = static_cast<uint16_t>(roomId);
-    outgoingEvent.type = HVAC_EVENT_SETTINGS;
-    outgoingEvent.room.settings.temperature = MODEL_DEFAULT_TARGET_TEMPERATURE_C;
-    outgoingEvent.room.settings.mode = HVAC_MODE_UNKNOWN;
-    outgoingEvent.room.settings.fan = HVAC_FAN_AUTO;
-    outgoingEvent.room.settings.outputFlags = usbFlags;
-
-    (void)xHVAC_SendToController(&outgoingEvent, 10);
-}
-
 void Model::refreshConnectivityStatus()
 {
     const bool currentWiFiOnline = (APP_WiFi_LwIP_IsNetworkOnline() != 0U);
@@ -719,10 +658,6 @@ void Model::refreshConnectivityStatus()
                 modelListener->updateRoomOnline(static_cast<Rooms>(roomIndex), currentRoomOnline);
             }
 
-            if (!previousRoomOnline && currentRoomOnline)
-            {
-                applyRoomDefaultAutoSetPoint(static_cast<Rooms>(roomIndex));
-            }
         }
     }
 }
