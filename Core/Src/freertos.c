@@ -64,7 +64,7 @@ osThreadId_t wifiTaskHandle;
 const osThreadAttr_t wifiTask_attributes = {
   .name = "wifiTask",
   .stack_size = 2048 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
