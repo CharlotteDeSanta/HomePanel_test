@@ -148,6 +148,7 @@ static uint32_t g_serverSendErrorCount = 0U;
 static uint32_t g_dhcpRestartCount = 0U;
 static uint32_t g_rxPbufAllocFailCount = 0U;
 static uint32_t g_rxTcpipInputFailCount = 0U;
+static uint32_t g_rxEthernetFrameCount = 0U;
 
 static void APP_WiFi_LwIP_TcpipInitDone(void *arg);
 static err_t APP_WiFi_LwIP_NetifInit(struct netif *netif);
@@ -838,6 +839,11 @@ uint8_t APP_WiFi_LwIP_HasPendingTx(void)
   hasPending = (g_txQueueCount != 0U) ? 1U : 0U;
   (void)xSemaphoreGive(g_txQueueMutex);
   return hasPending;
+}
+
+uint32_t APP_WiFi_LwIP_GetRxEthernetFrameCount(void)
+{
+  return g_rxEthernetFrameCount;
 }
 
 uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
@@ -1899,13 +1905,19 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
       {
         const int16_t temperature = APP_WiFi_LwIP_ReadI16(&frame->payload[0]);
         const uint16_t humidity = APP_WiFi_LwIP_ReadLe16(&frame->payload[2]);
+        /*
+         * Online state should be driven by actual socket/session liveness on the
+         * upper node side. Some node firmware payloads may transiently report 0
+         * in telemetry[6], which causes UI online flicker despite an active TCP
+         * session. Keep telemetry from a connected client as online=1 here.
+         */
         (void)APP_HomeData_UpdateTelemetry(frame->node,
                                            frame->sequence,
                                            temperature,
                                            humidity,
                                            frame->payload[4],
                                            frame->payload[5],
-                                           frame->payload[6],
+                                           1U,
                                            frame->payload[7]);
 #if APP_WIFI_LWIP_VERBOSE_PROTO_LOG
         printf("[proto] telemetry node=%u temp_x10=%d hum_x10=%u mode=%u fan=%u online=%u flags=0x%02X\n",
@@ -2524,6 +2536,8 @@ void APP_WiFi_LwIP_ProcessEthernetFrame(const uint8_t *frame, uint16_t length)
     pbuf_free(packet);
     return;
   }
+
+  g_rxEthernetFrameCount++;
 
   APP_WiFi_LwIP_FlushTxQueue();
 }

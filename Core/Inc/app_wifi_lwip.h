@@ -16,6 +16,7 @@ uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
                                   uint8_t fan,
                                   uint8_t flags);
 uint8_t APP_WiFi_LwIP_HasPendingTx(void);
+uint32_t APP_WiFi_LwIP_GetRxEthernetFrameCount(void);
 
 #ifdef __cplusplus
 }

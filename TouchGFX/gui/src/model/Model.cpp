@@ -645,8 +645,23 @@ void Model::refreshConnectivityStatus()
 
         if (APP_HomeData_CopyNodeStatusByRoomIndex(roomIndex, &nodeStatus) != 0U)
         {
-            const uint32_t ageMs = nowMs - nodeStatus.updated_ms;
-            currentRoomOnline = (nodeStatus.online != 0U) && (ageMs <= MODEL_ROOM_ONLINE_TIMEOUT_MS);
+            if (nodeStatus.online != 0U)
+            {
+                if (currentWiFiOnline)
+                {
+                    /*
+                     * While WiFi/TCP stack is online, prefer socket/session-driven
+                     * online state from backend to avoid UI flicker caused by
+                     * temporary telemetry gaps.
+                     */
+                    currentRoomOnline = true;
+                }
+                else
+                {
+                    const uint32_t ageMs = nowMs - nodeStatus.updated_ms;
+                    currentRoomOnline = (ageMs <= MODEL_ROOM_ONLINE_TIMEOUT_MS);
+                }
+            }
         }
 
         const bool previousRoomOnline = roomOnline[roomIndex];

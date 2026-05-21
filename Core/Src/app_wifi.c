@@ -122,6 +122,9 @@
 #define APP_WIFI_CREDIT_STALL_WINDOW_MS 1200U
 #define APP_WIFI_CREDIT_STALL_GAP_MS    250U
 #define APP_WIFI_RECOVERY_JOIN_DELAY_MS 1200U
+#define APP_WIFI_ERROR_RECOVERY_DELAY_MS 2000U
+#define APP_WIFI_CONNECTED_LINK_RECOVERY_MIN_FRAMES 3U
+#define APP_WIFI_CONNECTED_LINK_RECOVERY_MIN_MS    2000U
 #define APP_WIFI_WLC_E_STATUS_SUCCESS   0UL
 #define APP_WIFI_WLC_E_STATUS_NO_NETWORKS 3UL
 #define APP_WIFI_WLC_E_STATUS_ABORT     4UL
@@ -420,6 +423,8 @@ static uint8_t g_wifiNoCreditTxSequenceSnapshot = 0xFFU;
 static uint8_t g_wifiNoCreditBusCreditSnapshot = 0xFFU;
 static uint32_t g_wifiNoCreditFirstTick = 0U;
 static uint32_t g_wifiNoCreditLastTick = 0U;
+static uint32_t g_wifiErrorRecoveryAtTick = 0U;
+static uint8_t g_wifiErrorRecoveryCount = 0U;
 
 static const char *APP_WiFi_StateToString(APP_WiFiState_t state);
 static const char *APP_WiFi_SdpcmChannelToString(uint8_t channel);
@@ -511,6 +516,27 @@ static void APP_WiFi_SetState(APP_WiFiState_t nextState)
 {
   const APP_WiFiState_t previousState = g_wifiState;
 
+  if ((nextState != APP_WIFI_STATE_ERROR) && (previousState == APP_WIFI_STATE_ERROR))
+  {
+    g_wifiErrorRecoveryAtTick = 0U;
+  }
+
+  if ((nextState == APP_WIFI_STATE_ERROR) && (previousState != APP_WIFI_STATE_ERROR))
+  {
+    g_wifiErrorRecoveryCount++;
+    if (g_wifiJoinRequestedSsidLength != 0U)
+    {
+      g_wifiErrorRecoveryAtTick = HAL_GetTick() + APP_WIFI_ERROR_RECOVERY_DELAY_MS;
+      APP_WiFi_Logf("[wifi] error: auto recovery armed in %lu ms (attempt %u)\n",
+                    (unsigned long)APP_WIFI_ERROR_RECOVERY_DELAY_MS,
+                    (unsigned int)g_wifiErrorRecoveryCount);
+    }
+    else
+    {
+      g_wifiErrorRecoveryAtTick = 0U;
+    }
+  }
+
   g_wifiState = nextState;
 
   if (previousState != nextState)
@@ -586,6 +612,8 @@ void APP_WiFi_Init(void)
   g_wifiLastIoctlValue = 0U;
   g_wifiPendingIovarRequest = APP_WIFI_IOVAR_REQUEST_NONE;
   APP_WiFi_ResetNoCreditStall();
+  g_wifiErrorRecoveryAtTick = 0U;
+  g_wifiErrorRecoveryCount = 0U;
   g_wifiLinkState = APP_WIFI_LINK_STATE_IDLE;
   g_wifiJoinSecurity = APP_WIFI_JOIN_SECURITY_OPEN;
   memset(g_wifiJoinRequestedSsid, 0, sizeof(g_wifiJoinRequestedSsid));
@@ -2379,9 +2407,16 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
       if (status == APP_WIFI_WLC_E_STATUS_SUCCESS)
       {
         g_wifiJoinAuthenticated = 1U;
-        if (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED)
+        /*
+         * Do not clear connected-link-down pending state on AUTH alone.
+         * During AP churn we can receive AUTH success without a stable LINK_UP,
+         * which falsely masks a broken runtime link and stalls recovery.
+         * Recovery is cleared by LINK_UP or confirmed RX traffic instead.
+         */
+        if ((g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED) &&
+            (g_wifiConnectedLinkDownPending != 0U))
         {
-          APP_WiFi_ClearConnectedLinkIssue("auth");
+          APP_WiFi_Logf("[wifi] runtime: auth success while link-down pending, wait link-up/rx\n");
         }
         APP_WiFi_EvaluateJoinCompletion();
       }
@@ -2468,9 +2503,14 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
       if (status == APP_WIFI_WLC_SUP_KEYED)
       {
         g_wifiJoinSecurityComplete = 1U;
-        if (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED)
+        /*
+         * Same rationale as AUTH: keyed does not guarantee data path recovery.
+         * Keep pending link-down until LINK_UP or RX traffic confirms recovery.
+         */
+        if ((g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED) &&
+            (g_wifiConnectedLinkDownPending != 0U))
         {
-          APP_WiFi_ClearConnectedLinkIssue("psk keyed");
+          APP_WiFi_Logf("[wifi] runtime: psk keyed while link-down pending, wait link-up/rx\n");
         }
         APP_WiFi_EvaluateJoinCompletion();
       }
@@ -2688,6 +2728,8 @@ static void APP_WiFi_EvaluateJoinCompletion(void)
   g_wifiJoinStep = APP_WIFI_JOIN_STEP_IDLE;
   g_wifiJoinRetryAtTick = 0U;
   g_wifiJoinRetryCount = 0U;
+  g_wifiErrorRecoveryCount = 0U;
+  g_wifiErrorRecoveryAtTick = 0U;
   APP_WiFi_Logf("[wifi] join: connected ssid=\"%s\" auth=%u link=%u security=%u\n",
                 g_wifiJoinRequestedSsid,
                 (unsigned int)g_wifiJoinAuthenticated,
@@ -2706,7 +2748,7 @@ static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status,
   {
     g_wifiConnectedLinkDownPending = 1U;
     g_wifiConnectedLinkDownTick = HAL_GetTick();
-    g_wifiConnectedLinkDownFrameCount = g_wifiSdpcmFrameCount;
+    g_wifiConnectedLinkDownFrameCount = APP_WiFi_LwIP_GetRxEthernetFrameCount();
     APP_WiFi_Logf("[wifi] runtime: link issue from %s, grace=%lu ms\n",
                   (source != NULL) ? source : "unknown",
                   (unsigned long)APP_WIFI_CONNECTED_LINK_DOWN_GRACE_MS);
@@ -2735,6 +2777,7 @@ static void APP_WiFi_ClearConnectedLinkIssue(const char *source)
 static void APP_WiFi_ProcessConnectedLinkRecovery(void)
 {
   const uint32_t now = HAL_GetTick();
+  const uint32_t currentRxFrames = APP_WiFi_LwIP_GetRxEthernetFrameCount();
 
   if (g_wifiLinkState != APP_WIFI_LINK_STATE_CONNECTED)
   {
@@ -2751,9 +2794,19 @@ static void APP_WiFi_ProcessConnectedLinkRecovery(void)
     return;
   }
 
-  if (g_wifiSdpcmFrameCount != g_wifiConnectedLinkDownFrameCount)
+  if (currentRxFrames != g_wifiConnectedLinkDownFrameCount)
   {
-    APP_WiFi_ClearConnectedLinkIssue("rx traffic");
+    const uint32_t rxDelta = currentRxFrames - g_wifiConnectedLinkDownFrameCount;
+    const uint32_t stableMs = now - g_wifiConnectedLinkDownTick;
+
+    if ((rxDelta >= APP_WIFI_CONNECTED_LINK_RECOVERY_MIN_FRAMES) &&
+        (stableMs >= APP_WIFI_CONNECTED_LINK_RECOVERY_MIN_MS))
+    {
+      APP_WiFi_Logf("[wifi] runtime: rx recovery reached delta=%lu stable=%lu ms\n",
+                    (unsigned long)rxDelta,
+                    (unsigned long)stableMs);
+      APP_WiFi_ClearConnectedLinkIssue("lwip rx traffic");
+    }
     return;
   }
 
@@ -2769,6 +2822,13 @@ static void APP_WiFi_ProcessConnectedLinkRecovery(void)
                 (unsigned long)g_wifiConnectedLinkDownStatus,
                 (unsigned long)g_wifiConnectedLinkDownReason);
   APP_WiFi_FailJoin("runtime link lost", g_wifiConnectedLinkDownStatus, g_wifiConnectedLinkDownReason);
+  if (g_wifiState == APP_WIFI_STATE_MAILBOX_READY)
+  {
+    APP_WiFi_Logf("[wifi] runtime: force stack reset for recovery\n");
+    (void)APP_WiFi_Platform_AbortFunction2Read();
+    APP_WiFi_ResetControlContextForRecovery();
+    APP_WiFi_SetState(APP_WIFI_STATE_RESET_ASSERT);
+  }
 }
 
 static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t detail)
@@ -4585,6 +4645,11 @@ void APP_WiFi_Task(void *argument)
         APP_WiFi_ProcessJoinRequest();
         APP_WiFi_PollPendingIoctlResponse();
         APP_WiFi_ProcessConnectedLinkRecovery();
+        if (g_wifiState != APP_WIFI_STATE_MAILBOX_READY)
+        {
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+          break;
+        }
         APP_WiFi_ProcessScanRequest();
         APP_WiFi_PollActiveScanResults();
         drainedFrames = APP_WiFi_DrainSdpcmRxQueue(APP_WIFI_RX_DRAIN_BURST_MAIN);
@@ -4617,6 +4682,16 @@ void APP_WiFi_Task(void *argument)
       }
 
       case APP_WIFI_STATE_ERROR:
+        if ((g_wifiJoinRequestedSsidLength != 0U) &&
+            (g_wifiErrorRecoveryAtTick != 0U) &&
+            ((int32_t)(HAL_GetTick() - g_wifiErrorRecoveryAtTick) >= 0))
+        {
+          APP_WiFi_Logf("[wifi] error: triggering auto recovery reset\n");
+          APP_WiFi_ResetNoCreditStall();
+          APP_WiFi_SetState(APP_WIFI_STATE_RESET_ASSERT);
+          osDelay(APP_WIFI_STACK_WAIT_MS);
+          break;
+        }
         APP_WiFi_LogPeriodicHeartbeat();
       default:
         osDelay(APP_WIFI_POLL_MS);
