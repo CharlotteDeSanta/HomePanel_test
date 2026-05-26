@@ -33,6 +33,7 @@ static void APP_HomeData_LogNodeOnlineChange(uint8_t node,
          (unsigned long)(currentUpdatedMs - previousUpdatedMs));
 }
 
+/* Convert 1-based protocol node id into 0-based internal room index. */
 uint8_t APP_HomeData_NodeToRoomIndex(uint8_t node, uint8_t *roomIndex)
 {
   uint8_t index = 0U;
@@ -47,6 +48,7 @@ uint8_t APP_HomeData_NodeToRoomIndex(uint8_t node, uint8_t *roomIndex)
   return 1U;
 }
 
+/* Update one room telemetry snapshot and synchronize node online bookkeeping. */
 uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
                                      uint16_t sequence,
                                      int16_t temperature_x10,
@@ -56,6 +58,10 @@ uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
                                      uint8_t online,
                                      uint8_t output_flags)
 {
+  /*
+   * Atomically update both telemetry payload and node liveness snapshot so UI
+   * reads a consistent view (data + online flag + timestamp).
+   */
   uint8_t roomIndex = 0U;
   uint8_t previousKnown = 0U;
   uint8_t previousOnline = 0U;
@@ -104,8 +110,13 @@ uint8_t APP_HomeData_UpdateTelemetry(uint8_t node,
   return 1U;
 }
 
+/* Update node online state from socket/session lifecycle events. */
 uint8_t APP_HomeData_UpdateNodeOnline(uint8_t node, uint8_t online)
 {
+  /*
+   * Session-driven online/offline path (e.g., connect/disconnect) that can
+   * update liveness without waiting for the next telemetry frame.
+   */
   uint8_t roomIndex = 0U;
   uint8_t previousKnown = 0U;
   uint8_t previousOnline = 0U;
@@ -140,6 +151,7 @@ uint8_t APP_HomeData_UpdateNodeOnline(uint8_t node, uint8_t online)
   return 1U;
 }
 
+/* Copy telemetry snapshot for a room under critical section protection. */
 uint8_t APP_HomeData_CopyTelemetryByRoomIndex(uint8_t roomIndex,
                                               APP_HomeDataTelemetry_t *telemetry)
 {
@@ -155,6 +167,7 @@ uint8_t APP_HomeData_CopyTelemetryByRoomIndex(uint8_t roomIndex,
   return telemetry->valid;
 }
 
+/* Copy node-status snapshot for a room under critical section protection. */
 uint8_t APP_HomeData_CopyNodeStatusByRoomIndex(uint8_t roomIndex,
                                                APP_HomeDataNodeStatus_t *status)
 {

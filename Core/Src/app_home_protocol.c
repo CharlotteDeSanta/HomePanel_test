@@ -3,11 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Read little-endian 16-bit field from wire buffer. */
 static uint16_t APP_HomeProtocol_ReadLe16(const uint8_t *data)
 {
   return (uint16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8));
 }
 
+/* Write little-endian 16-bit field into wire buffer. */
 static void APP_HomeProtocol_WriteLe16(uint8_t *data, uint16_t value)
 {
   data[0] = (uint8_t)(value & 0xFFU);
@@ -26,6 +28,7 @@ static void APP_HomeProtocol_ResetParser(APP_HomeProtocolParser_t *parser,
   parser->lastError = error;
 }
 
+/* Initialize parser state before consuming a new byte stream. */
 void APP_HomeProtocol_InitParser(APP_HomeProtocolParser_t *parser)
 {
   if (parser == NULL)
@@ -42,6 +45,13 @@ APP_HomeProtocolParseResult_t APP_HomeProtocol_PushByte(APP_HomeProtocolParser_t
                                                         uint8_t byte,
                                                         APP_HomeProtocolFrame_t *frame)
 {
+  /*
+   * Streaming frame parser (byte-by-byte):
+   * - synchronize on 2-byte SOF
+   * - validate protocol version and payload length
+   * - wait until full frame is available
+   * - verify CRC16 before publishing decoded fields
+   */
   uint16_t payloadLength = 0U;
   uint16_t totalLength = 0U;
   uint16_t expectedCrc = 0U;
@@ -54,6 +64,7 @@ APP_HomeProtocolParseResult_t APP_HomeProtocol_PushByte(APP_HomeProtocolParser_t
 
   if (parser->length == 0U)
   {
+    /* Wait for first start marker; ignore all unrelated bytes. */
     if (byte == APP_HOME_PROTOCOL_SOF0)
     {
       parser->buffer[0] = byte;
@@ -64,6 +75,7 @@ APP_HomeProtocolParseResult_t APP_HomeProtocol_PushByte(APP_HomeProtocolParser_t
 
   if (parser->length == 1U)
   {
+    /* Keep parser lock robust when SOF0 repeats in the stream. */
     if (byte == APP_HOME_PROTOCOL_SOF1)
     {
       parser->buffer[1] = byte;
@@ -157,6 +169,10 @@ uint16_t APP_HomeProtocol_BuildFrame(uint8_t node,
                                      uint8_t *output,
                                      uint16_t outputSize)
 {
+  /*
+   * Wire format:
+   * [SOF0][SOF1][VER][NODE][CMD][SEQ_LE16][LEN_LE16][PAYLOAD][CRC_LE16]
+   */
   uint16_t totalLength = 0U;
   uint16_t crc = 0U;
 
@@ -193,6 +209,7 @@ uint16_t APP_HomeProtocol_BuildFrame(uint8_t node,
   return totalLength;
 }
 
+/* Compute CRC16 (Modbus polynomial) over protocol payload region. */
 uint16_t APP_HomeProtocol_Crc16(const uint8_t *data, uint16_t length)
 {
   uint16_t crc = 0xFFFFU;
@@ -223,6 +240,7 @@ uint16_t APP_HomeProtocol_Crc16(const uint8_t *data, uint16_t length)
   return crc;
 }
 
+/* Convert protocol command id to human-readable string for logging/tracing. */
 const char *APP_HomeProtocol_CommandToString(uint8_t command)
 {
   switch (command)

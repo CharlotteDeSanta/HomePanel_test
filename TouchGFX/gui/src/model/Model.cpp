@@ -9,6 +9,7 @@
 
 namespace
 {
+/* Parse HH/MM numeric token from compile-time time string. */
 uint8_t parseTimeComponent(const char* digits)
 {
     if (digits == 0 || digits[0] < '0' || digits[0] > '9' || digits[1] < '0' || digits[1] > '9')
@@ -19,6 +20,7 @@ uint8_t parseTimeComponent(const char* digits)
     return static_cast<uint8_t>((digits[0] - '0') * 10 + (digits[1] - '0'));
 }
 
+/* Decode compile-time month token (e.g. "May") to numeric month. */
 uint8_t parseBuildMonth()
 {
     const char* month = __DATE__;
@@ -49,6 +51,7 @@ uint8_t parseBuildMonth()
     }
 }
 
+/* Decode compile-time day token from __DATE__. */
 uint8_t parseBuildDay()
 {
     const char* date = __DATE__;
@@ -57,12 +60,14 @@ uint8_t parseBuildDay()
     return static_cast<uint8_t>(tens * 10U + units);
 }
 
+/* Decode compile-time year token from __DATE__. */
 uint16_t parseBuildYear()
 {
     const char* date = __DATE__;
     return static_cast<uint16_t>((date[7] - '0') * 1000 + (date[8] - '0') * 100 + (date[9] - '0') * 10 + (date[10] - '0'));
 }
 
+/* Compute weekday index for a Gregorian date. */
 uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
 {
     static const uint8_t monthOffsets[] = { 0U, 3U, 2U, 5U, 0U, 3U, 5U, 1U, 4U, 6U, 2U, 4U };
@@ -77,11 +82,13 @@ const uint32_t MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS = 45000U;
 const uint32_t MODEL_ROOM_ONLINE_TIMEOUT_MS = 45000U;
 const float MODEL_DEFAULT_TARGET_TEMPERATURE_C = 25.0f;
 
+/* Check whether current tick has reached a scheduled deadline. */
 bool tickReached(uint32_t nowMs, uint32_t deadlineMs)
 {
     return static_cast<int32_t>(nowMs - deadlineMs) >= 0;
 }
 
+/* Compare float setpoints using small tolerance to avoid noise-triggered updates. */
 bool temperatureEquals(float lhs, float rhs)
 {
     const float diff = lhs - rhs;
@@ -89,6 +96,7 @@ bool temperatureEquals(float lhs, float rhs)
 }
 }
 
+/* Construct model with default room state, time base, and weather placeholders. */
 Model::Model() :
     kitchenTemperature(-20.0f),
     kitchenHumidity(-20.0f),
@@ -156,6 +164,7 @@ Model::Model() :
     }
 }
 
+/* Periodic model loop for clock sync, controller queue polling, and graph sampling. */
 void Model::tick()
 {
     const uint32_t nowMs = GUI_Time_GetTickMs();
@@ -220,6 +229,7 @@ void Model::tick()
 }
 
 
+/* Read latest measured temperature for a room. */
 float Model::getRoomTemperature(Rooms roomId)
 {
     switch (roomId)
@@ -238,6 +248,7 @@ float Model::getRoomTemperature(Rooms roomId)
     }
 }
 
+/* Read latest measured humidity for a room. */
 float Model::getRoomHumidity(Rooms roomId)
 {
     switch (roomId)
@@ -256,6 +267,7 @@ float Model::getRoomHumidity(Rooms roomId)
     }
 }
 
+/* Read latest effective fan mode for a room. */
 HVAC_FanMode_t Model::getRoomFanMode(Rooms roomId)
 {
     switch (roomId)
@@ -274,6 +286,7 @@ HVAC_FanMode_t Model::getRoomFanMode(Rooms roomId)
     }
 }
 
+/* Read latest effective USB output bitmask for a room. */
 uint8_t Model::getRoomUsbFlags(Rooms roomId)
 {
     switch (roomId)
@@ -289,12 +302,16 @@ uint8_t Model::getRoomUsbFlags(Rooms roomId)
     }
 }
 
+/* Update temperature target for one room and emit SETTINGS when AUTO fan policy is active. */
 void Model::setRoomTempSetPoint(Rooms roomId, float temperature)
 {
     HVAC_FanMode_t fanSetPoint = HVAC_FAN_UNKNOWN;
     uint8_t usbFlags = 0U;
 
-    // Set model variable
+    /*
+     * Temperature setpoint is meaningful only when the room is in AUTO fan mode.
+     * In manual fan modes, we keep the local slider value but do not issue control.
+     */
     switch (roomId)
     {
     case KITCHEN:
@@ -340,8 +357,10 @@ void Model::setRoomTempSetPoint(Rooms roomId, float temperature)
         return;
     }
 
-    // Send event
-    //outgoingEvent.timestamp = ;
+    /*
+     * Send one consolidated SETTINGS frame so the backend receives a complete
+     * control tuple (temp + fan + usb) for idempotent apply on node side.
+     */
     outgoingEvent = HVAC_Event_t{};
     outgoingEvent.roomId = (uint16_t)roomId;
     outgoingEvent.type = HVAC_EVENT_SETTINGS;
@@ -353,6 +372,7 @@ void Model::setRoomTempSetPoint(Rooms roomId, float temperature)
     xHVAC_SendToController(&outgoingEvent, 10);
 }
 
+/* Update fan setpoint for one room and emit consolidated SETTINGS payload downstream. */
 void Model::setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode)
 {
     float temperature = 0.0f;
@@ -391,7 +411,7 @@ void Model::setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode)
         return;
     }
 
-    //outgoingEvent.timestamp = ;
+    /* Keep control payload complete to avoid partial-state races on reconnect. */
     outgoingEvent = HVAC_Event_t{};
     outgoingEvent.roomId = (uint16_t)roomId;
     outgoingEvent.type = HVAC_EVENT_SETTINGS;
@@ -403,6 +423,7 @@ void Model::setRoomFanSetPoint(Rooms roomId, HVAC_FanMode_t fanMode)
     xHVAC_SendToController(&outgoingEvent, 10);
 }
 
+/* Update USB output flags for one room and emit synchronized SETTINGS payload downstream. */
 void Model::setRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
 {
     float temperature = 0.0f;
@@ -441,6 +462,10 @@ void Model::setRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
         return;
     }
 
+    /*
+     * USB toggle is sent together with current fan/temp setpoints.
+     * This prevents stale peer state from overwriting one field only.
+     */
     outgoingEvent = HVAC_Event_t{};
     outgoingEvent.roomId = (uint16_t)roomId;
     outgoingEvent.type = HVAC_EVENT_SETTINGS;
@@ -451,10 +476,12 @@ void Model::setRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
 
     if (xHVAC_SendToController(&outgoingEvent, 10))
     {
+        /* Enter short pending window to suppress stale telemetry echo. */
         markUsbFlagsPending(roomId, usbFlags);
     }
 }
 
+/* Mark room USB state as pending until matching telemetry or timeout clears it. */
 void Model::markUsbFlagsPending(Rooms roomId, uint8_t usbFlags)
 {
     const uint8_t roomIndex = static_cast<uint8_t>(roomId);
@@ -468,6 +495,7 @@ void Model::markUsbFlagsPending(Rooms roomId, uint8_t usbFlags)
     usbFlagsPendingUntilMs[roomIndex] = GUI_Time_GetTickMs() + MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS;
 }
 
+/* Gate USB telemetry updates while a locally-issued USB command is awaiting confirmation. */
 bool Model::shouldApplyUsbTelemetry(Rooms roomId, uint8_t usbFlags)
 {
     const uint8_t roomIndex = static_cast<uint8_t>(roomId);
@@ -483,12 +511,14 @@ bool Model::shouldApplyUsbTelemetry(Rooms roomId, uint8_t usbFlags)
 
     if (usbFlags == pendingUsbFlags[roomIndex])
     {
+        /* Node confirmed the requested state; close pending guard immediately. */
         usbFlagsPending[roomIndex] = false;
         return true;
     }
 
     if (!tickReached(GUI_Time_GetTickMs(), usbFlagsPendingUntilMs[roomIndex]))
     {
+        /* Still inside guard window: keep local optimistic state on UI side. */
         return false;
     }
 
@@ -496,26 +526,31 @@ bool Model::shouldApplyUsbTelemetry(Rooms roomId, uint8_t usbFlags)
     return true;
 }
 
+/* Get preferred weather/temperature display unit flag. */
 bool Model::getIsFahrenheit()
 {
     return unitIsFahrenheit;
 }
 
+/* Set preferred weather/temperature display unit flag. */
 void Model::setIsFahrenheit(bool isFahrenheit)
 {
     unitIsFahrenheit = isFahrenheit;
 }
 
+/* Get currently selected room context for cross-screen navigation. */
 Rooms Model::getSelectedRoom()
 {
     return selectedRoom;
 }
 
+/* Set currently selected room context for cross-screen navigation. */
 void Model::setSelectedRoom(Rooms room)
 {
     selectedRoom = room;
 }
 
+/* Read target temperature setpoint for a room. */
 float Model::getRoomTempSetPoint(Rooms room)
 {
     switch (room)
@@ -534,6 +569,7 @@ float Model::getRoomTempSetPoint(Rooms room)
     }
 }
 
+/* Read target fan setpoint (AUTO/manual) for a room. */
 HVAC_FanMode_t Model::getRoomFanSetPoint(Rooms room)
 {
     switch (room)
@@ -552,41 +588,49 @@ HVAC_FanMode_t Model::getRoomFanSetPoint(Rooms room)
     }
 }
 
+/* Return latest cached weather payload for weather views. */
 WeatherData Model::getWeatherData()
 {
     return weatherData;
 }
 
+/* Read cached clock hour value. */
 uint8_t Model::getClockHour()
 {
     return clockHour;
 }
 
+/* Read cached clock minute value. */
 uint8_t Model::getClockMinute()
 {
     return clockMinute;
 }
 
+/* Read cached calendar year value. */
 uint16_t Model::getClockYear()
 {
     return clockYear;
 }
 
+/* Read cached calendar month value. */
 uint8_t Model::getClockMonth()
 {
     return clockMonth;
 }
 
+/* Read cached calendar day value. */
 uint8_t Model::getClockDay()
 {
     return clockDay;
 }
 
+/* Read cached calendar weekday value. */
 uint8_t Model::getClockWeekday()
 {
     return clockWeekday;
 }
 
+/* Copy room history buffer for graph rendering without exposing internal storage directly. */
 void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& returnBufferSize)
 {
     returnBufferSize = 0;
@@ -608,11 +652,13 @@ void Model::getRoomBuffer(Rooms room, BufferSample returnBuffer[], uint8_t& retu
     }
 }
 
+/* Return current global WiFi online/offline state. */
 bool Model::getWiFiOnline() const
 {
     return wifiOnline;
 }
 
+/* Return current online/offline state for one room node. */
 bool Model::getRoomOnline(Rooms roomId) const
 {
     const uint8_t roomIndex = static_cast<uint8_t>(roomId);
@@ -624,8 +670,15 @@ bool Model::getRoomOnline(Rooms roomId) const
     return roomOnline[roomIndex];
 }
 
+/* Recompute WiFi and node online status and notify view only on state transitions. */
 void Model::refreshConnectivityStatus()
 {
+    /*
+     * Connectivity is refreshed independently from telemetry rendering:
+     * - WiFi online follows lwIP netif/server availability
+     * - Node online follows backend session state with timeout fallback
+     * This separation keeps UI status stable during short payload gaps.
+     */
     const bool currentWiFiOnline = (APP_WiFi_LwIP_IsNetworkOnline() != 0U);
 
     if (currentWiFiOnline != wifiOnline)
@@ -677,6 +730,7 @@ void Model::refreshConnectivityStatus()
     }
 }
 
+/* Pull RTC datetime into model and notify view only when observed fields changed. */
 void Model::syncClockFromRtc(bool forceNotify)
 {
     GuiDateTime rtcDateTime = {};
@@ -715,15 +769,23 @@ void Model::syncClockFromRtc(bool forceNotify)
     }
 }
 
+/* Drain controller->GUI event queue and propagate changed telemetry/settings to view. */
 void Model::checkForIncomingData()
 {
-    // Check if controller is ready
+    /*
+     * Bridge events from controller queue to GUI-facing model fields.
+     * The presenter/view only updates when values change, to reduce redraw work.
+     */
     if (xHVAC_WaitControllerReady(0) && xHVAC_ReceiveFromController(&incomingEvent, 0))
     {
         // Check for incoming event
         switch (incomingEvent.type)
         {
-        // If incoming event is sensor data
+        /*
+         * TELEMETRY path:
+         * backend -> model fields -> modelListener callback -> active view widgets.
+         * Every assignment is change-driven to avoid redundant redraw work.
+         */
         case HVAC_EVENT_TELEMETRY:
             switch ((Rooms)incomingEvent.roomId)
             {
@@ -801,7 +863,11 @@ void Model::checkForIncomingData()
 
             break;
 
-        // If incoming event is settings
+        /*
+         * SETTINGS path:
+         * reflects effective node-side setpoints back to UI controls
+         * so sliders/toggles stay in sync after remote changes.
+         */
         case HVAC_EVENT_SETTINGS:
             switch ((Rooms)incomingEvent.roomId)
             {
@@ -866,6 +932,7 @@ void Model::checkForIncomingData()
     }
 }
 
+/* Convert weather code to generated bitmap id (small or large icon variant). */
 uint16_t Model::getBitmapFromWeatherCode(uint16_t weatherCode, bool iconIsSmall)
 {
     switch (weatherCode)
@@ -931,6 +998,7 @@ uint16_t Model::getBitmapFromWeatherCode(uint16_t weatherCode, bool iconIsSmall)
     }
 }
 
+/* Convert weather code to localized text id used by weather text widgets. */
 uint16_t Model::getTextFromWeatherCode(uint16_t weatherCode)
 {
     switch (weatherCode)
@@ -996,6 +1064,7 @@ uint16_t Model::getTextFromWeatherCode(uint16_t weatherCode)
     }
 }
 
+/* Append one sample to fixed-length buffer by shifting out oldest entries when full. */
 void Model::insertBufferSample(BufferSample buffer[], uint8_t& bufferCount, const BufferSample& sample)
 {
     if (bufferCount < MAX_BUFFER_SIZE)

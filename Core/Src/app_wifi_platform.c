@@ -195,6 +195,7 @@ static uint32_t APP_WiFi_Platform_BuildCmd52Argument(uint8_t rwFlag,
 static uint32_t APP_WiFi_Platform_RoundTransferLength(uint16_t dataLength);
 static uint32_t APP_WiFi_Platform_GetDctrlBlockSize(uint32_t transferLength);
 
+/* Configure SDIO GPIO pins and pull modes for AP6181 bus. */
 static void APP_WiFi_Platform_SdioGpioInit(void)
 {
   GPIO_InitTypeDef gpioInit = {0};
@@ -213,6 +214,7 @@ static void APP_WiFi_Platform_SdioGpioInit(void)
   HAL_GPIO_Init(GPIOD, &gpioInit);
 }
 
+/* Reset platform-side AP6181 transport/runtime caches before WiFi bring-up. */
 void APP_WiFi_Platform_Init(void)
 {
   g_wifiSdioInterruptCount = 0U;
@@ -264,13 +266,20 @@ void APP_WiFi_Platform_Init(void)
   HAL_GPIO_WritePin(WIFI_RESET_GPIO_Port, WIFI_RESET_Pin, GPIO_PIN_SET);
 }
 
+/* Drive AP6181 reset GPIO pin level from upper WiFi state machine. */
 void APP_WiFi_Platform_SetResetPin(GPIO_PinState pinState)
 {
   HAL_GPIO_WritePin(WIFI_RESET_GPIO_Port, WIFI_RESET_Pin, pinState);
 }
 
+/* Initialize STM32 SDMMC host peripheral used by AP6181 SDIO transport. */
 HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void)
 {
+  /*
+   * AP6181 host-side bootstrap:
+   * configure STM32 SDMMC1 as raw SDIO transport (not SD-card mode),
+   * then clear stale IRQ/data state before first command transaction.
+   */
   if (g_wifiSdioHostInitialized != 0U)
   {
     return HAL_OK;
@@ -299,8 +308,10 @@ HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void)
   return HAL_OK;
 }
 
+/* Enumerate AP6181 SDIO card and switch host bus configuration. */
 HAL_StatusTypeDef APP_WiFi_Platform_SdioEnumerate(void)
 {
+  /* Enumerate the SDIO function with retry loop to tolerate power-up race. */
   uint32_t attempt = 0U;
 
   if (g_wifiSdioHostInitialized == 0U)
@@ -361,6 +372,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_SdioEnumerate(void)
   return HAL_TIMEOUT;
 }
 
+/* Execute SDIO CMD52 read transaction for CCCR/FBR/function register access. */
 HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Read(uint8_t functionNumber, uint32_t address, uint8_t *value)
 {
   uint8_t response = 0U;
@@ -383,6 +395,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Read(uint8_t functionNumber, uint32_t a
   return HAL_OK;
 }
 
+/* Execute SDIO CMD52 write transaction for CCCR/FBR/function register access. */
 HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Write(uint8_t functionNumber, uint32_t address, uint8_t value)
 {
   uint8_t response = 0U;
@@ -400,6 +413,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd52Write(uint8_t functionNumber, uint32_t 
   return HAL_OK;
 }
 
+/* Probe SDIO CCCR/FBR capabilities and cache key negotiation registers. */
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void)
 {
   uint8_t value = 0U;
@@ -448,6 +462,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeCccr(void)
   return HAL_OK;
 }
 
+/* Enable SDIO function-1 and wait until IO-ready indicates firmware core access path. */
 HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction1(void)
 {
   uint32_t attempt = 0U;
@@ -506,6 +521,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction1(void)
   return HAL_TIMEOUT;
 }
 
+/* Switch host/device bus mode (width/block size/control) after initial enumeration. */
 HAL_StatusTypeDef APP_WiFi_Platform_ConfigureBus(void)
 {
   uint8_t value = 0U;
@@ -576,6 +592,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigureBus(void)
   return HAL_OK;
 }
 
+/* Execute SDIO CMD53 read transaction for function memory/FIFO regions. */
 HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Read(uint8_t functionNumber, uint32_t address, uint8_t *data, uint16_t dataLength)
 {
   const uint32_t transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
@@ -619,6 +636,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Read(uint8_t functionNumber, uint32_t a
   return HAL_OK;
 }
 
+/* Optional low-level CMD53 smoke test for bring-up diagnostics. */
 HAL_StatusTypeDef APP_WiFi_Platform_RunCmd53SmokeTest(void)
 {
   uint8_t data[APP_WIFI_SDIO_CMD53_SMOKE_LEN] = {0};
@@ -635,16 +653,19 @@ HAL_StatusTypeDef APP_WiFi_Platform_RunCmd53SmokeTest(void)
   return HAL_OK;
 }
 
+/* Convenience wrapper for single-byte function-1 register read. */
 HAL_StatusTypeDef APP_WiFi_Platform_Fn1Read8(uint32_t address, uint8_t *value)
 {
   return APP_WiFi_Platform_Cmd52Read(APP_WIFI_SDIO_FN1, address, value);
 }
 
+/* Convenience wrapper for single-byte function-1 register write. */
 HAL_StatusTypeDef APP_WiFi_Platform_Fn1Write8(uint32_t address, uint8_t value)
 {
   return APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN1, address, value);
 }
 
+/* Request ALP clock and wait until chip clock status confirms availability. */
 HAL_StatusTypeDef APP_WiFi_Platform_RequestAlpClock(void)
 {
   const uint8_t requestValue = APP_WIFI_SDIO_FORCE_HW_CLKREQ_OFF |
@@ -685,6 +706,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_RequestAlpClock(void)
   return HAL_TIMEOUT;
 }
 
+/* Program backplane window registers so subsequent Fn1 ops target desired address range. */
 HAL_StatusTypeDef APP_WiFi_Platform_SetBackplaneWindow(uint32_t address)
 {
   const uint32_t base = address & (uint32_t)(~APP_WIFI_BACKPLANE_ADDRESS_MASK);
@@ -713,6 +735,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_SetBackplaneWindow(uint32_t address)
   return HAL_OK;
 }
 
+/* Read arbitrary backplane memory range through windowed function-1 accesses. */
 HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead(uint32_t address, uint8_t *data, uint16_t dataLength)
 {
   uint32_t windowOffset = address & APP_WIFI_BACKPLANE_ADDRESS_MASK;
@@ -752,6 +775,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead(uint32_t address, uint8_t *dat
   return status;
 }
 
+/* Read one 32-bit word from backplane address space. */
 HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead32(uint32_t address, uint32_t *value)
 {
   uint8_t data[sizeof(uint32_t)] = {0};
@@ -777,6 +801,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead32(uint32_t address, uint32_t *
   return HAL_OK;
 }
 
+/* Write arbitrary backplane memory range through windowed function-1 accesses. */
 HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite(uint32_t address, const uint8_t *data, uint16_t dataLength)
 {
   uint32_t windowOffset = address & APP_WIFI_BACKPLANE_ADDRESS_MASK;
@@ -816,6 +841,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite(uint32_t address, const uint8
   return status;
 }
 
+/* Write one 32-bit word to backplane address space. */
 HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite32(uint32_t address, uint32_t value)
 {
   uint8_t data[sizeof(uint32_t)] = {0};
@@ -837,6 +863,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite32(uint32_t address, uint32_t 
   return HAL_OK;
 }
 
+/* Optional backplane read smoke test for address-window validation. */
 HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneSmokeTest(void)
 {
   uint32_t value = 0U;
@@ -850,6 +877,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneSmokeTest(void)
   return HAL_OK;
 }
 
+/* Optional backplane write/readback smoke test for bus reliability. */
 HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneWriteSmokeTest(void)
 {
   uint32_t value = 0U;
@@ -868,6 +896,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_RunBackplaneWriteSmokeTest(void)
   return HAL_OK;
 }
 
+/* Request HT clock to guarantee throughput for function-2 data transfers. */
 HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void)
 {
   uint32_t attempt = 0U;
@@ -904,6 +933,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_RequestHtClock(void)
   return HAL_TIMEOUT;
 }
 
+/* Enable SDIO function-2 used for runtime data/control packet transfer. */
 HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction2(void)
 {
   uint32_t attempt = 0U;
@@ -960,6 +990,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction2(void)
   return HAL_TIMEOUT;
 }
 
+/* Poll IO-ready bits until SDIO function-2 becomes available. */
 HAL_StatusTypeDef APP_WiFi_Platform_WaitForFunction2Ready(void)
 {
   uint32_t attempt = 0U;
@@ -992,8 +1023,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_WaitForFunction2Ready(void)
   return HAL_TIMEOUT;
 }
 
+/* Configure host/firmware interrupt routing for SDIO+OOB signaling. */
 HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void)
 {
+  /*
+   * Enable AP6181 function-2 interrupt route:
+   * SEP interrupt -> CCCR master enable -> host-side mask mirrors.
+   */
   uint8_t cccrIntEn = 0U;
   uint8_t sepIntCtl = 0U;
 
@@ -1024,8 +1060,10 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void)
   return HAL_OK;
 }
 
+/* Apply runtime bus settings required after firmware boot. */
 HAL_StatusTypeDef APP_WiFi_Platform_ConfigurePostFirmwareBus(void)
 {
+  /* Program runtime host/function interrupt masks after firmware boot. */
   const uint8_t functionIntMask = APP_WIFI_FUNCTION_INT_MASK_VALUE;
 
   if (APP_WiFi_Platform_BackplaneWrite32(APP_WIFI_SDIO_INT_HOST_MASK_ADDRESS, APP_WIFI_HOST_INT_MASK_VALUE) != HAL_OK)
@@ -1048,8 +1086,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigurePostFirmwareBus(void)
   return HAL_OK;
 }
 
+/* Prepare WLAN core/reset state before firmware and NVRAM staging. */
 HAL_StatusTypeDef APP_WiFi_Platform_PrepareFirmwareDownload(void)
 {
+  /*
+   * Stop WLAN ARM + SOCRAM cores before staging image, so writes target
+   * passive RAM and avoid concurrent firmware execution during download.
+   */
   if (APP_WiFi_Platform_DisableDeviceCore(APP_WIFI_WLAN_ARM_WRAPPER_BASE, 0U) != HAL_OK)
   {
     return HAL_ERROR;
@@ -1068,8 +1111,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_PrepareFirmwareDownload(void)
   return HAL_OK;
 }
 
+/* Discover firmware/NVRAM blobs and required staging addresses. */
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeFirmwareResources(void)
 {
+  /*
+   * Validate firmware/NVRAM blobs from compiled resources and precompute
+   * final staging addresses/trailer expected by Broadcom boot ROM.
+   */
   const uint8_t *firmwareData = NULL;
   const uint8_t *nvramData = NULL;
   uint32_t firmwareSize = 0U;
@@ -1114,8 +1162,10 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeFirmwareResources(void)
   return HAL_OK;
 }
 
+/* Transfer WiFi firmware binary into target backplane RAM. */
 HAL_StatusTypeDef APP_WiFi_Platform_StageFirmwareImage(void)
 {
+  /* Stream firmware blob to AP6181 RAM base over backplane windowed writes. */
   uint32_t bytesStaged = 0U;
 
   if (g_wifiFirmwareSize == 0U)
@@ -1136,8 +1186,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_StageFirmwareImage(void)
   return HAL_OK;
 }
 
+/* Transfer NVRAM configuration blob and trailer into backplane RAM. */
 HAL_StatusTypeDef APP_WiFi_Platform_StageNvramImage(void)
 {
+  /*
+   * NVRAM is staged near RAM top with a trailer word encoding length.
+   * Firmware reads this trailer during early init to locate board config.
+   */
   const uint32_t roundedNvramSize = (g_wifiNvramSize + 3U) & ~0x3U;
   const uint32_t trailerAddress = APP_WIFI_43362_RAM_BASE + APP_WIFI_43362_RAM_SIZE - APP_WIFI_NVRAM_TRAILER_SIZE;
   uint32_t bytesStaged = 0U;
@@ -1166,11 +1221,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_StageNvramImage(void)
   return HAL_OK;
 }
 
+/* Release WLAN ARM core from reset to start firmware execution. */
 HAL_StatusTypeDef APP_WiFi_Platform_ReleaseWlanArmCore(void)
 {
   return APP_WiFi_Platform_ResetDeviceCore(APP_WIFI_WLAN_ARM_WRAPPER_BASE, 0U);
 }
 
+/* Poll firmware shared structures until boot is fully confirmed. */
 HAL_StatusTypeDef APP_WiFi_Platform_WaitForFirmwareBoot(void)
 {
   uint32_t attempt = 0U;
@@ -1189,6 +1246,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_WaitForFirmwareBoot(void)
   return HAL_TIMEOUT;
 }
 
+/* Locate and validate firmware shared-memory descriptor exported by WLAN core. */
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeSharedMemory(void)
 {
   APP_WiFi_WlanShared_t shared = {0};
@@ -1231,6 +1289,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeSharedMemory(void)
   return HAL_OK;
 }
 
+/* Discover firmware console ring-buffer metadata for optional runtime diagnostics. */
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeConsole(void)
 {
   APP_WiFi_HndLog_t logHeader = {0};
@@ -1266,6 +1325,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeConsole(void)
   return HAL_OK;
 }
 
+/* Read mailbox bootstrap state used by host<->firmware control handshakes. */
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeMailbox(void)
 {
   uint32_t interruptStatus = 0U;
@@ -1300,8 +1360,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_ProbeMailbox(void)
   return HAL_OK;
 }
 
+/* Read/clear function-2 RX status indicating pending frame availability. */
 HAL_StatusTypeDef APP_WiFi_Platform_GetFunction2RxInterruptStatus(uint32_t *frameStatus)
 {
+  /*
+   * Pull and ACK host interrupt bits for function-2 RX path.
+   * Caller consumes frameStatus to decide whether packet fetch is needed.
+   */
   uint32_t interruptStatus = 0U;
 
   if (frameStatus == NULL)
@@ -1328,6 +1393,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_GetFunction2RxInterruptStatus(uint32_t *fram
   return HAL_OK;
 }
 
+/* Clear acknowledged function-2 RX interrupt bits in host interrupt status register. */
 HAL_StatusTypeDef APP_WiFi_Platform_ClearFunction2RxInterrupt(uint32_t frameStatus)
 {
   if (frameStatus == 0U)
@@ -1344,6 +1410,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ClearFunction2RxInterrupt(uint32_t frameStat
   return HAL_OK;
 }
 
+/* Abort pending function-2 read path after timeout/stall before attempting recovery. */
 HAL_StatusTypeDef APP_WiFi_Platform_AbortFunction2Read(void)
 {
   if (APP_WiFi_Platform_Cmd52Write(APP_WIFI_SDIO_FN0,
@@ -1361,8 +1428,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_AbortFunction2Read(void)
   return HAL_OK;
 }
 
+/* Receive one frame payload from function-2 data channel. */
 HAL_StatusTypeDef APP_WiFi_Platform_Fn2Read(uint8_t *data, uint16_t dataLength)
 {
+  /*
+   * Function-2 read is the AP6181 -> host data path.
+   * Uses CMD53 + IDMA scratch buffer, then copies payload to caller buffer.
+   */
   uint16_t count = 0U;
   uint8_t blockMode = 0U;
 
@@ -1427,8 +1499,13 @@ HAL_StatusTypeDef APP_WiFi_Platform_Fn2Read(uint8_t *data, uint16_t dataLength)
   return HAL_OK;
 }
 
+/* Transmit one frame payload through function-2 data channel. */
 HAL_StatusTypeDef APP_WiFi_Platform_Fn2Write(const uint8_t *data, uint16_t dataLength)
 {
+  /*
+   * Function-2 write is host -> AP6181 data/control path.
+   * Payload is padded/aligned in scratch DMA buffer to match CMD53 transfer mode.
+   */
   uint32_t transferLength = 0U;
   uint32_t dmaTransferLength = 0U;
   uint32_t dctrlBlockSize = 0U;
@@ -1736,6 +1813,7 @@ uint32_t APP_WiFi_Platform_GetHostMailboxData(void)
   return g_wifiHostMailboxData;
 }
 
+/* SDMMC IRQ handler for AP6181 SDIO transport interrupt accounting. */
 void APP_WiFi_Platform_SDMMC_IRQHandler(void)
 {
   const uint32_t status = SDMMC1->STA;
@@ -1759,6 +1837,7 @@ void APP_WiFi_Platform_SDMMC_IRQHandler(void)
   }
 }
 
+/* Convert SDMMC error bitmask into HAL_StatusTypeDef class. */
 static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error)
 {
   if (error == SDMMC_ERROR_NONE)
@@ -1774,6 +1853,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error)
   return HAL_ERROR;
 }
 
+/* Apply negotiated bus width to SDMMC host and track diagnostics. */
 static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide)
 {
   SDMMC_InitTypeDef sdioInit = {0};
@@ -1809,6 +1889,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide)
   return HAL_OK;
 }
 
+/* Wait for ongoing CMD53 DMA/IT transfer completion with timeout. */
 static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void)
 {
   const uint32_t deadline = HAL_GetTick() + APP_WIFI_SDIO_CMD53_TIMEOUT_MS;
@@ -1854,6 +1935,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void)
   }
 }
 
+/* Execute one CMD53 write transaction to AP6181 SDIO function space. */
 static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, uint32_t address, const uint8_t *data, uint16_t dataLength)
 {
   const uint32_t transferLength = APP_WiFi_Platform_RoundTransferLength(dataLength);
@@ -1893,16 +1975,19 @@ static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, ui
   return HAL_OK;
 }
 
+/* Read one byte from AP6181 backplane memory-mapped region. */
 static HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead8(uint32_t address, uint8_t *value)
 {
   return APP_WiFi_Platform_BackplaneRead(address, value, 1U);
 }
 
+/* Write one byte into AP6181 backplane memory-mapped region. */
 static HAL_StatusTypeDef APP_WiFi_Platform_BackplaneWrite8(uint32_t address, uint8_t value)
 {
   return APP_WiFi_Platform_BackplaneWrite(address, &value, 1U);
 }
 
+/* Read core wrapper IOCTRL/RESETCTRL registers for one core. */
 static HAL_StatusTypeDef APP_WiFi_Platform_ReadCoreState(uint32_t wrapperBase, uint8_t *ioCtrl, uint8_t *resetCtrl)
 {
   uint8_t localIoCtrl = 0U;
@@ -1935,6 +2020,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_ReadCoreState(uint32_t wrapperBase, u
   return HAL_OK;
 }
 
+/* Disable target core and optionally halt CPU via wrapper registers. */
 static HAL_StatusTypeDef APP_WiFi_Platform_DisableDeviceCore(uint32_t wrapperBase, uint8_t cpuHalt)
 {
   uint8_t resetCtrl = 0U;
@@ -1972,6 +2058,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_DisableDeviceCore(uint32_t wrapperBas
   return APP_WiFi_Platform_ReadCoreState(wrapperBase, &ioCtrl, &resetCtrl);
 }
 
+/* Perform disable/reset/re-enable cycle for target AP6181 core. */
 static HAL_StatusTypeDef APP_WiFi_Platform_ResetDeviceCore(uint32_t wrapperBase, uint8_t cpuHalt)
 {
   uint8_t ioCtrl = 0U;
@@ -2016,6 +2103,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_ResetDeviceCore(uint32_t wrapperBase,
   return APP_WiFi_Platform_ReadCoreState(wrapperBase, &ioCtrl, &resetCtrl);
 }
 
+/* Check whether target AP6181 core reports up/active state. */
 static HAL_StatusTypeDef APP_WiFi_Platform_DeviceCoreIsUp(uint32_t wrapperBase)
 {
   uint8_t ioCtrl = 0U;
@@ -2106,6 +2194,7 @@ static HAL_StatusTypeDef APP_WiFi_Platform_WriteResourceToBackplane(APP_WiFi_Res
   return HAL_OK;
 }
 
+/* Clean D-cache lines before SDMMC DMA reads source buffers. */
 static void APP_WiFi_Platform_DCacheClean(const void *address, uint32_t length)
 {
 #if (__DCACHE_PRESENT == 1U)
@@ -2126,6 +2215,7 @@ static void APP_WiFi_Platform_DCacheClean(const void *address, uint32_t length)
 #endif
 }
 
+/* Invalidate D-cache lines after SDMMC DMA writes destination buffers. */
 static void APP_WiFi_Platform_DCacheInvalidate(const void *address, uint32_t length)
 {
 #if (__DCACHE_PRESENT == 1U)
@@ -2182,6 +2272,7 @@ static uint32_t APP_WiFi_Platform_BuildCmd52Argument(uint8_t rwFlag,
   return argument;
 }
 
+/* Round transfer length to SDIO alignment constraints. */
 static uint32_t APP_WiFi_Platform_RoundTransferLength(uint16_t dataLength)
 {
   uint32_t transferLength = 1U;
@@ -2199,6 +2290,7 @@ static uint32_t APP_WiFi_Platform_RoundTransferLength(uint16_t dataLength)
   return transferLength;
 }
 
+/* Select SDMMC data block size field for given transfer length. */
 static uint32_t APP_WiFi_Platform_GetDctrlBlockSize(uint32_t transferLength)
 {
   switch (transferLength)

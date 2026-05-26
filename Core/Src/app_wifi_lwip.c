@@ -218,6 +218,7 @@ static void APP_WiFi_LwIP_LogClientEndpoint(const char *eventName,
                                             int32_t extraValue,
                                             const char *extraLabel);
 
+/* tcpip_init completion callback used to release init wait semaphore. */
 static void APP_WiFi_LwIP_TcpipInitDone(void *arg)
 {
   SemaphoreHandle_t *doneSemaphore = (SemaphoreHandle_t *)arg;
@@ -228,6 +229,7 @@ static void APP_WiFi_LwIP_TcpipInitDone(void *arg)
   }
 }
 
+/* Pack IPv4 octets into host-order 32-bit cache key. */
 static uint32_t APP_WiFi_LwIP_BuildIpAddressU32(uint8_t octet0, uint8_t octet1, uint8_t octet2, uint8_t octet3)
 {
   return ((uint32_t)octet0 << 24) |
@@ -236,6 +238,7 @@ static uint32_t APP_WiFi_LwIP_BuildIpAddressU32(uint8_t octet0, uint8_t octet1, 
          (uint32_t)octet3;
 }
 
+/* Format IPv4 address cache key into dotted-decimal string. */
 static void APP_WiFi_LwIP_FormatIpAddress(uint32_t ipAddress, char *buffer, uint32_t bufferSize)
 {
   if ((buffer == NULL) || (bufferSize == 0U))
@@ -252,6 +255,7 @@ static void APP_WiFi_LwIP_FormatIpAddress(uint32_t ipAddress, char *buffer, uint
                  (unsigned long)(ipAddress & 0xFFUL));
 }
 
+/* Format MAC address bytes into colon-separated debug string. */
 static void APP_WiFi_LwIP_FormatMacAddress(const uint8_t *macAddress, char *buffer, uint32_t bufferSize)
 {
   if ((buffer == NULL) || (bufferSize == 0U))
@@ -276,6 +280,7 @@ static void APP_WiFi_LwIP_FormatMacAddress(const uint8_t *macAddress, char *buff
                  (unsigned int)macAddress[5]);
 }
 
+/* Update lightweight peer ARP cache from observed traffic. */
 static void APP_WiFi_LwIP_UpdatePeerCache(uint32_t ipAddress, const uint8_t *macAddress)
 {
   TickType_t nowTick = xTaskGetTickCount();
@@ -331,6 +336,7 @@ static void APP_WiFi_LwIP_UpdatePeerCache(uint32_t ipAddress, const uint8_t *mac
   taskEXIT_CRITICAL();
 }
 
+/* Resolve peer MAC from local cache for faster diagnostics/heuristics. */
 static uint8_t APP_WiFi_LwIP_FindPeerMac(uint32_t ipAddress, uint8_t *macAddress, uint32_t *ageMs)
 {
   TickType_t nowTick = xTaskGetTickCount();
@@ -361,6 +367,7 @@ static uint8_t APP_WiFi_LwIP_FindPeerMac(uint32_t ipAddress, uint8_t *macAddress
   return found;
 }
 
+/* Learn peer IP/MAC mapping from incoming Ethernet payload. */
 static void APP_WiFi_LwIP_CachePeerFromFrame(const uint8_t *frame, uint16_t length)
 {
   uint16_t etherType = 0U;
@@ -441,6 +448,7 @@ static void APP_WiFi_LwIP_LogClientEndpoint(const char *eventName,
   }
 }
 
+/* lwIP netif linkoutput: flatten pbuf chain and forward Ethernet frame to WiFi driver queue. */
 static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p)
 {
   uint8_t *copy = NULL;
@@ -503,6 +511,7 @@ static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p)
   return ERR_OK;
 }
 
+/* Initialize lwIP netif object for AP6181-backed station interface. */
 static err_t APP_WiFi_LwIP_NetifInit(struct netif *netif)
 {
   uint8_t macAddress[APP_WIFI_MAC_ADDRESS_SIZE] = {0U};
@@ -526,6 +535,7 @@ static err_t APP_WiFi_LwIP_NetifInit(struct netif *netif)
   return ERR_OK;
 }
 
+/* Refresh lwIP netif hardware address from WiFi firmware MAC source of truth. */
 static err_t APP_WiFi_LwIP_RefreshNetifMacAddress(struct netif *netif)
 {
   uint8_t macAddress[APP_WIFI_MAC_ADDRESS_SIZE] = {0U};
@@ -565,6 +575,7 @@ static err_t APP_WiFi_LwIP_RefreshNetifMacAddress(struct netif *netif)
 }
 
 #if (APP_WIFI_LWIP_GRATUITOUS_ARP_ENABLE != 0U)
+/* Emit gratuitous ARP probe/update when explicitly requested. */
 static err_t APP_WiFi_LwIP_SendGratuitousArp(struct netif *netif)
 {
   if (netif == NULL)
@@ -575,6 +586,7 @@ static err_t APP_WiFi_LwIP_SendGratuitousArp(struct netif *netif)
   return etharp_gratuitous(netif);
 }
 
+/* Conditionally refresh ARP announcement based on runtime policy. */
 static void APP_WiFi_LwIP_MaybeRefreshArp(void)
 {
   TickType_t nowTick = xTaskGetTickCount();
@@ -611,6 +623,7 @@ static void APP_WiFi_LwIP_MaybeRefreshArp(void)
 }
 #endif
 
+/* Start DHCP client on netif and reset progress bookkeeping. */
 static void APP_WiFi_LwIP_StartDhcp(void)
 {
   if (netifapi_dhcp_start(&g_wifiNetif) == ERR_OK)
@@ -628,6 +641,7 @@ static void APP_WiFi_LwIP_StartDhcp(void)
   }
 }
 
+/* Poll DHCP state machine and apply timeout/restart guards. */
 static void APP_WiFi_LwIP_CheckDhcpProgress(void)
 {
   const TickType_t nowTick = xTaskGetTickCount();
@@ -669,6 +683,7 @@ static void APP_WiFi_LwIP_CheckDhcpProgress(void)
   }
 }
 
+/* Push one outgoing Ethernet frame into bounded TX queue. */
 static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length)
 {
   if ((data == NULL) || (g_txQueueMutex == NULL))
@@ -696,6 +711,7 @@ static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length)
   return 1U;
 }
 
+/* Peek next queued TX packet without removing it. */
 static uint8_t APP_WiFi_LwIP_QueuePeek(APP_WiFi_LwIP_TxPacket_t *packet)
 {
   if ((packet == NULL) || (g_txQueueMutex == NULL))
@@ -719,6 +735,7 @@ static uint8_t APP_WiFi_LwIP_QueuePeek(APP_WiFi_LwIP_TxPacket_t *packet)
   return 1U;
 }
 
+/* Pop and free the head entry after successful or dropped TX handling. */
 static void APP_WiFi_LwIP_QueuePop(void)
 {
   if (g_txQueueMutex == NULL)
@@ -742,6 +759,7 @@ static void APP_WiFi_LwIP_QueuePop(void)
   (void)xSemaphoreGive(g_txQueueMutex);
 }
 
+/* Lazily create control-path mutex protecting pending control queue. */
 static uint8_t APP_WiFi_LwIP_EnsureControlMutex(void)
 {
   if (g_controlMutex != NULL)
@@ -753,6 +771,7 @@ static uint8_t APP_WiFi_LwIP_EnsureControlMutex(void)
   return (g_controlMutex != NULL) ? 1U : 0U;
 }
 
+/* Reset control queue/reply tracking state after link/session reset. */
 static void APP_WiFi_LwIP_ResetControlState(void)
 {
   if ((APP_WiFi_LwIP_EnsureControlMutex() == 0U) ||
@@ -772,6 +791,7 @@ static void APP_WiFi_LwIP_ResetControlState(void)
   (void)xSemaphoreGive(g_controlMutex);
 }
 
+/* Store latest control intent per room with debounce gap before transmission. */
 static uint8_t APP_WiFi_LwIP_StorePendingControl(const APP_WiFi_LwIP_ControlCommand_t *command)
 {
   uint8_t roomIndex = 0U;
@@ -812,6 +832,7 @@ static uint8_t APP_WiFi_LwIP_IsSameControlPayload(const APP_WiFi_LwIP_ControlCom
           (lhs->flags == rhs->flags)) ? 1U : 0U;
 }
 
+/* Query whether lwIP netif + socket server are currently considered online. */
 uint8_t APP_WiFi_LwIP_IsNetworkOnline(void)
 {
   if ((g_netifAdded == 0U) || (g_netifUp == 0U) || (g_dhcpStarted == 0U))
@@ -822,6 +843,7 @@ uint8_t APP_WiFi_LwIP_IsNetworkOnline(void)
   return (dhcp_supplied_address(&g_wifiNetif) != 0) ? 1U : 0U;
 }
 
+/* Return non-zero when Ethernet TX path still has queued data. */
 uint8_t APP_WiFi_LwIP_HasPendingTx(void)
 {
   uint8_t hasPending = 0U;
@@ -841,11 +863,13 @@ uint8_t APP_WiFi_LwIP_HasPendingTx(void)
   return hasPending;
 }
 
+/* Return total number of processed inbound Ethernet frames. */
 uint32_t APP_WiFi_LwIP_GetRxEthernetFrameCount(void)
 {
   return g_rxEthernetFrameCount;
 }
 
+/* Queue/merge one outbound CONTROL command for target node (room-mapped). */
 uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
                                   int16_t targetTemperature_x10,
                                   uint8_t mode,
@@ -920,6 +944,7 @@ uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
   return 1U;
 }
 
+/* Drop queued outbound frames during hard network reset/reinit. */
 static void APP_WiFi_LwIP_DropQueuedTx(void)
 {
   APP_WiFi_LwIP_TxPacket_t packet = {0};
@@ -939,6 +964,7 @@ static void APP_WiFi_LwIP_DropQueuedTx(void)
   }
 }
 
+/* Try to transmit queued frames while netif is online; keep ordering stable. */
 static void APP_WiFi_LwIP_FlushTxQueue(void)
 {
   APP_WiFi_LwIP_TxPacket_t packet = {0};
@@ -1013,6 +1039,7 @@ static void APP_WiFi_LwIP_FlushTxQueue(void)
   (void)xSemaphoreGive(g_txFlushMutex);
 }
 
+/* Optional RX frame logger used for low-level transport troubleshooting. */
 static void APP_WiFi_LwIP_LogRxFrame(const uint8_t *frame, uint16_t length)
 {
 #if (APP_WIFI_LWIP_ETH_TRACE_ENABLE != 0U)
@@ -1088,6 +1115,7 @@ static void APP_WiFi_LwIP_LogRxFrame(const uint8_t *frame, uint16_t length)
 #endif
 }
 
+/* Optional TX frame logger used for low-level transport troubleshooting. */
 static void APP_WiFi_LwIP_LogTxFrame(const uint8_t *frame, uint16_t length, uint32_t packetIndex)
 {
 #if (APP_WIFI_LWIP_ETH_TRACE_ENABLE != 0U)
@@ -1167,6 +1195,7 @@ static void APP_WiFi_LwIP_LogTxFrame(const uint8_t *frame, uint16_t length, uint
 #endif
 }
 
+/* Dump bounded binary payload as hex string with caller prefix. */
 static void APP_WiFi_LwIP_LogBufferHex(const char *prefix, const uint8_t *data, uint16_t length)
 {
   uint16_t limit = length;
@@ -1210,6 +1239,7 @@ static void APP_WiFi_LwIP_LogBufferHex(const char *prefix, const uint8_t *data, 
   printf("%s\n", line);
 }
 
+/* Blocking helper to send full payload over one lwIP socket. */
 static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint16_t length)
 {
   uint16_t offset = 0U;
@@ -1241,8 +1271,13 @@ static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint
   return 1U;
 }
 
+/* Serialize and send one control command frame to selected node socket. */
 static uint8_t APP_WiFi_LwIP_SendControlFrame(int clientSocket, const APP_WiFi_LwIP_ControlCommand_t *command)
 {
+  /*
+   * Encode one CONTROL command into protocol frame and send atomically.
+   * Socket send success only means bytes left lwIP; final apply is confirmed by ACK/ERR.
+   */
   uint8_t payload[APP_HOME_CONTROL_PAYLOAD_LEN] = {0U};
   uint8_t txFrame[APP_HOME_PROTOCOL_MAX_FRAME_LEN] = {0U};
   uint16_t txLength = 0U;
@@ -1287,8 +1322,15 @@ static uint8_t APP_WiFi_LwIP_SendControlFrame(int clientSocket, const APP_WiFi_L
   return 1U;
 }
 
+/* Try sending queued controls whose destination matches active client node. */
 static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientNode)
 {
+  /*
+   * Per-node control scheduler:
+   * - keep at most one in-flight command waiting for ACK/ERR
+   * - apply tx gap to absorb rapid UI toggles
+   * - requeue on transient send failure without dropping newest intent
+   */
   APP_WiFi_LwIP_ControlCommand_t command = {0};
   uint8_t roomIndex = 0U;
   uint8_t hasCommand = 0U;
@@ -1309,6 +1351,7 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
   {
     if ((int32_t)(nowTick - g_inflightControlTxTick[roomIndex]) >= (int32_t)pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_ACK_TIMEOUT_MS))
     {
+      /* ACK timeout: release inflight slot so next desired state can be retried. */
       g_serverControlTimeoutCount++;
       printf("[proto] control ack timeout #%lu node=%u seq=%u\n",
              (unsigned long)g_serverControlTimeoutCount,
@@ -1369,8 +1412,13 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
   }
 }
 
+/* Match control ACK/ERR reply and release inflight command tracking. */
 static void APP_WiFi_LwIP_HandleControlReply(const APP_HomeProtocolFrame_t *frame, uint8_t isError)
 {
+  /*
+   * Match ACK/ERR to in-flight control by room + sequence.
+   * Only matching replies can clear the in-flight guard.
+   */
   uint8_t roomIndex = 0U;
   TickType_t nowTick = xTaskGetTickCount();
 
@@ -1426,8 +1474,14 @@ static void APP_WiFi_LwIP_HandleControlReply(const APP_HomeProtocolFrame_t *fram
   (void)xSemaphoreGive(g_controlMutex);
 }
 
+/* Requeue inflight command after disconnect to avoid command loss. */
 static void APP_WiFi_LwIP_RequeueInflightControl(uint8_t clientNode)
 {
+  /*
+   * Client disconnect/reconnect recovery:
+   * move unsafely in-flight control back to pending queue so the latest intent
+   * is replayed when the node socket is restored.
+   */
   uint8_t roomIndex = 0U;
   TickType_t nowTick = xTaskGetTickCount();
 
@@ -1461,6 +1515,7 @@ static void APP_WiFi_LwIP_RequeueInflightControl(uint8_t clientNode)
   (void)xSemaphoreGive(g_controlMutex);
 }
 
+/* Send protocol ACK referencing original command id and sequence. */
 static void APP_WiFi_LwIP_SendProtocolAck(int clientSocket, const APP_HomeProtocolFrame_t *frame)
 {
   uint8_t payload[1] = {0U};
@@ -1524,6 +1579,7 @@ static void APP_WiFi_LwIP_SendProtocolError(int clientSocket,
   }
 }
 
+/* Validate protocol command byte against implemented command set. */
 static uint8_t APP_WiFi_LwIP_IsKnownProtocolCommand(uint8_t command)
 {
   switch (command)
@@ -1541,22 +1597,26 @@ static uint8_t APP_WiFi_LwIP_IsKnownProtocolCommand(uint8_t command)
   }
 }
 
+/* Validate node id byte against supported room-node range. */
 static uint8_t APP_WiFi_LwIP_IsKnownNode(uint8_t node)
 {
   uint8_t roomIndex = 0U;
   return APP_HomeData_NodeToRoomIndex(node, &roomIndex);
 }
 
+/* Read little-endian 16-bit value from protocol buffer. */
 static uint16_t APP_WiFi_LwIP_ReadLe16(const uint8_t *data)
 {
   return (uint16_t)((uint16_t)data[0] | ((uint16_t)data[1] << 8));
 }
 
+/* Read signed little-endian 16-bit telemetry scalar from payload. */
 static int16_t APP_WiFi_LwIP_ReadI16(const uint8_t *data)
 {
   return (int16_t)APP_WiFi_LwIP_ReadLe16(data);
 }
 
+/* Lazily create mutex guarding multi-client slot table. */
 static uint8_t APP_WiFi_LwIP_EnsureClientSlotsMutex(void)
 {
   if (g_clientSlotsMutex != NULL)
@@ -1568,6 +1628,7 @@ static uint8_t APP_WiFi_LwIP_EnsureClientSlotsMutex(void)
   return (g_clientSlotsMutex != NULL) ? 1U : 0U;
 }
 
+/* Reserve one client slot for an accepted socket and initialize slot metadata. */
 static int32_t APP_WiFi_LwIP_ClaimClientSlot(uint32_t ipAddress, int socketHandle)
 {
   int32_t freeIndex = -1;
@@ -1618,6 +1679,7 @@ static int32_t APP_WiFi_LwIP_ClaimClientSlot(uint32_t ipAddress, int socketHandl
   return freeIndex;
 }
 
+/* Enforce single-active-socket ownership per node id across all client slots. */
 static void APP_WiFi_LwIP_RequestNodeTakeover(uint8_t slotIndex, uint8_t node)
 {
   uint8_t previousNode = APP_HOME_NODE_NONE;
@@ -1678,6 +1740,7 @@ static void APP_WiFi_LwIP_RequestNodeTakeover(uint8_t slotIndex, uint8_t node)
   (void)xSemaphoreGive(g_clientSlotsMutex);
 }
 
+/* Check whether one client slot has pending forced-close request. */
 static uint8_t APP_WiFi_LwIP_IsCloseRequested(uint8_t slotIndex)
 {
   uint8_t closeRequested = 1U;
@@ -1702,6 +1765,7 @@ static uint8_t APP_WiFi_LwIP_IsCloseRequested(uint8_t slotIndex)
   return closeRequested;
 }
 
+/* Detect duplicated node sessions occupying different client slots. */
 static uint8_t APP_WiFi_LwIP_HasOtherActiveNodeClient(uint8_t slotIndex, uint8_t node)
 {
   uint8_t hasOther = 0U;
@@ -1737,6 +1801,7 @@ static uint8_t APP_WiFi_LwIP_HasOtherActiveNodeClient(uint8_t slotIndex, uint8_t
   return hasOther;
 }
 
+/* Fetch stable snapshot of one client slot under slot-table mutex. */
 static uint8_t APP_WiFi_LwIP_GetSlotSnapshot(uint8_t slotIndex, uint32_t *ipAddress, uint8_t *node)
 {
   uint8_t valid = 0U;
@@ -1769,6 +1834,7 @@ static uint8_t APP_WiFi_LwIP_GetSlotSnapshot(uint8_t slotIndex, uint32_t *ipAddr
   return valid;
 }
 
+/* Release one client slot and clear ownership/state metadata. */
 static void APP_WiFi_LwIP_ReleaseClientSlot(uint8_t slotIndex)
 {
   if ((slotIndex >= APP_WIFI_LWIP_MAX_CLIENTS) ||
@@ -1787,8 +1853,14 @@ static void APP_WiFi_LwIP_ReleaseClientSlot(uint8_t slotIndex)
   (void)xSemaphoreGive(g_clientSlotsMutex);
 }
 
+/* Mark all client slots for close during global reconnect/recovery. */
 static void APP_WiFi_LwIP_RequestCloseAllClients(void)
 {
+  /*
+   * Netif-down fence:
+   * asynchronously ask every active client task to exit so sockets are not
+   * left in half-open state across WiFi rejoin/rebind.
+   */
   if (APP_WiFi_LwIP_EnsureClientSlotsMutex() == 0U)
   {
     return;
@@ -1817,11 +1889,19 @@ static void APP_WiFi_LwIP_RequestCloseAllClients(void)
   (void)xSemaphoreGive(g_clientSlotsMutex);
 }
 
+/* Decode and process one complete protocol frame received from a TCP client. */
 static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
                                               uint8_t slotIndex,
                                               const APP_HomeProtocolFrame_t *frame,
                                               uint8_t *clientNode)
 {
+  /*
+   * Per-frame protocol dispatcher for one connected node:
+   * 1) bind node identity to the current TCP slot
+   * 2) validate command/payload
+   * 3) push telemetry/control data into shared model state
+   * 4) emit ACK/ERR when required by protocol semantics
+   */
   uint8_t shouldAck = 1U;
   APP_HomeProtocolError_t error = APP_HOME_ERR_NONE;
 
@@ -2033,6 +2113,7 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
   }
 }
 
+/* Launch TCP server task once after lwIP initialization completes. */
 static void APP_WiFi_LwIP_StartServerTask(void)
 {
   if (g_serverStarted != 0U)
@@ -2050,8 +2131,16 @@ static void APP_WiFi_LwIP_StartServerTask(void)
   g_serverStarted = 1U;
 }
 
+/* Per-client worker thread handling bidirectional protocol traffic for one socket. */
 static void APP_WiFi_LwIP_ClientTask(void *argument)
 {
+  /*
+   * One TCP client task per accepted socket. The task continuously:
+   * - drains pending outbound controls for this node
+   * - receives stream bytes and feeds the frame parser
+   * - updates node online state on valid protocol activity
+   * - exits only on close request, recv error, or peer close
+   */
   APP_WiFi_LwIP_ClientContext_t *context = (APP_WiFi_LwIP_ClientContext_t *)argument;
   APP_HomeProtocolParser_t parser;
   APP_HomeProtocolFrame_t frame;
@@ -2198,10 +2287,18 @@ static void APP_WiFi_LwIP_ClientTask(void *argument)
   vTaskDelete(NULL);
 }
 
+/* Listening server thread accepting node clients and spawning per-client workers. */
 static void APP_WiFi_LwIP_ServerTask(void *argument)
 {
   (void)argument;
 
+  /*
+   * Long-running acceptor:
+   * - wait until network stack is online
+   * - open non-blocking listen socket
+   * - accept clients and spawn dedicated client tasks
+   * - rebuild server socket when network drops or repeated accept errors occur
+   */
   for (;;)
   {
     while (APP_WiFi_LwIP_IsNetworkOnline() == 0U)
@@ -2384,6 +2481,7 @@ static void APP_WiFi_LwIP_ServerTask(void *argument)
   }
 }
 
+/* One-time lwIP/tcpip/netif/server bootstrap and lazy resource allocation entrypoint. */
 static void APP_WiFi_LwIP_EnsureInitialized(void)
 {
   ip4_addr_t ipaddr;
@@ -2483,6 +2581,7 @@ static void APP_WiFi_LwIP_EnsureInitialized(void)
   }
 }
 
+/* Inject one received Ethernet frame from AP6181 into lwIP input path. */
 void APP_WiFi_LwIP_ProcessEthernetFrame(const uint8_t *frame, uint16_t length)
 {
   struct pbuf *packet = NULL;
@@ -2542,6 +2641,7 @@ void APP_WiFi_LwIP_ProcessEthernetFrame(const uint8_t *frame, uint16_t length)
   APP_WiFi_LwIP_FlushTxQueue();
 }
 
+/* Periodic service hook for DHCP progression, ARP maintenance, and queue flush. */
 void APP_WiFi_LwIP_Service(void)
 {
   uint8_t linkConnected = (APP_WiFi_GetLinkState() == APP_WIFI_LINK_STATE_CONNECTED) ? 1U : 0U;

@@ -1,6 +1,7 @@
 #include <gui/main_screen/MainView.hpp>
 #include <texts/TextKeysAndLanguages.hpp>
 
+/* Construct main screen view and wire callbacks used by settings/indicator widgets. */
 MainView::MainView() :
     tickCount(0),
     waitingToFlip(false),
@@ -10,6 +11,7 @@ MainView::MainView() :
     setTempAndFan.setUsbSettingChangedCallback(setTempAndFanUsbSettingChangedCallback);
 }
 
+/* Initialize the main screen widgets and bind initial state from presenter/model. */
 void MainView::setupScreen()
 {
     MainViewBase::setupScreen();
@@ -37,6 +39,7 @@ void MainView::setupScreen()
     kitchenStat.setAction(roomStatusNoopCallback);
     livingStat.setAction(roomStatusNoopCallback);
     bedroomStat.setAction(roomStatusNoopCallback);
+    /* Online indicators are display-only; state comes from model callbacks. */
     wifistatText.setTypedText(TypedText(T_ENTEREDTEXT));
     updateWiFiOnline(presenter->getWiFiOnline());
     updateRoomOnline(KITCHEN, presenter->getRoomOnline(KITCHEN));
@@ -56,11 +59,13 @@ void MainView::setupScreen()
     bedroomCardButton.setTouchable(false);
 }
 
+/* Tear down main screen resources when navigating away from this view. */
 void MainView::tearDownScreen()
 {
     MainViewBase::tearDownScreen();
 }
 
+/* Drive startup/transition animations and periodic performance text updates. */
 void MainView::handleTickEvent()
 {
     tickCount++;
@@ -102,6 +107,7 @@ void MainView::handleTickEvent()
     performanceText.countTheFrames();
 }
 
+/* Enter settings view with Kitchen as current room context. */
 void MainView::kitchenCardButtonClicked()
 {
     livingroomCardContainer.flipOut(FLIP_DURATION);
@@ -112,6 +118,7 @@ void MainView::kitchenCardButtonClicked()
     setSelectedRoom(KITCHEN);
 }
 
+/* Enter settings view with Living Room as current room context. */
 void MainView::livingroomCardButtonClicked()
 {
     kitchenCardContainer.flipOut(FLIP_DURATION);
@@ -122,6 +129,7 @@ void MainView::livingroomCardButtonClicked()
     setSelectedRoom(LIVINGROOM);
 }
 
+/* Enter settings view with Bedroom as current room context. */
 void MainView::bedroomCardButtonClicked()
 {
     kitchenCardContainer.flipOut(FLIP_DURATION);
@@ -132,6 +140,7 @@ void MainView::bedroomCardButtonClicked()
     setSelectedRoom(BEDROOM);
 }
 
+/* Restore room cards after leaving settings panel and restart temp animation context. */
 void MainView::resetRoomCards()
 {
     kitchenCardButton.setTouchable(false);
@@ -158,8 +167,10 @@ void MainView::resetRoomCards()
     temperatureAnimation.startAnimation(presenter->getSelectedRoom(), presenter->getRoomTempSetPoint(presenter->getSelectedRoom()), presenter->getRoomTemperature(presenter->getSelectedRoom()), presenter->getIsFahrenheit());
 }
 
+/* Handle fan setpoint changes from SetTempAndFan panel and mirror to room card. */
 void MainView::fanModeChanged(HVAC_FanMode_t fanMode)
 {
+    /* UI -> presenter -> model -> backend control queue. */
     presenter->setRoomFanSetPoint(presenter->getSelectedRoom(), fanMode);
 
     switch (presenter->getSelectedRoom())
@@ -178,17 +189,22 @@ void MainView::fanModeChanged(HVAC_FanMode_t fanMode)
     }
 }
 
+/* Handle USB output flag changes from SetTempAndFan panel. */
 void MainView::usbSettingsChanged(uint8_t flags)
 {
+    /* Push current room USB mask through the same presenter/model control path. */
     presenter->setRoomUsbFlags(presenter->getSelectedRoom(), flags);
 }
 
+/* Handle target temperature setpoint change from SetTempAndFan panel. */
 void MainView::temperatureChanged(float temperature)
 {
+    /* Temperature setpoint write is filtered by model policy (AUTO mode only). */
     presenter->setRoomTempSetPoint(presenter->getSelectedRoom(), temperature);
     closeSettingsButton.setTouchable(false);
 }
 
+/* Fade out room highlight overlays when the temp animation phase completes. */
 void MainView::temperatureAnimationDone()
 {
     kitchenSelectedImage.startFadeAnimation(0, FADE_DURATION);
@@ -196,12 +212,14 @@ void MainView::temperatureAnimationDone()
     bedroomSelectedImage.startFadeAnimation(0, FADE_DURATION);
 }
 
+/* Navigate to graph screen for the requested room context. */
 void MainView::graphButtonClicked(Rooms room)
 {
     presenter->setSelectedRoom(room);
     application().gotoGraphScreenNoTransition();
 }
 
+/* Apply live room temperature telemetry to the corresponding room card widget. */
 void MainView::updateRoomTemperature(Rooms roomId, float temperature)
 {
     switch (roomId)
@@ -220,6 +238,7 @@ void MainView::updateRoomTemperature(Rooms roomId, float temperature)
     }
 }
 
+/* Apply live room humidity telemetry to the corresponding room card widget. */
 void MainView::updateRoomHumidity(Rooms roomId, float humidity)
 {
     switch (roomId)
@@ -238,6 +257,7 @@ void MainView::updateRoomHumidity(Rooms roomId, float humidity)
     }
 }
 
+/* Apply live room fan runtime mode telemetry to fan indicators. */
 void MainView::updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
 {
     switch (roomId)
@@ -256,13 +276,16 @@ void MainView::updateRoomFanMode(Rooms roomId, HVAC_FanMode_t fanMode)
     }
 }
 
+/* Reflect USB output state from model into SetTempAndFan panel state. */
 void MainView::updateRoomUsbFlags(Rooms roomId, uint8_t usbFlags)
 {
     setTempAndFan.setUsbFlags(roomId, usbFlags);
 }
 
+/* Update WiFi connectivity status wildcard text shown on the main screen. */
 void MainView::updateWiFiOnline(bool online)
 {
+    /* Wildcard text binding for designer text area (ASCII-safe "Online/Offline"). */
     const char* status = online ? "Online" : "Offline";
     Unicode::strncpy(wifistatTextBuffer, status, WIFISTATTEXT_SIZE);
     wifistatTextBuffer[WIFISTATTEXT_SIZE - 1U] = 0;
@@ -270,8 +293,10 @@ void MainView::updateWiFiOnline(bool online)
     wifistatText.invalidate();
 }
 
+/* Update passive room online indicators based on backend node liveness state. */
 void MainView::updateRoomOnline(Rooms roomId, bool online)
 {
+    /* Room online radio buttons are passive indicators controlled by model state. */
     switch (roomId)
     {
     case KITCHEN:
@@ -291,10 +316,12 @@ void MainView::updateRoomOnline(Rooms roomId, bool online)
     }
 }
 
+/* No-op action sink for non-interactive room online indicators. */
 void MainView::roomStatusNoopHandler(const touchgfx::AbstractButton&)
 {
 }
 
+/* Render current clock/date text using model-provided date components and time. */
 void MainView::updateClock(uint8_t hour, uint8_t minute)
 {
     Unicode::snprintf(clockTextBuffer1, CLOCKTEXTBUFFER1_SIZE, "%02d/%02d/%04d %02d",
@@ -306,6 +333,7 @@ void MainView::updateClock(uint8_t hour, uint8_t minute)
     clockText.invalidate();
 }
 
+/* Date callback forwards to unified clock renderer to keep one formatting path. */
 void MainView::updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t weekday)
 {
     (void)year;
@@ -316,12 +344,14 @@ void MainView::updateDate(uint16_t year, uint8_t month, uint8_t day, uint8_t wee
     updateClock(presenter->getClockHour(), presenter->getClockMinute());
 }
 
+/* Weather hook retained for compatibility; current design does not render weather on main cards. */
 void MainView::updateCurrentWeather(WeatherData weatherData, bool isUnitFahrenheit)
 {
     (void)weatherData;
     (void)isUnitFahrenheit;
 }
 
+/* Refresh room card temperatures and settings panel temperature in selected unit. */
 void MainView::setTemperatures()
 {
     // Set temperatures in correct unit
@@ -332,6 +362,7 @@ void MainView::setTemperatures()
     temperatureAnimation.setTemperature(presenter->getRoomTempSetPoint(presenter->getSelectedRoom()), presenter->getIsFahrenheit());
 }
 
+/* Update selected room context and synchronize card highlight/interaction state. */
 void MainView::setSelectedRoom(Rooms room)
 {
     temperatureAnimationDone();

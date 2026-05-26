@@ -512,6 +512,7 @@ static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status,
 static void APP_WiFi_ClearConnectedLinkIssue(const char *source);
 static void APP_WiFi_ProcessConnectedLinkRecovery(void);
 
+/* Transition WiFi driver state and emit transition diagnostics. */
 static void APP_WiFi_SetState(APP_WiFiState_t nextState)
 {
   const APP_WiFiState_t previousState = g_wifiState;
@@ -548,6 +549,7 @@ static void APP_WiFi_SetState(APP_WiFiState_t nextState)
   }
 }
 
+/* Initialize AP6181 host driver runtime context and cached metadata. */
 void APP_WiFi_Init(void)
 {
   g_wifiOobInterruptCount = 0U;
@@ -627,36 +629,43 @@ void APP_WiFi_Init(void)
   APP_WiFi_Logf("[wifi] init complete, debug UART ready on USART1\n");
 }
 
+/* Return current AP6181 bring-up/runtime state. */
 APP_WiFiState_t APP_WiFi_GetState(void)
 {
   return g_wifiState;
 }
 
+/* Return number of observed OOB interrupts from WiFi module. */
 uint32_t APP_WiFi_GetOobInterruptCount(void)
 {
   return g_wifiOobInterruptCount;
 }
 
+/* Return non-zero when latest scan transaction has completed. */
 uint8_t APP_WiFi_IsScanComplete(void)
 {
   return g_wifiScanCompleted;
 }
 
+/* Return non-zero when latest scan transaction ended abnormally. */
 uint8_t APP_WiFi_IsScanAborted(void)
 {
   return g_wifiScanAborted;
 }
 
+/* Return number of cached BSS entries from last successful scan. */
 uint32_t APP_WiFi_GetCachedScanResultCount(void)
 {
   return g_wifiCachedScanResultCount;
 }
 
+/* Return current link/join state independent from bring-up state machine. */
 APP_WiFiLinkState_t APP_WiFi_GetLinkState(void)
 {
   return g_wifiLinkState;
 }
 
+/* Copy cached scan results into caller-provided buffer. */
 uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t maxResults)
 {
   uint32_t resultCount = g_wifiCachedScanResultCount;
@@ -675,6 +684,7 @@ uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t 
   return resultCount;
 }
 
+/* Queue an active scan request when WiFi stack state allows it. */
 uint8_t APP_WiFi_RequestScan(void)
 {
   const uint8_t scanActive = ((g_wifiScanStep != APP_WIFI_SCAN_STEP_IDLE) ||
@@ -700,6 +710,7 @@ uint8_t APP_WiFi_RequestScan(void)
   return 1U;
 }
 
+/* Store join credentials and arm asynchronous join procedure. */
 uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password)
 {
   size_t ssidLength = 0U;
@@ -780,6 +791,7 @@ uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password)
   return 1U;
 }
 
+/* Count module OOB IRQ pulses used as receive/attention hints. */
 void APP_WiFi_HandleOobInterrupt(uint16_t gpioPin)
 {
   if (gpioPin == WIFI_OOB_IRQ_Pin)
@@ -788,11 +800,13 @@ void APP_WiFi_HandleOobInterrupt(uint16_t gpioPin)
   }
 }
 
+/* HAL EXTI hook routing WiFi OOB pin events into driver. */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   APP_WiFi_HandleOobInterrupt(GPIO_Pin);
 }
 
+/* Convert internal state enum to compact debug label. */
 static const char *APP_WiFi_StateToString(APP_WiFiState_t state)
 {
   switch (state)
@@ -856,6 +870,7 @@ static const char *APP_WiFi_StateToString(APP_WiFiState_t state)
   }
 }
 
+/* Convert SDPCM channel id to debug-friendly text label. */
 static const char *APP_WiFi_SdpcmChannelToString(uint8_t channel)
 {
   switch (channel)
@@ -871,6 +886,7 @@ static const char *APP_WiFi_SdpcmChannelToString(uint8_t channel)
   }
 }
 
+/* Print formatted AP6181 debug line to configured debug UART. */
 static void APP_WiFi_Logf(const char *format, ...)
 {
   char logBuffer[APP_WIFI_LOG_BUFFER_SIZE];
@@ -900,6 +916,7 @@ static void APP_WiFi_Logf(const char *format, ...)
   (void)APP_DebugUart_WriteString(logBuffer);
 }
 
+/* Read little-endian 16-bit field from raw transport buffer. */
 static uint16_t APP_WiFi_ReadLe16(const uint8_t *bytes)
 {
   if (bytes == NULL)
@@ -910,6 +927,7 @@ static uint16_t APP_WiFi_ReadLe16(const uint8_t *bytes)
   return (uint16_t)(((uint16_t)bytes[0]) | ((uint16_t)bytes[1] << 8U));
 }
 
+/* Read little-endian 32-bit field from raw transport buffer. */
 static uint32_t APP_WiFi_ReadLe32(const uint8_t *bytes)
 {
   if (bytes == NULL)
@@ -923,6 +941,7 @@ static uint32_t APP_WiFi_ReadLe32(const uint8_t *bytes)
          ((uint32_t)bytes[3] << 24U);
 }
 
+/* Read big-endian 16-bit field from raw transport buffer. */
 static uint16_t APP_WiFi_ReadBe16(const uint8_t *bytes)
 {
   if (bytes == NULL)
@@ -933,6 +952,7 @@ static uint16_t APP_WiFi_ReadBe16(const uint8_t *bytes)
   return (uint16_t)(((uint16_t)bytes[0] << 8U) | (uint16_t)bytes[1]);
 }
 
+/* Read big-endian 32-bit field from raw transport buffer. */
 static uint32_t APP_WiFi_ReadBe32(const uint8_t *bytes)
 {
   if (bytes == NULL)
@@ -946,6 +966,7 @@ static uint32_t APP_WiFi_ReadBe32(const uint8_t *bytes)
          (uint32_t)bytes[3];
 }
 
+/* Write little-endian 16-bit field into raw transport buffer. */
 static void APP_WiFi_WriteLe16(uint8_t *bytes, uint16_t value)
 {
   if (bytes == NULL)
@@ -957,6 +978,7 @@ static void APP_WiFi_WriteLe16(uint8_t *bytes, uint16_t value)
   bytes[1] = (uint8_t)((value >> 8U) & 0xFFU);
 }
 
+/* Write little-endian 32-bit field into raw transport buffer. */
 static void APP_WiFi_WriteLe32(uint8_t *bytes, uint32_t value)
 {
   if (bytes == NULL)
@@ -970,11 +992,13 @@ static void APP_WiFi_WriteLe32(uint8_t *bytes, uint32_t value)
   bytes[3] = (uint8_t)((value >> 24U) & 0xFFU);
 }
 
+/* Clamp chunk size used by aligned SDPCM payload helper loops. */
 static uint16_t APP_WiFi_GetSdpcmChunkSize(uint16_t remaining)
 {
   return (remaining > 4U) ? 4U : remaining;
 }
 
+/* Cache last SDPCM frame header details for diagnostics/heartbeat logs. */
 static void APP_WiFi_RecordSdpcmHeader(const uint8_t *header, uint16_t frameLength, uint32_t frameInterrupt)
 {
   if (header == NULL)
@@ -1008,6 +1032,7 @@ static void APP_WiFi_RecordSdpcmHeader(const uint8_t *header, uint16_t frameLeng
   }
 }
 
+/* Update host-side SDPCM credit cursor based on received frame header fields. */
 static void APP_WiFi_UpdateSdpcmCredit(const uint8_t *header)
 {
   uint8_t creditDiff = 0U;
@@ -1035,6 +1060,7 @@ static void APP_WiFi_UpdateSdpcmCredit(const uint8_t *header)
   }
 }
 
+/* Clear accumulated no-credit stall detector counters and snapshots. */
 static void APP_WiFi_ResetNoCreditStall(void)
 {
   g_wifiNoCreditHitCount = 0U;
@@ -1044,8 +1070,14 @@ static void APP_WiFi_ResetNoCreditStall(void)
   g_wifiNoCreditLastTick = 0U;
 }
 
+/* Reinitialize host control/session cursors after transport fault. */
 static void APP_WiFi_ResetControlContextForRecovery(void)
 {
+  /*
+   * Soft-reset all host-side protocol/session cursors that can be corrupted
+   * after SDIO stalls or transient firmware-side desync.
+   * Intentionally keeps join profile so auto rejoin can proceed.
+   */
   const uint8_t hasJoinProfile = (g_wifiJoinRequestedSsidLength != 0U) ? 1U : 0U;
 
   g_wifiBusCredit = 1U;
@@ -1107,8 +1139,14 @@ static void APP_WiFi_ResetControlContextForRecovery(void)
   }
 }
 
+/* Update credit-stall detector and trigger recovery when needed. */
 static void APP_WiFi_RecordNoCreditStall(const char *scope, const char *name)
 {
+  /*
+   * Credit-stall detector for SDPCM flow control.
+   * Repeated "no credit" snapshots within a short window are treated as
+   * transport deadlock and trigger stack-level recovery.
+   */
   const uint32_t now = HAL_GetTick();
   const uint8_t txSnapshot = g_wifiTxSequence;
   const uint8_t creditSnapshot = g_wifiBusCredit;
@@ -1147,6 +1185,8 @@ static void APP_WiFi_RecordNoCreditStall(const char *scope, const char *name)
   }
 }
 
+/* Reserve one control-plane SDPCM credit or trigger stall handling when unavailable. */
+/* Reserve one SDPCM control credit or report stall diagnostics. */
 static uint8_t APP_WiFi_ReserveControlCredit(const char *scope, const char *name, uint8_t *availableCredits)
 {
   uint8_t available = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
@@ -1174,6 +1214,7 @@ static uint8_t APP_WiFi_ReserveControlCredit(const char *scope, const char *name
   return 1U;
 }
 
+/* Dump SDPCM payload bytes (bounded) for low-level transport debugging. */
 static void APP_WiFi_LogSdpcmBytes(const char *prefix, const uint8_t *data, uint16_t length)
 {
   char logBuffer[APP_WIFI_LOG_BUFFER_SIZE];
@@ -1220,6 +1261,7 @@ static void APP_WiFi_LogSdpcmBytes(const char *prefix, const uint8_t *data, uint
   (void)APP_DebugUart_WriteString(logBuffer);
 }
 
+/* Print MAC address with caller-provided prefix for diagnostics. */
 static void APP_WiFi_LogMacAddress(const char *prefix, const uint8_t *macAddress)
 {
   if ((prefix == NULL) || (macAddress == NULL))
@@ -1237,6 +1279,7 @@ static void APP_WiFi_LogMacAddress(const char *prefix, const uint8_t *macAddress
                 (unsigned int)macAddress[5]);
 }
 
+/* Decode one hexadecimal ASCII nibble into integer value. */
 static int APP_WiFi_ParseHexNibble(char character)
 {
   if ((character >= '0') && (character <= '9'))
@@ -1257,6 +1300,7 @@ static int APP_WiFi_ParseHexNibble(char character)
   return -1;
 }
 
+/* Parse "macaddr=" token from NVRAM text blob. */
 static uint8_t APP_WiFi_ParseNvramMacAddress(const char *text, uint8_t *macAddress)
 {
   const char *cursor = NULL;
@@ -1301,6 +1345,7 @@ static uint8_t APP_WiFi_ParseNvramMacAddress(const char *text, uint8_t *macAddre
   return 1U;
 }
 
+/* Validate MAC address is neither all-zero nor broadcast. */
 static uint8_t APP_WiFi_IsMacAddressUsable(const uint8_t *macAddress)
 {
   uint8_t allZero = 1U;
@@ -1327,6 +1372,7 @@ static uint8_t APP_WiFi_IsMacAddressUsable(const uint8_t *macAddress)
   return (uint8_t)((allZero == 0U) && (allFF == 0U));
 }
 
+/* Generate deterministic locally-administered fallback MAC from MCU UID. */
 static void APP_WiFi_GenerateFallbackMacAddress(uint8_t *macAddress)
 {
   const uint32_t uid0 = HAL_GetUIDw0();
@@ -1346,6 +1392,7 @@ static void APP_WiFi_GenerateFallbackMacAddress(uint8_t *macAddress)
   macAddress[5] = (uint8_t)(uid2 & 0xFFU);
 }
 
+/* Resolve device MAC from cache/NVRAM and fallback generator. */
 uint8_t APP_WiFi_GetMacAddress(uint8_t *macAddress)
 {
   const uint8_t *nvramData = NULL;
@@ -1376,6 +1423,7 @@ uint8_t APP_WiFi_GetMacAddress(uint8_t *macAddress)
   return 1U;
 }
 
+/* Set one bit in firmware event mask payload by event number. */
 static void APP_WiFi_SetEventMaskBit(uint8_t *eventMask, uint16_t eventNumber)
 {
   if ((eventMask == NULL) || (eventNumber >= (APP_WIFI_WL_EVENTING_MASK_LEN * 8U)))
@@ -1386,6 +1434,7 @@ static void APP_WiFi_SetEventMaskBit(uint8_t *eventMask, uint16_t eventNumber)
   eventMask[eventNumber / 8U] |= (uint8_t)(1U << (eventNumber % 8U));
 }
 
+/* Copy one scan SSID field into zero-terminated local string buffer. */
 static void APP_WiFi_CopyScanSsid(char *destination, const uint8_t *ssid, uint8_t ssidLength)
 {
   uint8_t index = 0U;
@@ -1410,12 +1459,14 @@ static void APP_WiFi_CopyScanSsid(char *destination, const uint8_t *ssid, uint8_
   destination[length] = '\0';
 }
 
+/* Reset cached scan result table and associated counters. */
 static void APP_WiFi_ClearCachedScanResults(void)
 {
   memset(g_wifiCachedScanResults, 0, sizeof(g_wifiCachedScanResults));
   g_wifiCachedScanResultCount = 0U;
 }
 
+/* Find cached scan entry index by BSSID bytes. */
 static int32_t APP_WiFi_FindCachedScanResult(const uint8_t *bssid)
 {
   uint32_t index = 0U;
@@ -1436,6 +1487,7 @@ static int32_t APP_WiFi_FindCachedScanResult(const uint8_t *bssid)
   return -1;
 }
 
+/* Insert/update one BSS entry into compact scan cache table. */
 static void APP_WiFi_UpdateCachedScanResult(const APP_WiFi_BssInfo_t *bssInfo)
 {
   APP_WiFiScanResult_t *cachedResult = NULL;
@@ -1567,6 +1619,7 @@ static HAL_StatusTypeDef APP_WiFi_SendControlIoctl(uint8_t ioctlType,
   return APP_WiFi_SendBufferedControlIoctl(ioctlType, command, payload, payloadLength, name);
 }
 
+/* Send version ioctl to verify control path responsiveness. */
 static HAL_StatusTypeDef APP_WiFi_SendGetVersionIoctl(void)
 {
   const uint32_t versionPlaceholder = 0U;
@@ -1578,6 +1631,7 @@ static HAL_StatusTypeDef APP_WiFi_SendGetVersionIoctl(void)
                                    "WLC_GET_VERSION");
 }
 
+/* Send WLC_UP to bring firmware network stack into operational state. */
 static HAL_StatusTypeDef APP_WiFi_SendUpIoctl(void)
 {
   return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
@@ -1629,6 +1683,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetU32Iovar(const char *iovarName,
   return HAL_OK;
 }
 
+/* Disable TX glomming to simplify transport behavior during bring-up. */
 static HAL_StatusTypeDef APP_WiFi_SendDisableTxGlomIovar(void)
 {
   return APP_WiFi_SendSetU32Iovar(APP_WIFI_IOVAR_TX_GLOM,
@@ -1637,6 +1692,7 @@ static HAL_StatusTypeDef APP_WiFi_SendDisableTxGlomIovar(void)
                                   APP_WIFI_IOVAR_REQUEST_TX_GLOM_SET);
 }
 
+/* Enable APSTA capability bit expected by selected firmware profile. */
 static HAL_StatusTypeDef APP_WiFi_SendEnableApstaIovar(void)
 {
   return APP_WiFi_SendSetU32Iovar(APP_WIFI_IOVAR_APSTA,
@@ -1645,6 +1701,7 @@ static HAL_StatusTypeDef APP_WiFi_SendEnableApstaIovar(void)
                                   APP_WIFI_IOVAR_REQUEST_APSTA_SET);
 }
 
+/* Program regulatory country/locale fields in firmware. */
 static HAL_StatusTypeDef APP_WiFi_SendSetCountryIovar(void)
 {
   uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + 80U] = {0};
@@ -1722,6 +1779,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetCountryIovar(void)
   return HAL_OK;
 }
 
+/* Configure 2.4 GHz gmode policy to firmware auto selection. */
 static HAL_StatusTypeDef APP_WiFi_SendSetGmodeAutoIoctl(void)
 {
   const uint32_t gmode = APP_WIFI_GMODE_AUTO;
@@ -1733,6 +1791,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetGmodeAutoIoctl(void)
                                    "WLC_SET_GMODE(GMODE_AUTO)");
 }
 
+/* Query firmware-reported MAC to verify NVRAM/MAC initialization. */
 static HAL_StatusTypeDef APP_WiFi_SendGetCurEtheraddrIovar(void)
 {
   uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + 32U] = {0};
@@ -1803,6 +1862,7 @@ static HAL_StatusTypeDef APP_WiFi_SendGetCurEtheraddrIovar(void)
   return HAL_OK;
 }
 
+/* Program firmware event mask so join/link/scan events are reported. */
 static HAL_StatusTypeDef APP_WiFi_SendSetEventMsgsIovar(void)
 {
   uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + 64U] = {0};
@@ -1976,6 +2036,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetBsscfgU32Iovar(const char *iovarName,
   return HAL_OK;
 }
 
+/* Configure security bitmask before protected join sequence. */
 static HAL_StatusTypeDef APP_WiFi_SendSetWsecIoctl(uint32_t wsec)
 {
   return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
@@ -1985,6 +2046,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetWsecIoctl(uint32_t wsec)
                                    "WLC_SET_WSEC");
 }
 
+/* Select infrastructure mode required for station join. */
 static HAL_StatusTypeDef APP_WiFi_SendSetInfraIoctl(uint32_t infraMode)
 {
   return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
@@ -1994,6 +2056,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetInfraIoctl(uint32_t infraMode)
                                    "WLC_SET_INFRA");
 }
 
+/* Configure open/shared authentication policy before join. */
 static HAL_StatusTypeDef APP_WiFi_SendSetAuthIoctl(uint32_t authMode)
 {
   return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
@@ -2003,6 +2066,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetAuthIoctl(uint32_t authMode)
                                    "WLC_SET_AUTH");
 }
 
+/* Configure WPA/WPA2 authentication mode before join. */
 static HAL_StatusTypeDef APP_WiFi_SendSetWpaAuthIoctl(uint32_t wpaAuth)
 {
   return APP_WiFi_SendControlIoctl(APP_WIFI_SDPCM_IOCTL_SET,
@@ -2012,6 +2076,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetWpaAuthIoctl(uint32_t wpaAuth)
                                    "WLC_SET_WPA_AUTH");
 }
 
+/* Query associated BSSID to confirm join completion from firmware. */
 static HAL_StatusTypeDef APP_WiFi_SendGetBssidIoctl(void)
 {
   uint8_t bssid[APP_WIFI_MAC_ADDRESS_SIZE] = {0U};
@@ -2023,6 +2088,7 @@ static HAL_StatusTypeDef APP_WiFi_SendGetBssidIoctl(void)
                                            "WLC_GET_BSSID");
 }
 
+/* Enable/disable supplicant WPA handling on firmware side. */
 static HAL_StatusTypeDef APP_WiFi_SendSetSupWpaIovar(uint32_t enabled)
 {
   return APP_WiFi_SendSetBsscfgU32Iovar(APP_WIFI_IOVAR_BSSCFG_SUP_WPA,
@@ -2031,6 +2097,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetSupWpaIovar(uint32_t enabled)
                                         APP_WIFI_IOVAR_REQUEST_SUP_WPA_SET);
 }
 
+/* Configure supplicant WPA2 EAP version field for compatibility. */
 static HAL_StatusTypeDef APP_WiFi_SendSetSupWpa2EapverIovar(int32_t eapVersion)
 {
   return APP_WiFi_SendSetBsscfgU32Iovar(APP_WIFI_IOVAR_BSSCFG_SUP_WPA2_EAPVER,
@@ -2039,6 +2106,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetSupWpa2EapverIovar(int32_t eapVersion)
                                         APP_WIFI_IOVAR_REQUEST_SUP_WPA2_EAPVER_SET);
 }
 
+/* Configure supplicant association/auth timeout window in milliseconds. */
 static HAL_StatusTypeDef APP_WiFi_SendSetSupWpaTimeoutIovar(int32_t timeoutMs)
 {
   return APP_WiFi_SendSetBsscfgU32Iovar(APP_WIFI_IOVAR_BSSCFG_SUP_WPA_TMO,
@@ -2047,6 +2115,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetSupWpaTimeoutIovar(int32_t timeoutMs)
                                         APP_WIFI_IOVAR_REQUEST_SUP_WPA_TMO_SET);
 }
 
+/* Submit WPA passphrase material used by secure join sequence. */
 static HAL_StatusTypeDef APP_WiFi_SendSetPassphrasePmk(const uint8_t *passphrase, uint16_t passphraseLength)
 {
   APP_WiFi_Pmk_t pmk;
@@ -2076,6 +2145,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetPassphrasePmk(const uint8_t *passphrase
                                            "WLC_SET_WSEC_PMK");
 }
 
+/* Issue join request for currently staged SSID credentials. */
 static HAL_StatusTypeDef APP_WiFi_SendJoinSsidIoctl(void)
 {
   APP_WiFi_Ssid_t ssid;
@@ -2091,6 +2161,7 @@ static HAL_StatusTypeDef APP_WiFi_SendJoinSsidIoctl(void)
                                            "WLC_SET_SSID");
 }
 
+/* Disable firmware power-save to reduce latency/jitter during control traffic. */
 static HAL_StatusTypeDef APP_WiFi_SendSetPmOffIoctl(void)
 {
   const uint32_t pmValue = APP_WIFI_PM_OFF;
@@ -2102,6 +2173,7 @@ static HAL_StatusTypeDef APP_WiFi_SendSetPmOffIoctl(void)
                                    "WLC_SET_PM(PM_OFF)");
 }
 
+/* Clear scan suppression so active scans can run while associated. */
 static HAL_StatusTypeDef APP_WiFi_SendClearScanSuppressIoctl(void)
 {
   const uint32_t scanSuppress = 0U;
@@ -2113,6 +2185,7 @@ static HAL_StatusTypeDef APP_WiFi_SendClearScanSuppressIoctl(void)
                                    "WLC_SET_SCANSUPPRESS(0)");
 }
 
+/* Trigger escan command and start asynchronous scan result flow. */
 static HAL_StatusTypeDef APP_WiFi_SendEscanIovar(void)
 {
   uint8_t frame[APP_WIFI_SDPCM_HEADER_SIZE + APP_WIFI_SDPCM_CDC_HEADER_SIZE + 128U] = {0};
@@ -2204,6 +2277,7 @@ static HAL_StatusTypeDef APP_WiFi_SendEscanIovar(void)
   return HAL_OK;
 }
 
+/* Send one Ethernet payload frame through SDPCM data channel. */
 APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
 {
   static uint32_t dataTxAttemptCount = 0U;
@@ -2310,8 +2384,16 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   return APP_WIFI_TX_STATUS_OK;
 }
 
+/* Decode one firmware async event frame and update join/scan/runtime link state. */
 static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
 {
+  /*
+   * Parse one asynchronous firmware event from an SDPCM frame and translate it
+   * into our runtime state:
+   * - join/auth/link progress during connect
+   * - connected-link degradation/recovery hints during runtime
+   * - scan result lifecycle for UI network list updates
+   */
   static const uint8_t brcmOui[APP_WIFI_BRCM_EVENT_OUI_LEN] = {0x00U, 0x10U, 0x18U};
   uint8_t sdpcmHeaderLength = 0U;
   const APP_WiFi_BdcHeader_t *bdcHeader = NULL;
@@ -2638,6 +2720,7 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
                 (unsigned long)dataLength);
 }
 
+/* Reset join attempt bookkeeping and transient status snapshots. */
 static void APP_WiFi_ResetJoinProgress(void)
 {
   g_wifiJoinStep = APP_WIFI_JOIN_STEP_IDLE;
@@ -2660,6 +2743,7 @@ static void APP_WiFi_ResetJoinProgress(void)
   memset(g_wifiLastBssid, 0, sizeof(g_wifiLastBssid));
 }
 
+/* Kick off one join attempt using currently staged credentials. */
 static void APP_WiFi_StartJoinAttempt(uint32_t now)
 {
   APP_WiFi_ResetJoinProgress();
@@ -2676,6 +2760,7 @@ static void APP_WiFi_StartJoinAttempt(uint32_t now)
   g_wifiJoinStep = APP_WIFI_JOIN_STEP_SEND_WSEC;
 }
 
+/* Evaluate retry timers and schedule next join attempt when due. */
 static void APP_WiFi_ProcessJoinRetry(void)
 {
   const uint32_t now = HAL_GetTick();
@@ -2701,6 +2786,7 @@ static void APP_WiFi_ProcessJoinRetry(void)
   APP_WiFi_StartJoinAttempt(now);
 }
 
+/* Evaluate asynchronous join status/timeouts and finalize result. */
 static void APP_WiFi_EvaluateJoinCompletion(void)
 {
   if (g_wifiLinkState != APP_WIFI_LINK_STATE_CONNECTING)
@@ -2737,6 +2823,8 @@ static void APP_WiFi_EvaluateJoinCompletion(void)
                 (unsigned int)g_wifiJoinSecurityComplete);
 }
 
+/* Mark runtime link degradation while keeping a grace window for transient AP churn. */
+/* Record connected-state link anomaly and arm bounded recovery attempts. */
 static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status, uint32_t reason)
 {
   if (g_wifiLinkState != APP_WIFI_LINK_STATE_CONNECTED)
@@ -2758,6 +2846,8 @@ static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status,
   g_wifiConnectedLinkDownReason = reason;
 }
 
+/* Clear pending runtime link issue when stable recovery evidence is observed. */
+/* Clear transient link anomaly flags after confirmed stable connectivity. */
 static void APP_WiFi_ClearConnectedLinkIssue(const char *source)
 {
   if (g_wifiConnectedLinkDownPending != 0U)
@@ -2774,11 +2864,19 @@ static void APP_WiFi_ClearConnectedLinkIssue(const char *source)
   g_wifiConnectedLinkDownFrameCount = 0U;
 }
 
+/* Evaluate deferred runtime link issues and escalate to recovery when grace expires. */
+/* Execute connected-state recovery path without full driver restart. */
 static void APP_WiFi_ProcessConnectedLinkRecovery(void)
 {
   const uint32_t now = HAL_GetTick();
   const uint32_t currentRxFrames = APP_WiFi_LwIP_GetRxEthernetFrameCount();
 
+  /*
+   * Runtime recovery is intentionally conservative:
+   * - A single auth event or one random RX frame is not enough.
+   * - We only clear pending link-down after minimum traffic + stable window.
+   * This avoids false recoveries that leave nodes stuck in busy-p/CIPSTART loops.
+   */
   if (g_wifiLinkState != APP_WIFI_LINK_STATE_CONNECTED)
   {
     g_wifiConnectedLinkDownPending = 0U;
@@ -2831,8 +2929,13 @@ static void APP_WiFi_ProcessConnectedLinkRecovery(void)
   }
 }
 
+/* Mark join as failed and configure retry policy/log context. */
 static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t detail)
 {
+  /*
+   * Unified failure sink for both initial join and runtime link-loss escalation.
+   * It resets join progress markers and arms bounded retry if profile is available.
+   */
   if (g_wifiLinkState == APP_WIFI_LINK_STATE_FAILED)
   {
     return;
@@ -2874,6 +2977,7 @@ static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t deta
   }
 }
 
+/* Drive join request state machine from pending request to completion. */
 static void APP_WiFi_ProcessJoinRequest(void)
 {
   const uint32_t now = HAL_GetTick();
@@ -3163,6 +3267,7 @@ static void APP_WiFi_ProcessJoinRequest(void)
   }
 }
 
+/* Probe and process one inbound SDPCM frame when transport appears ready. */
 static uint8_t APP_WiFi_TryProbeSdpcmRxInternal(uint8_t requireInterruptHint)
 {
   const uint8_t scanActive = ((g_wifiState == APP_WIFI_STATE_MAILBOX_READY) &&
@@ -3581,6 +3686,7 @@ static uint8_t APP_WiFi_TryProbeSdpcmRxInternal(uint8_t requireInterruptHint)
   return 1U;
 }
 
+/* Drain multiple pending SDPCM frames to keep RX queue healthy. */
 static uint32_t APP_WiFi_DrainSdpcmRxQueue(uint8_t maxFrames)
 {
   uint32_t framesDrained = 0U;
@@ -3616,6 +3722,7 @@ static uint32_t APP_WiFi_DrainSdpcmRxQueue(uint8_t maxFrames)
   return framesDrained;
 }
 
+/* Poll control channel for pending ioctl completion responses/events. */
 static void APP_WiFi_PollPendingIoctlResponse(void)
 {
   uint32_t framesDrained = 0U;
@@ -3641,6 +3748,7 @@ static void APP_WiFi_PollPendingIoctlResponse(void)
   }
 }
 
+/* Poll active escan transaction and consume asynchronous BSS events. */
 static void APP_WiFi_PollActiveScanResults(void)
 {
   uint32_t framesDrained = 0U;
@@ -3679,6 +3787,7 @@ static void APP_WiFi_PollActiveScanResults(void)
   }
 }
 
+/* Initialize scan state machine fields before sending escan ioctl. */
 static void APP_WiFi_StartScanRequest(void)
 {
   g_wifiScanRequested = 0U;
@@ -3700,6 +3809,7 @@ static void APP_WiFi_StartScanRequest(void)
   APP_WiFi_Logf("[wifi] scan: starting requested escan sequence\n");
 }
 
+/* Abort current scan workflow and keep partial cache if available. */
 static void APP_WiFi_FailScan(const char *reason)
 {
   if (g_wifiScanStep == APP_WIFI_SCAN_STEP_IDLE)
@@ -3722,6 +3832,7 @@ static void APP_WiFi_FailScan(const char *reason)
                 (unsigned long)g_wifiCachedScanResultCount);
 }
 
+/* Advance scan request state machine while mailbox/control path is ready. */
 static void APP_WiFi_ProcessScanRequest(void)
 {
   const uint32_t now = HAL_GetTick();
@@ -3885,6 +3996,7 @@ static void APP_WiFi_ProcessScanRequest(void)
   }
 }
 
+/* Emit per-state diagnostic snapshots for bring-up troubleshooting. */
 static void APP_WiFi_LogStateDetails(APP_WiFiState_t state)
 {
   switch (state)
@@ -4008,6 +4120,7 @@ static void APP_WiFi_LogStateDetails(APP_WiFiState_t state)
   }
 }
 
+/* Run periodic maintenance: staged ioctls, scan driver, and debug heartbeat. */
 static void APP_WiFi_LogPeriodicHeartbeat(void)
 {
   const uint32_t now = HAL_GetTick();
@@ -4204,6 +4317,7 @@ static void APP_WiFi_LogPeriodicHeartbeat(void)
   }
 }
 
+/* Main AP6181 bring-up/runtime task driving the global WiFi state machine. */
 void APP_WiFi_Task(void *argument)
 {
   (void)argument;
