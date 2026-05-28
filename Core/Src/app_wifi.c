@@ -4717,15 +4717,17 @@ void APP_WiFi_Task(void *argument)
         break;
 
       case APP_WIFI_STATE_HT_CLOCK_READY:
-        if ((APP_WiFi_Platform_ConfigurePostFirmwareBus() == HAL_OK) &&
+        if ((APP_WiFi_Platform_EnableHighSpeedSdio() == HAL_OK) &&
+            (APP_WiFi_Platform_ConfigurePostFirmwareBus() == HAL_OK) &&
             (APP_WiFi_Platform_WaitForFunction2Ready() == HAL_OK))
         {
           /*
            * This is the closest checkpoint to the official 43362 SDIO bring-up:
-           * firmware has booted, HT is available, the post-download backplane
-           * interrupt masks/watermark are programmed, and Function 2 finally
-           * reports ready. From here on, shared/console/mailbox probing is
-           * treated as follow-on diagnostics rather than the bring-up gate.
+           * firmware has booted, HT is available, SDIO host is now switched to
+           * high-speed clock, the post-download backplane interrupt masks/
+           * watermark are programmed, and Function 2 finally reports ready.
+           * From here on, shared/console/mailbox probing is treated as
+           * follow-on diagnostics rather than the bring-up gate.
            */
           APP_WiFi_SetState(APP_WIFI_STATE_READY);
           osDelay(APP_WIFI_STACK_WAIT_MS);

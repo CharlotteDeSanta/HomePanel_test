@@ -35,6 +35,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_EnableFunction2(void);
 HAL_StatusTypeDef APP_WiFi_Platform_WaitForFunction2Ready(void);
 HAL_StatusTypeDef APP_WiFi_Platform_ConfigureInterruptPath(void);
 HAL_StatusTypeDef APP_WiFi_Platform_ConfigurePostFirmwareBus(void);
+HAL_StatusTypeDef APP_WiFi_Platform_EnableHighSpeedSdio(void);
 HAL_StatusTypeDef APP_WiFi_Platform_PrepareFirmwareDownload(void);
 HAL_StatusTypeDef APP_WiFi_Platform_ProbeFirmwareResources(void);
 HAL_StatusTypeDef APP_WiFi_Platform_StageFirmwareImage(void);

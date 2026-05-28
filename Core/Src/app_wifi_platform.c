@@ -14,8 +14,9 @@
 #define APP_WIFI_SDIO_FN0             0U
 #define APP_WIFI_SDIO_FN1             1U
 #define APP_WIFI_SDIO_FN2             2U
-#define APP_WIFI_SDIO_ENUM_CLK_DIV    300U
-#define APP_WIFI_SDIO_RUN_CLK_DIV     10U
+#define APP_WIFI_SDIO_ENUM_CLK_DIV        300U
+#define APP_WIFI_SDIO_RUN_CLK_DIV         10U
+#define APP_WIFI_SDIO_HIGH_SPEED_CLK_DIV  7U
 #define APP_WIFI_SDIO_CCCR_REV        0x00U
 #define APP_WIFI_SDIO_CCCR_SDREV      0x01U
 #define APP_WIFI_SDIO_CCCR_IOEN       0x02U
@@ -1896,6 +1897,41 @@ static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide, u
   sdioInit.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
   sdioInit.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
   sdioInit.BusWide = busWide;
+  sdioInit.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+
+  if (SDMMC_Init(SDMMC1, sdioInit) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (SDMMC_PowerState_ON(SDMMC1) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  if (SDMMC_SetSDMMCReadWaitMode(SDMMC1, SDMMC_READ_WAIT_MODE_CLK) != HAL_OK)
+  {
+    return HAL_ERROR;
+  }
+
+  g_wifiLastSdioStatus = SDMMC1->STA;
+  g_wifiLastSdioError = SDMMC_ERROR_NONE;
+  return HAL_OK;
+}
+
+/* Switch SDIO host to high-speed clock after firmware boot.
+   Mimics the Wildfire host_platform_enable_high_speed_sdio() flow:
+   re-initialise SDMMC1 at the faster divider with 4-bit bus width.
+   Call this AFTER firmware has booted (HT available) but BEFORE
+   any SDPCM/IOCTL traffic starts. */
+HAL_StatusTypeDef APP_WiFi_Platform_EnableHighSpeedSdio(void)
+{
+  SDMMC_InitTypeDef sdioInit = {0};
+
+  sdioInit.ClockDiv = APP_WIFI_SDIO_HIGH_SPEED_CLK_DIV;
+  sdioInit.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+  sdioInit.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+  sdioInit.BusWide = SDMMC_BUS_WIDE_4B;
   sdioInit.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
 
   if (SDMMC_Init(SDMMC1, sdioInit) != HAL_OK)
