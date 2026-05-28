@@ -66,7 +66,7 @@
 #define TCP_SND_BUF                         (1 * TCP_MSS)
 #define TCP_SND_QUEUELEN                    (2 * (TCP_SND_BUF / TCP_MSS))
 #define TCP_SNDLOWAT                        (TCP_MSS / 2)
-#define TCP_SNDQUEUELOWAT                   2
+#define TCP_SNDQUEUELOWAT                   1
 #define TCP_LISTEN_BACKLOG                  1
 #define TCP_DEFAULT_LISTEN_BACKLOG          8
 

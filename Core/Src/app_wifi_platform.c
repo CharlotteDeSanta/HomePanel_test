@@ -14,6 +14,8 @@
 #define APP_WIFI_SDIO_FN0             0U
 #define APP_WIFI_SDIO_FN1             1U
 #define APP_WIFI_SDIO_FN2             2U
+#define APP_WIFI_SDIO_ENUM_CLK_DIV    300U
+#define APP_WIFI_SDIO_RUN_CLK_DIV     10U
 #define APP_WIFI_SDIO_CCCR_REV        0x00U
 #define APP_WIFI_SDIO_CCCR_SDREV      0x01U
 #define APP_WIFI_SDIO_CCCR_IOEN       0x02U
@@ -165,7 +167,7 @@ static uint32_t g_wifiCmd53Scratch[(APP_WIFI_STAGE_CHUNK_SIZE + sizeof(uint32_t)
 static uint8_t g_wifiStageBuffer[APP_WIFI_STAGE_CHUNK_SIZE] = {0};
 
 static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error);
-static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide);
+static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide, uint32_t clockDiv);
 static HAL_StatusTypeDef APP_WiFi_Platform_WaitCmd53Transfer(void);
 static HAL_StatusTypeDef APP_WiFi_Platform_Cmd53Write(uint8_t functionNumber, uint32_t address, const uint8_t *data, uint16_t dataLength);
 static HAL_StatusTypeDef APP_WiFi_Platform_BackplaneRead8(uint32_t address, uint8_t *value);
@@ -325,7 +327,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_SdioHostInit(void)
   SDMMC1->MASK = 0U;
   SDMMC1->ICR = 0xFFFFFFFFU;
 
-  if (APP_WiFi_Platform_ApplyHostBusWidth(SDMMC_BUS_WIDE_1B) != HAL_OK)
+  if (APP_WiFi_Platform_ApplyHostBusWidth(SDMMC_BUS_WIDE_1B, APP_WIFI_SDIO_ENUM_CLK_DIV) != HAL_OK)
   {
     return HAL_ERROR;
   }
@@ -610,7 +612,7 @@ HAL_StatusTypeDef APP_WiFi_Platform_ConfigureBus(void)
   }
   g_wifiCccrBusControl = value;
 
-  if (APP_WiFi_Platform_ApplyHostBusWidth(SDMMC_BUS_WIDE_4B) != HAL_OK)
+  if (APP_WiFi_Platform_ApplyHostBusWidth(SDMMC_BUS_WIDE_4B, APP_WIFI_SDIO_RUN_CLK_DIV) != HAL_OK)
   {
     return HAL_ERROR;
   }
@@ -1881,16 +1883,16 @@ static HAL_StatusTypeDef APP_WiFi_Platform_SdioErrorToHalStatus(uint32_t error)
 }
 
 /* Apply negotiated bus width to SDMMC host and track diagnostics. */
-static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide)
+static HAL_StatusTypeDef APP_WiFi_Platform_ApplyHostBusWidth(uint32_t busWide, uint32_t clockDiv)
 {
   SDMMC_InitTypeDef sdioInit = {0};
 
   /*
    * Keep the host configuration minimal and deterministic:
-   * start in slow 1-bit mode, then reuse the same settings when switching
-   * to 4-bit after the card-side CCCR/BUS interface control is updated.
+   * enumerate in slow 1-bit mode, then switch to the run clock only after
+   * the card-side CCCR/BUS interface control is updated for 4-bit transfers.
    */
-  sdioInit.ClockDiv = SDMMC_INIT_CLK_DIV;
+  sdioInit.ClockDiv = clockDiv;
   sdioInit.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
   sdioInit.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
   sdioInit.BusWide = busWide;

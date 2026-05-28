@@ -27,13 +27,14 @@
 #define APP_WIFI_LWIP_TCP_SERVER_PORT      5000U
 #define APP_WIFI_LWIP_TX_QUEUE_DEPTH        16U
 #define APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH 16U
-#define APP_WIFI_LWIP_TX_BURST_LIMIT        24U
+#define APP_WIFI_LWIP_TX_BURST_LIMIT        8U
 #define APP_WIFI_LWIP_TX_FLUSH_LOCK_WAIT_MS 2U
 #define APP_WIFI_LWIP_TX_ERROR_RETRY_BEFORE_DROP 8U
 #define APP_WIFI_LWIP_CONTROL_ROOM_COUNT    APP_HOME_DATA_ROOM_COUNT
 #define APP_WIFI_LWIP_CONTROL_POLL_MS       2U
 #define APP_WIFI_LWIP_CONTROL_TX_GAP_MS      40U
 #define APP_WIFI_LWIP_CONTROL_DEBOUNCE_MS    40U
+#define APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS 180U
 #define APP_WIFI_LWIP_CONTROL_RETRY_MS       APP_WIFI_LWIP_CONTROL_TX_GAP_MS
 #define APP_WIFI_LWIP_CONTROL_SUPERSEDE_MS   250U
 #define APP_WIFI_LWIP_GRATUITOUS_ARP_ENABLE 0U
@@ -126,6 +127,7 @@ static uint8_t g_txPriorityQueueCount = 0U;
 static uint16_t g_controlSequence = 1U;
 static TickType_t g_pendingControlReadyTick[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
 static TickType_t g_nextControlTxTick[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
+static TickType_t g_nextGlobalControlTxTick = 0U;
 static uint8_t g_tcpipStarted = 0U;
 static uint8_t g_netifAdded = 0U;
 static uint8_t g_netifUp = 0U;
@@ -956,6 +958,7 @@ static void APP_WiFi_LwIP_ResetControlState(void)
   memset(g_pendingControlRetryCount, 0, sizeof(g_pendingControlRetryCount));
   memset(g_pendingControlReadyTick, 0, sizeof(g_pendingControlReadyTick));
   memset(g_nextControlTxTick, 0, sizeof(g_nextControlTxTick));
+  g_nextGlobalControlTxTick = 0U;
 
   (void)xSemaphoreGive(g_controlMutex);
 }
@@ -1758,6 +1761,18 @@ static void APP_WiFi_LwIP_DrainAllPendingControls(void)
     return;
   }
 
+  if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) != pdTRUE)
+  {
+    return;
+  }
+  if ((g_nextGlobalControlTxTick != 0U) &&
+      ((int32_t)(nowTick - g_nextGlobalControlTxTick) < 0))
+  {
+    (void)xSemaphoreGive(g_controlMutex);
+    return;
+  }
+  (void)xSemaphoreGive(g_controlMutex);
+
   for (uint8_t roomIndex = 0U; roomIndex < APP_WIFI_LWIP_CONTROL_ROOM_COUNT; roomIndex++)
   {
     APP_WiFi_LwIP_ControlCommand_t command = {0};
@@ -1766,6 +1781,13 @@ static void APP_WiFi_LwIP_DrainAllPendingControls(void)
 
     if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) != pdTRUE)
     {
+      return;
+    }
+
+    if ((g_nextGlobalControlTxTick != 0U) &&
+        ((int32_t)(nowTick - g_nextGlobalControlTxTick) < 0))
+    {
+      (void)xSemaphoreGive(g_controlMutex);
       return;
     }
 
@@ -1783,6 +1805,7 @@ static void APP_WiFi_LwIP_DrainAllPendingControls(void)
       g_pendingControlValid[roomIndex] = 0U;
       g_pendingControlRetryCount[roomIndex] = 0U;
       g_pendingControlReadyTick[roomIndex] = 0U;
+      g_nextGlobalControlTxTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS);
       hasCommand = 1U;
     }
 
@@ -1813,6 +1836,7 @@ static void APP_WiFi_LwIP_DrainAllPendingControls(void)
       if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) == pdTRUE)
       {
         g_nextControlTxTick[roomIndex] = 0U;
+        g_nextGlobalControlTxTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS);
         (void)xSemaphoreGive(g_controlMutex);
       }
     }
@@ -1825,6 +1849,7 @@ static void APP_WiFi_LwIP_DrainAllPendingControls(void)
         g_pendingControlRetryCount[roomIndex] = 0U;
         g_pendingControlReadyTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
         g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+        g_nextGlobalControlTxTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS);
         (void)xSemaphoreGive(g_controlMutex);
       }
     }
@@ -1858,6 +1883,13 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
     return;
   }
 
+  if ((g_nextGlobalControlTxTick != 0U) &&
+      ((int32_t)(nowTick - g_nextGlobalControlTxTick) < 0))
+  {
+    (void)xSemaphoreGive(g_controlMutex);
+    return;
+  }
+
   if ((g_pendingControlValid[roomIndex] != 0U) &&
       ((int32_t)(nowTick - g_pendingControlReadyTick[roomIndex]) >= 0))
   {
@@ -1865,6 +1897,7 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
     g_pendingControlValid[roomIndex] = 0U;
     g_pendingControlRetryCount[roomIndex] = 0U;
     g_pendingControlReadyTick[roomIndex] = 0U;
+    g_nextGlobalControlTxTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS);
     hasCommand = 1U;
   }
 
@@ -1881,6 +1914,7 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
     {
       /* Telemetry will prove the final state; avoid ACK/confirm retries that amplify load. */
       g_nextControlTxTick[roomIndex] = 0U;
+      g_nextGlobalControlTxTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS);
       (void)xSemaphoreGive(g_controlMutex);
     }
   }
@@ -1893,6 +1927,7 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
       g_pendingControlRetryCount[roomIndex] = 0U;
       g_pendingControlReadyTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
       g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+      g_nextGlobalControlTxTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_GLOBAL_TX_GAP_MS);
       (void)xSemaphoreGive(g_controlMutex);
     }
   }

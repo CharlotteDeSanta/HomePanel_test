@@ -30,6 +30,7 @@
 #define APP_WIFI_LOG_BUFFER_SIZE        1024U
 #define APP_WIFI_SDIO_FN2               2U
 #define APP_WIFI_SDPCM_FRAME_AVAILABLE_MASK 0x000000F0U
+#define APP_WIFI_SDPCM_EMPTY_IRQ_MASK      0x00000040U
 #define APP_WIFI_SDPCM_HW_TAG_SIZE      4U
 #define APP_WIFI_SDPCM_HEADER_SIZE      12U
 #define APP_WIFI_SDPCM_DATA_PADDING_SIZE 2U
@@ -2638,9 +2639,9 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
         g_wifiJoinLinkReady = 1U;
         if ((g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED) && (hadPendingLinkIssue != 0U))
         {
-          APP_WiFi_Logf("[wifi] runtime: link-up after transient down, refresh sessions\n");
+          APP_WiFi_Logf("[wifi] runtime: link-up after transient down, rebind lwip network\n");
           APP_WiFi_ResetNoCreditStall();
-          APP_WiFi_LwIP_RequestSessionRefresh();
+          APP_WiFi_LwIP_RequestNetworkRebind();
           APP_WiFi_ClearConnectedLinkIssue("link up");
         }
         else
@@ -3509,8 +3510,12 @@ static uint8_t APP_WiFi_TryProbeSdpcmRxInternal(uint8_t requireInterruptHint)
   frameLength = APP_WiFi_ReadLe16(&header[0]);
   frameCheck = APP_WiFi_ReadLe16(&header[2]);
 
-  if ((requireInterruptHint == 0U) && (frameLength == 0U) && (frameCheck == 0U))
+  if ((frameLength == 0U) && (frameCheck == 0U))
   {
+    if ((requireInterruptHint != 0U) && (frameInterrupt == APP_WIFI_SDPCM_EMPTY_IRQ_MASK))
+    {
+      (void)APP_WiFi_Platform_ClearFunction2RxInterrupt(frameInterrupt);
+    }
     return 0U;
   }
 
