@@ -35,35 +35,37 @@
 
 #define MEM_ALIGNMENT                       4
 #define MEM_LIBC_MALLOC                     0
-#define MEM_SIZE                            (96 * 1024)
+#define MEM_SIZE                            (128 * 1024)
 
-#define PBUF_POOL_SIZE                      72
+#define PBUF_POOL_SIZE                      84
 #define PBUF_POOL_BUFSIZE                   1600
 
 #define MEMP_NUM_PBUF                       48
 #define MEMP_NUM_UDP_PCB                    6
 #define MEMP_NUM_TCP_PCB                    16
 #define MEMP_NUM_TCP_PCB_LISTEN             8
-#define MEMP_NUM_TCP_SEG                    96
+#define MEMP_NUM_TCP_SEG                    128
 #define MEMP_NUM_REASSDATA                  4
 #define MEMP_NUM_NETCONN                    20
 #define MEMP_NUM_NETBUF                     32
 #define MEMP_NUM_SYS_TIMEOUT                32
 #define MEMP_NUM_TCPIP_MSG_API              32
-#define MEMP_NUM_TCPIP_MSG_INPKT            48
+#define MEMP_NUM_TCPIP_MSG_INPKT            64
 
-#define TCPIP_MBOX_SIZE                     48
+#define TCPIP_MBOX_SIZE                     64
 #define TCPIP_THREAD_STACKSIZE              4096
-#define TCPIP_THREAD_PRIO                   23
+#define TCPIP_THREAD_PRIO                   31
 #define DEFAULT_RAW_RECVMBOX_SIZE           8
-#define DEFAULT_TCP_RECVMBOX_SIZE           24
+#define DEFAULT_TCP_RECVMBOX_SIZE           8
 #define DEFAULT_UDP_RECVMBOX_SIZE           8
 #define DEFAULT_ACCEPTMBOX_SIZE             32
 
 #define TCP_MSS                             1460
-#define TCP_WND                             (6 * TCP_MSS)
-#define TCP_SND_BUF                         (6 * TCP_MSS)
+#define TCP_WND                             (2 * TCP_MSS)
+#define TCP_SND_BUF                         (2 * TCP_MSS)
 #define TCP_SND_QUEUELEN                    (2 * (TCP_SND_BUF / TCP_MSS))
+#define TCP_SNDLOWAT                        TCP_MSS
+#define TCP_SNDQUEUELOWAT                   2
 #define TCP_LISTEN_BACKLOG                  1
 #define TCP_DEFAULT_LISTEN_BACKLOG          8
 

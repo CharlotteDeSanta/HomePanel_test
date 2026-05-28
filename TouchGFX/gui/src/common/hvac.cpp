@@ -4,6 +4,7 @@
 #include "app_wifi_lwip.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 namespace
@@ -417,11 +418,20 @@ bool xHVAC_SendToController(const HVAC_Event_t* event, uint32_t xTicksToWait)
         room.fanMode = fan;
         room.outputFlags = event->room.settings.outputFlags;
 
-        (void)APP_WiFi_LwIP_SendControl((uint8_t)(event->roomId + 1U),
-                                        floatToProtocolX10(room.targetTemperature),
-                                        (uint8_t)mode,
-                                        (uint8_t)fan,
-                                        event->room.settings.outputFlags);
+        if (APP_WiFi_LwIP_SendControl((uint8_t)(event->roomId + 1U),
+                                      floatToProtocolX10(room.targetTemperature),
+                                      (uint8_t)mode,
+                                      (uint8_t)fan,
+                                      event->room.settings.outputFlags) == 0U)
+        {
+            printf("[proto] control queue rejected room=%u mode=%u fan=%u flags=0x%02X\n",
+                   (unsigned int)event->roomId,
+                   (unsigned int)mode,
+                   (unsigned int)fan,
+                   (unsigned int)event->room.settings.outputFlags);
+            return false;
+        }
+
         return true;
     }
 

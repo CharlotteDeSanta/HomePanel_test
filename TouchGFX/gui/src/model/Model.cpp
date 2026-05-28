@@ -76,7 +76,7 @@ uint8_t calculateWeekday(uint16_t year, uint8_t month, uint8_t day)
 }
 
 const uint32_t MODEL_CLOCK_UPDATE_PERIOD_MS = 1000U;
-const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 1000U;
+const uint32_t MODEL_CONTROLLER_POLL_PERIOD_MS = 50U;
 const uint32_t MODEL_GRAPH_SAMPLE_PERIOD_MS = 2000U;
 const uint32_t MODEL_USB_FLAGS_CONFIRM_TIMEOUT_MS = 45000U;
 const uint32_t MODEL_ROOM_ONLINE_TIMEOUT_MS = 45000U;

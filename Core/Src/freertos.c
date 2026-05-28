@@ -28,6 +28,9 @@
 /* USER CODE BEGIN Includes */
 #include "app_touchgfx.h"
 #include "app_wifi.h"
+#if defined(APP_ENABLE_SYSTEMVIEW) && (APP_ENABLE_SYSTEMVIEW == 1)
+#include "SEGGER_SYSVIEW.h"
+#endif
 
 /* USER CODE END Includes */
 
@@ -50,6 +53,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+#if defined(APP_ENABLE_SYSTEMVIEW) && (APP_ENABLE_SYSTEMVIEW == 1)
+static uint8_t g_systemViewStarted = 0U;
+#endif
 
 /* USER CODE END Variables */
 /* Definitions for guiTask */
@@ -57,14 +63,14 @@ osThreadId_t guiTaskHandle;
 const osThreadAttr_t guiTask_attributes = {
   .name = "guiTask",
   .stack_size = 4096 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for wifiTask */
 osThreadId_t wifiTaskHandle;
 const osThreadAttr_t wifiTask_attributes = {
   .name = "wifiTask",
   .stack_size = 2048 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityNormal7,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,6 +90,13 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
+#if defined(APP_ENABLE_SYSTEMVIEW) && (APP_ENABLE_SYSTEMVIEW == 1)
+  /*
+   * Initialize SystemView before creating application tasks so startup,
+   * task creation and early scheduler events are visible in the trace.
+   */
+  SEGGER_SYSVIEW_Conf();
+#endif
   APP_WiFi_Init();
 
   /* USER CODE END Init */
@@ -131,6 +144,17 @@ void MX_FREERTOS_Init(void) {
 void StartGUITask(void *argument)
 {
   /* USER CODE BEGIN StartGUITask */
+#if defined(APP_ENABLE_SYSTEMVIEW) && (APP_ENABLE_SYSTEMVIEW == 1)
+  /*
+   * Start SystemView after scheduler and task context are active.
+   * Starting too early (before scheduler start) can stall some FreeRTOS ports.
+   */
+  if (g_systemViewStarted == 0U)
+  {
+    g_systemViewStarted = 1U;
+    SEGGER_SYSVIEW_Start();
+  }
+#endif
   /*
    * TouchGFX owns the UI thread. Keep all direct view/presenter/model updates
    * inside this task, and let future communication tasks exchange data through

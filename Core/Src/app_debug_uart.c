@@ -2,90 +2,23 @@
 
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include "task.h"
-#include "usart.h"
+#include "SEGGER_RTT.h"
 
 #define APP_DEBUG_UART_DEFAULT_TIMEOUT_MS 1000U
 
-static SemaphoreHandle_t g_appDebugUartMutex = NULL;
-
-static UART_HandleTypeDef *APP_DebugUart_GetHandle(void)
-{
-  return &huart1;
-}
-
-static uint8_t APP_DebugUart_IsInIsr(void)
-{
-  return (__get_IPSR() != 0U) ? 1U : 0U;
-}
-
-static BaseType_t APP_DebugUart_Lock(uint32_t timeoutMs)
-{
-#if (INCLUDE_xTaskGetSchedulerState == 1)
-  BaseType_t schedulerState = xTaskGetSchedulerState();
-
-  if ((schedulerState != taskSCHEDULER_RUNNING) ||
-      (APP_DebugUart_IsInIsr() != 0U))
-  {
-    return pdFALSE;
-  }
-#endif
-
-  if (g_appDebugUartMutex == NULL)
-  {
-    g_appDebugUartMutex = xSemaphoreCreateMutex();
-    if (g_appDebugUartMutex == NULL)
-    {
-      return pdFALSE;
-    }
-  }
-
-  if (xSemaphoreTake(g_appDebugUartMutex, pdMS_TO_TICKS(timeoutMs)) != pdTRUE)
-  {
-    return pdFALSE;
-  }
-
-  return pdTRUE;
-}
-
-static void APP_DebugUart_Unlock(void)
-{
-  if ((g_appDebugUartMutex != NULL) &&
-#if (INCLUDE_xTaskGetSchedulerState == 1)
-      (xTaskGetSchedulerState() == taskSCHEDULER_RUNNING) &&
-#endif
-      (APP_DebugUart_IsInIsr() == 0U))
-  {
-    (void)xSemaphoreGive(g_appDebugUartMutex);
-  }
-}
-
 HAL_StatusTypeDef APP_DebugUart_Write(const uint8_t *data, uint16_t length, uint32_t timeout)
 {
-  UART_HandleTypeDef *const uart = APP_DebugUart_GetHandle();
-  HAL_StatusTypeDef result = HAL_ERROR;
-  BaseType_t locked = pdFALSE;
+  unsigned int written = 0U;
 
   if ((data == NULL) || (length == 0U))
   {
     return HAL_OK;
   }
 
-  if (uart->Instance == NULL)
-  {
-    return HAL_ERROR;
-  }
-
-  locked = APP_DebugUart_Lock(timeout);
-  result = HAL_UART_Transmit(uart, (uint8_t *)data, length, timeout);
-  if (locked == pdTRUE)
-  {
-    APP_DebugUart_Unlock();
-  }
-
-  return result;
+  (void)timeout;
+  written = SEGGER_RTT_Write(0U, data, (unsigned int)length);
+  (void)written;
+  return HAL_OK;
 }
 
 HAL_StatusTypeDef APP_DebugUart_WriteString(const char *text)
@@ -102,19 +35,40 @@ HAL_StatusTypeDef APP_DebugUart_WriteString(const char *text)
 
 HAL_StatusTypeDef APP_DebugUart_Read(uint8_t *data, uint16_t length, uint32_t timeout)
 {
-  UART_HandleTypeDef *const uart = APP_DebugUart_GetHandle();
-
   if ((data == NULL) || (length == 0U))
   {
     return HAL_ERROR;
   }
 
-  if (uart->Instance == NULL)
+  if (timeout == 0U)
   {
-    return HAL_ERROR;
+    const unsigned int readNow = SEGGER_RTT_Read(0U, data, (unsigned int)length);
+    return (readNow == (unsigned int)length) ? HAL_OK : HAL_TIMEOUT;
   }
 
-  return HAL_UART_Receive(uart, data, length, timeout);
+  {
+    uint32_t startTick = HAL_GetTick();
+    uint16_t offset = 0U;
+
+    while (offset < length)
+    {
+      const unsigned int readNow = SEGGER_RTT_Read(0U,
+                                                   &data[offset],
+                                                   (unsigned int)(length - offset));
+      if (readNow > 0U)
+      {
+        offset = (uint16_t)(offset + (uint16_t)readNow);
+        continue;
+      }
+
+      if ((timeout != HAL_MAX_DELAY) && ((HAL_GetTick() - startTick) >= timeout))
+      {
+        return HAL_TIMEOUT;
+      }
+    }
+  }
+
+  return HAL_OK;
 }
 
 int __io_putchar(int ch)

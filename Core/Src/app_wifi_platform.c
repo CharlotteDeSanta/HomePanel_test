@@ -270,6 +270,33 @@ void APP_WiFi_Platform_Init(void)
 void APP_WiFi_Platform_SetResetPin(GPIO_PinState pinState)
 {
   HAL_GPIO_WritePin(WIFI_RESET_GPIO_Port, WIFI_RESET_Pin, pinState);
+
+  if (pinState == GPIO_PIN_RESET)
+  {
+    /*
+     * Entering hardware reset must invalidate all cached SDIO transport state.
+     * Otherwise the upper state machine may skip host init/enumeration and jump
+     * into CMD52 probes with stale flags, which can spiral into CMD_RSP_TIMEOUT.
+     */
+    g_wifiSdioHostInitialized = 0U;
+    g_wifiSdioEnumerated = 0U;
+    g_wifiSdioBusConfigured = 0U;
+    g_wifiBackplaneWindowBase = APP_WIFI_BACKPLANE_WINDOW_INVALID;
+    g_wifiChipClockCsr = 0U;
+    g_wifiCccrIoEnable = 0U;
+    g_wifiCccrIoReady = 0U;
+    g_wifiCccrBusControl = 0U;
+    g_wifiHostInterruptMask = 0U;
+    g_wifiFunctionInterruptMask = 0U;
+    g_wifiLastSdioStatus = 0U;
+    g_wifiLastSdioError = SDMMC_ERROR_NONE;
+
+    if (__HAL_RCC_SDMMC1_IS_CLK_ENABLED() != 0U)
+    {
+      SDMMC1->MASK = 0U;
+      SDMMC1->ICR = 0xFFFFFFFFU;
+    }
+  }
 }
 
 /* Initialize STM32 SDMMC host peripheral used by AP6181 SDIO transport. */

@@ -56,6 +56,38 @@ set_source_files_properties(
 set(APP_AP6181_ROOT
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/ThirdParty/AP6181
 )
+set(APP_SEGGER_ROOT
+    ${CMAKE_CURRENT_SOURCE_DIR}/BSP/ThirdParty/SEGGER
+)
+option(APP_ENABLE_SYSTEMVIEW "Enable SEGGER SystemView tracing via RTT" OFF)
+
+if(APP_ENABLE_SYSTEMVIEW)
+    # Propagate SystemView trace hooks to FreeRTOS kernel sources
+    # built inside cmake/stm32cubemx (target FreeRTOS / stm32cubemx interface).
+    if(TARGET stm32cubemx)
+        target_compile_definitions(stm32cubemx INTERFACE
+            APP_ENABLE_SYSTEMVIEW=1
+        )
+        target_include_directories(stm32cubemx INTERFACE
+            ${APP_SEGGER_ROOT}/SystemView
+            ${APP_SEGGER_ROOT}/SystemView/Config
+            ${APP_SEGGER_ROOT}/SystemView/SYSVIEW
+            ${APP_SEGGER_ROOT}/SystemView/FreeRTOS
+            ${APP_SEGGER_ROOT}/RTT/Config
+            ${APP_SEGGER_ROOT}/RTT/RTT
+        )
+    endif()
+endif()
+
+# RTT is kept enabled for log output backend even when SystemView is disabled.
+set(APP_RTT_SOURCES
+    ${APP_SEGGER_ROOT}/RTT/RTT/SEGGER_RTT.c
+    ${APP_SEGGER_ROOT}/RTT/RTT/SEGGER_RTT_printf.c
+)
+
+target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+    ${APP_RTT_SOURCES}
+)
 
 set(APP_WIFI_LWIP_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/lwip_sys_arch.c
@@ -121,6 +153,18 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${APP_AP6181_ROOT}/Firmware/43362A2_bin.c
 )
 
+if(APP_ENABLE_SYSTEMVIEW)
+    set(APP_SYSTEMVIEW_SOURCES
+        ${APP_SEGGER_ROOT}/SystemView/SYSVIEW/SEGGER_SYSVIEW.c
+        ${APP_SEGGER_ROOT}/SystemView/FreeRTOS/SEGGER_SYSVIEW_FreeRTOS.c
+        ${APP_SEGGER_ROOT}/SystemView/FreeRTOS/SEGGER_SYSVIEW_Config_FreeRTOS.c
+    )
+
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE
+        ${APP_SYSTEMVIEW_SOURCES}
+    )
+endif()
+
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/BSP/Inc
@@ -128,12 +172,29 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${APP_AP6181_ROOT}/WiFi_SDK/WICED/platform/GCC
     ${APP_AP6181_ROOT}/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/include
     ${APP_AP6181_ROOT}/WiFi_SDK/WICED/network/LwIP/ver2.0.3/src/include/posix
+    ${APP_SEGGER_ROOT}/RTT/Config
+    ${APP_SEGGER_ROOT}/RTT/RTT
 )
+
+if(APP_ENABLE_SYSTEMVIEW)
+    target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
+        ${APP_SEGGER_ROOT}/SystemView
+        ${APP_SEGGER_ROOT}/SystemView/Config
+        ${APP_SEGGER_ROOT}/SystemView/SYSVIEW
+        ${APP_SEGGER_ROOT}/SystemView/FreeRTOS
+    )
+endif()
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
 )
+
+if(APP_ENABLE_SYSTEMVIEW)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+        APP_ENABLE_SYSTEMVIEW=1
+    )
+endif()
 
 # Remove wrong libob.a library dependency when using cpp files
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)

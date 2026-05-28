@@ -11,18 +11,19 @@
 #include "app_wifi_platform.h"
 #include "main.h"
 
-#define APP_WIFI_STACK_WAIT_MS          6U
+#define APP_WIFI_STACK_WAIT_MS          2U
 #define APP_WIFI_RESET_ASSERT_MS        20U
 #define APP_WIFI_RESET_RELEASE_GUARD_MS 50U
 #define APP_WIFI_MODULE_SETTLE_MS       200U
 #define APP_WIFI_POLL_MS                1000U
-#define APP_WIFI_RX_DRAIN_BURST_MAIN    12U
-#define APP_WIFI_RX_DRAIN_BURST_EXTRA   8U
-#define APP_WIFI_RX_DRAIN_EXTRA_ROUNDS  1U
+#define APP_WIFI_RX_DRAIN_BURST_MAIN    24U
+#define APP_WIFI_RX_DRAIN_BURST_EXTRA   16U
+#define APP_WIFI_RX_DRAIN_EXTRA_ROUNDS  2U
 #define APP_WIFI_HEARTBEAT_MS           5000U
 #define APP_WIFI_HEARTBEAT_LOG_ENABLE   0U
 #define APP_WIFI_SDPCM_TRACE_ENABLE     0U
 #define APP_WIFI_DATA_TX_LOG_ENABLE     0U
+#define APP_WIFI_DATA_TX_TRANSIENT_FAIL_MAX 6U
 #define APP_WIFI_SCAN_ACTIVE_POLL_MS    100U
 #define APP_WIFI_SCAN_TIMEOUT_MS        15000U
 #define APP_WIFI_SCAN_STEP_TIMEOUT_MS   3000U
@@ -117,7 +118,9 @@
 #define APP_WIFI_JOIN_LINK_TIMEOUT_MS   15000U
 #define APP_WIFI_JOIN_RETRY_DELAY_MS    5000U
 #define APP_WIFI_JOIN_RETRY_MAX         4U
-#define APP_WIFI_CONNECTED_LINK_DOWN_GRACE_MS 15000U
+#define APP_WIFI_CONNECTED_LINK_DOWN_GRACE_MS 12000U
+#define APP_WIFI_CONNECTED_LINK_SESSION_REFRESH_MS 1500U
+#define APP_WIFI_AUTH_LOG_THROTTLE_MS   1500U
 #define APP_WIFI_CREDIT_STALL_MIN_HITS  8U
 #define APP_WIFI_CREDIT_STALL_WINDOW_MS 1200U
 #define APP_WIFI_CREDIT_STALL_GAP_MS    250U
@@ -396,6 +399,10 @@ static uint32_t g_wifiJoinFailureReason = 0U;
 static uint32_t g_wifiLastJoinEventType = 0U;
 static uint32_t g_wifiLastJoinEventStatus = 0U;
 static uint32_t g_wifiLastJoinEventReason = 0U;
+static uint32_t g_wifiLastAuthLogTick = 0U;
+static uint32_t g_wifiLastAuthLogStatus = 0U;
+static uint32_t g_wifiLastAuthLogReason = 0U;
+static uint32_t g_wifiLastAuthLogType = 0U;
 static uint32_t g_wifiJoinStartTick = 0U;
 static uint32_t g_wifiJoinLastPollTick = 0U;
 static uint32_t g_wifiJoinRetryAtTick = 0U;
@@ -405,12 +412,14 @@ static uint32_t g_wifiConnectedLinkDownTick = 0U;
 static uint32_t g_wifiConnectedLinkDownStatus = 0U;
 static uint32_t g_wifiConnectedLinkDownReason = 0U;
 static uint32_t g_wifiConnectedLinkDownFrameCount = 0U;
+static uint8_t g_wifiConnectedLinkRefreshIssued = 0U;
 static uint32_t g_wifiScanPartialCount = 0U;
 static uint32_t g_wifiScanResultCount = 0U;
 static uint16_t g_wifiLastScanSyncId = 0U;
 static uint16_t g_wifiLastScanBssCount = 0U;
 static int16_t g_wifiLastScanRssi = 0;
 static uint8_t g_wifiLastScanChannel = 0U;
+static uint8_t g_wifiRxDrainActive = 0U;
 static uint32_t g_wifiLastScanPollTick = 0U;
 static uint32_t g_wifiLastIoctlCommand = 0U;
 static uint32_t g_wifiLastIoctlStatus = 0U;
@@ -451,6 +460,7 @@ static void APP_WiFi_CopyScanSsid(char *destination, const uint8_t *ssid, uint8_
 static void APP_WiFi_ClearCachedScanResults(void);
 static int32_t APP_WiFi_FindCachedScanResult(const uint8_t *bssid);
 static void APP_WiFi_UpdateCachedScanResult(const APP_WiFi_BssInfo_t *bssInfo);
+static void APP_WiFi_SortScanResultsByRssi(APP_WiFiScanResult_t *results, uint32_t resultCount);
 static HAL_StatusTypeDef APP_WiFi_SendBufferedControlIoctl(uint8_t ioctlType,
                                                            uint32_t command,
                                                            const void *payload,
@@ -498,6 +508,8 @@ static void APP_WiFi_PollActiveScanResults(void);
 static void APP_WiFi_ProcessScanRequest(void);
 static void APP_WiFi_StartScanRequest(void);
 static void APP_WiFi_FailScan(const char *reason);
+static uint8_t APP_WiFi_IsReadyForJoinRequest(void);
+static void APP_WiFi_ProcessMailboxReadySetup(void);
 static void APP_WiFi_ResetNoCreditStall(void);
 static void APP_WiFi_ResetControlContextForRecovery(void);
 static void APP_WiFi_RecordNoCreditStall(const char *scope, const char *name);
@@ -510,6 +522,7 @@ static void APP_WiFi_EvaluateJoinCompletion(void);
 static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t detail);
 static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status, uint32_t reason);
 static void APP_WiFi_ClearConnectedLinkIssue(const char *source);
+static void APP_WiFi_LogLwipRuntimeSnapshot(const char *source);
 static void APP_WiFi_ProcessConnectedLinkRecovery(void);
 
 /* Transition WiFi driver state and emit transition diagnostics. */
@@ -626,7 +639,7 @@ void APP_WiFi_Init(void)
   APP_WiFi_Resources_Init();
   APP_WiFi_Platform_Init();
   APP_WiFi_SetState(APP_WIFI_STATE_IDLE);
-  APP_WiFi_Logf("[wifi] init complete, debug UART ready on USART1\n");
+  APP_WiFi_Logf("[wifi] init complete, RTT log backend ready\n");
 }
 
 /* Return current AP6181 bring-up/runtime state. */
@@ -681,6 +694,7 @@ uint32_t APP_WiFi_CopyCachedScanResults(APP_WiFiScanResult_t *results, uint32_t 
   }
 
   memcpy(results, g_wifiCachedScanResults, resultCount * sizeof(APP_WiFiScanResult_t));
+  APP_WiFi_SortScanResultsByRssi(results, resultCount);
   return resultCount;
 }
 
@@ -708,6 +722,32 @@ uint8_t APP_WiFi_RequestScan(void)
   g_wifiScanAborted = 0U;
   APP_WiFi_Logf("[wifi] scan: requested\n");
   return 1U;
+}
+
+/* Return non-zero once firmware/control prerequisites are ready for association. */
+static uint8_t APP_WiFi_IsReadyForJoinRequest(void)
+{
+  const uint8_t scanActive = ((g_wifiScanStep != APP_WIFI_SCAN_STEP_IDLE) ||
+                              ((g_wifiScanIoctlCompleted != 0U) &&
+                               (g_wifiScanCompleted == 0U) &&
+                               (g_wifiScanAborted == 0U))) ? 1U : 0U;
+
+  if ((g_wifiState != APP_WIFI_STATE_MAILBOX_READY) ||
+      (g_wifiUpProbeCompleted == 0U) ||
+      (g_wifiEventMaskCompleted == 0U) ||
+      (g_wifiScanSuppressCompleted == 0U) ||
+      (g_wifiPmProbeCompleted == 0U))
+  {
+    return 0U;
+  }
+
+  if ((g_wifiIoctlProbeSent != 0U) &&
+      (g_wifiIoctlProbeCompleted == 0U))
+  {
+    return 0U;
+  }
+
+  return (scanActive == 0U) ? 1U : 0U;
 }
 
 /* Store join credentials and arm asynchronous join procedure. */
@@ -743,22 +783,15 @@ uint8_t APP_WiFi_RequestJoin(const char *ssid, const char *password)
     return 0U;
   }
 
-  if ((g_wifiState != APP_WIFI_STATE_MAILBOX_READY) ||
-      (g_wifiEventMaskCompleted == 0U) ||
-      (g_wifiPmProbeCompleted == 0U))
+  if (APP_WiFi_IsReadyForJoinRequest() == 0U)
   {
-    APP_WiFi_Logf("[wifi] join: wifi stack not ready state=%s evt=%u pm=%u\n",
+    APP_WiFi_Logf("[wifi] join: wifi stack not ready state=%s up=%u evt=%u scanSup=%u pm=%u ioctlDone=%u\n",
                   APP_WiFi_StateToString(g_wifiState),
+                  (unsigned int)g_wifiUpProbeCompleted,
                   (unsigned int)g_wifiEventMaskCompleted,
-                  (unsigned int)g_wifiPmProbeCompleted);
-    return 0U;
-  }
-
-  if ((g_wifiScanIoctlCompleted != 0U) &&
-      (g_wifiScanCompleted == 0U) &&
-      (g_wifiScanAborted == 0U))
-  {
-    APP_WiFi_Logf("[wifi] join: active scan still running, please retry after completion\n");
+                  (unsigned int)g_wifiScanSuppressCompleted,
+                  (unsigned int)g_wifiPmProbeCompleted,
+                  (unsigned int)g_wifiIoctlProbeCompleted);
     return 0U;
   }
 
@@ -1527,6 +1560,31 @@ static void APP_WiFi_UpdateCachedScanResult(const APP_WiFi_BssInfo_t *bssInfo)
   }
 }
 
+/* Sort copied scan results by RSSI descending so stronger AP appears first. */
+static void APP_WiFi_SortScanResultsByRssi(APP_WiFiScanResult_t *results, uint32_t resultCount)
+{
+  uint32_t index = 0U;
+
+  if ((results == NULL) || (resultCount < 2U))
+  {
+    return;
+  }
+
+  for (index = 1U; index < resultCount; ++index)
+  {
+    APP_WiFiScanResult_t current = results[index];
+    uint32_t insertPos = index;
+
+    while ((insertPos > 0U) && (current.rssi > results[insertPos - 1U].rssi))
+    {
+      results[insertPos] = results[insertPos - 1U];
+      insertPos--;
+    }
+
+    results[insertPos] = current;
+  }
+}
+
 static HAL_StatusTypeDef APP_WiFi_SendBufferedControlIoctl(uint8_t ioctlType,
                                                            uint32_t command,
                                                            const void *payload,
@@ -2284,6 +2342,7 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   static uint32_t dataTxOkCount = 0U;
   static uint32_t dataTxFailCount = 0U;
   static uint32_t dataTxBusyCount = 0U;
+  static uint8_t dataTxTransientFailStreak = 0U;
   uint8_t txFrame[APP_WIFI_SDPCM_HEADER_SIZE +
                   APP_WIFI_SDPCM_DATA_PADDING_SIZE +
                   APP_WIFI_SDPCM_BDC_HEADER_SIZE +
@@ -2314,10 +2373,19 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
   if (availableCredits == 0U)
   {
+    if (g_wifiRxDrainActive == 0U)
+    {
+      (void)APP_WiFi_DrainSdpcmRxQueue(2U);
+      availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
+    }
+  }
+
+  if (availableCredits == 0U)
+  {
     dataTxBusyCount++;
-      if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxBusyCount <= 32U))
-      {
-        APP_WiFi_Logf("[wifi] data tx busy #%lu len=%u txseq=%u credit=%u flow=%u\n",
+    if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxBusyCount <= 32U))
+    {
+      APP_WiFi_Logf("[wifi] data tx busy #%lu len=%u txseq=%u credit=%u flow=%u\n",
                     (unsigned long)dataTxBusyCount,
                     (unsigned int)length,
                     (unsigned int)g_wifiTxSequence,
@@ -2360,18 +2428,54 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
 
   if (APP_WiFi_Platform_Fn2Write(txFrame, frameLength) != HAL_OK)
   {
+    const uint32_t lastSdioError = APP_WiFi_Platform_GetLastSdioError();
+    const uint32_t lastSdioStatus = APP_WiFi_Platform_GetLastSdioStatus();
+
     dataTxFailCount++;
     if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxFailCount <= 32U))
     {
       APP_WiFi_Logf("[wifi] data tx failed #%lu len=%u sta=0x%08lX err=0x%08lX\n",
                     (unsigned long)dataTxFailCount,
                     (unsigned int)length,
-                    (unsigned long)APP_WiFi_Platform_GetLastSdioStatus(),
-                    (unsigned long)APP_WiFi_Platform_GetLastSdioError());
+                    (unsigned long)lastSdioStatus,
+                    (unsigned long)lastSdioError);
     }
+
+    /*
+     * SDIO write faults such as timeout/general-unknown can be transient under
+     * heavy AP6181 traffic. Report BUSY first to let lwIP retry the same frame
+     * instead of dropping data immediately.
+     */
+    if ((lastSdioError == SDMMC_ERROR_GENERAL_UNKNOWN_ERR) ||
+        (lastSdioError == SDMMC_ERROR_TIMEOUT))
+    {
+      if (dataTxTransientFailStreak < 0xFFU)
+      {
+        dataTxTransientFailStreak++;
+      }
+
+      if (dataTxTransientFailStreak <= APP_WIFI_DATA_TX_TRANSIENT_FAIL_MAX)
+      {
+        dataTxBusyCount++;
+        if ((dataTxTransientFailStreak <= 4U) ||
+            ((dataTxTransientFailStreak % 4U) == 0U))
+        {
+          APP_WiFi_Logf("[wifi] data tx transient busy streak=%u/%u sta=0x%08lX err=0x%08lX\n",
+                        (unsigned int)dataTxTransientFailStreak,
+                        (unsigned int)APP_WIFI_DATA_TX_TRANSIENT_FAIL_MAX,
+                        (unsigned long)lastSdioStatus,
+                        (unsigned long)lastSdioError);
+        }
+        return APP_WIFI_TX_STATUS_BUSY;
+      }
+
+      dataTxTransientFailStreak = 0U;
+    }
+
     return APP_WIFI_TX_STATUS_ERROR;
   }
 
+  dataTxTransientFailStreak = 0U;
   g_wifiTxSequence = (uint8_t)(txSequence + 1U);
   dataTxOkCount++;
   if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxOkCount <= 32U))
@@ -2479,13 +2583,28 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
       break;
 
     case APP_WIFI_WLC_E_AUTH:
+    {
+      const uint32_t authType = APP_WiFi_ReadBe32((const uint8_t *)&event->raw.auth_type);
+      const uint32_t nowTick = HAL_GetTick();
+      const uint8_t authLogChanged = ((status != g_wifiLastAuthLogStatus) ||
+                                      (reason != g_wifiLastAuthLogReason) ||
+                                      (authType != g_wifiLastAuthLogType)) ? 1U : 0U;
+      const uint8_t authLogDue = (uint8_t)(((nowTick - g_wifiLastAuthLogTick) >= APP_WIFI_AUTH_LOG_THROTTLE_MS) ? 1U : 0U);
+
       g_wifiLastJoinEventType = eventType;
       g_wifiLastJoinEventStatus = status;
       g_wifiLastJoinEventReason = reason;
-      APP_WiFi_Logf("[wifi] join: auth status=%lu reason=%lu authType=%lu\n",
-                    (unsigned long)status,
-                    (unsigned long)reason,
-                    (unsigned long)APP_WiFi_ReadBe32((const uint8_t *)&event->raw.auth_type));
+      if ((authLogChanged != 0U) || (authLogDue != 0U))
+      {
+        g_wifiLastAuthLogTick = nowTick;
+        g_wifiLastAuthLogStatus = status;
+        g_wifiLastAuthLogReason = reason;
+        g_wifiLastAuthLogType = authType;
+        APP_WiFi_Logf("[wifi] join: auth status=%lu reason=%lu authType=%lu\n",
+                      (unsigned long)status,
+                      (unsigned long)reason,
+                      (unsigned long)authType);
+      }
       if (status == APP_WIFI_WLC_E_STATUS_SUCCESS)
       {
         g_wifiJoinAuthenticated = 1U;
@@ -2508,6 +2627,7 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
         APP_WiFi_FailJoin("authentication failed", status, reason);
       }
       break;
+    }
 
     case APP_WIFI_WLC_E_LINK:
     {
@@ -2523,8 +2643,23 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
                     (unsigned int)eventFlags);
       if (linkUp != 0U)
       {
+        const uint8_t hadPendingLinkIssue = g_wifiConnectedLinkDownPending;
         g_wifiJoinLinkReady = 1U;
-        APP_WiFi_ClearConnectedLinkIssue("link up");
+        if ((g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED) && (hadPendingLinkIssue != 0U))
+        {
+          APP_WiFi_Logf("[wifi] runtime: link-up after transient down, rebind lwip network\n");
+          /*
+           * After a connected-state transient link loss, the firmware data path
+           * can recover while lwIP still keeps stale netif/DHCP/ARP state.
+           * Bounce the netif so reset nodes can discover and reconnect cleanly.
+           */
+          APP_WiFi_LwIP_RequestNetworkRebind();
+          APP_WiFi_ClearConnectedLinkIssue("link up");
+        }
+        else
+        {
+          APP_WiFi_ClearConnectedLinkIssue("link up");
+        }
         APP_WiFi_EvaluateJoinCompletion();
       }
       else if (g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED)
@@ -2740,6 +2875,7 @@ static void APP_WiFi_ResetJoinProgress(void)
   g_wifiConnectedLinkDownStatus = 0U;
   g_wifiConnectedLinkDownReason = 0U;
   g_wifiConnectedLinkDownFrameCount = 0U;
+  g_wifiConnectedLinkRefreshIssued = 0U;
   memset(g_wifiLastBssid, 0, sizeof(g_wifiLastBssid));
 }
 
@@ -2774,6 +2910,11 @@ static void APP_WiFi_ProcessJoinRetry(void)
   }
 
   if ((int32_t)(now - g_wifiJoinRetryAtTick) < 0)
+  {
+    return;
+  }
+
+  if (APP_WiFi_IsReadyForJoinRequest() == 0U)
   {
     return;
   }
@@ -2823,6 +2964,29 @@ static void APP_WiFi_EvaluateJoinCompletion(void)
                 (unsigned int)g_wifiJoinSecurityComplete);
 }
 
+/* Emit lightweight lwIP/server load snapshot around link recovery transitions. */
+static void APP_WiFi_LogLwipRuntimeSnapshot(const char *source)
+{
+  APP_WiFi_LwIP_RuntimeStats_t stats;
+
+  memset(&stats, 0, sizeof(stats));
+  APP_WiFi_LwIP_GetRuntimeStats(&stats);
+
+  APP_WiFi_Logf("[wifi] runtime: lwip snapshot source=%s clients=%u closing=%u txq=%u pending=%u inflight=%u tasks=%lu heap=%lu min_heap=%lu txq_fail=%lu rx_pbuf_fail=%lu rx_input_fail=%lu\n",
+                (source != NULL) ? source : "unknown",
+                (unsigned int)stats.activeClients,
+                (unsigned int)stats.closePendingClients,
+                (unsigned int)stats.txQueueDepth,
+                (unsigned int)stats.pendingControls,
+                (unsigned int)stats.inflightControls,
+                (unsigned long)stats.taskCount,
+                (unsigned long)stats.freeHeapBytes,
+                (unsigned long)stats.minEverFreeHeapBytes,
+                (unsigned long)stats.txEnqueueFailCount,
+                (unsigned long)stats.rxPbufAllocFailCount,
+                (unsigned long)stats.rxTcpipInputFailCount);
+}
+
 /* Mark runtime link degradation while keeping a grace window for transient AP churn. */
 /* Record connected-state link anomaly and arm bounded recovery attempts. */
 static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status, uint32_t reason)
@@ -2837,9 +3001,11 @@ static void APP_WiFi_MarkConnectedLinkIssue(const char *source, uint32_t status,
     g_wifiConnectedLinkDownPending = 1U;
     g_wifiConnectedLinkDownTick = HAL_GetTick();
     g_wifiConnectedLinkDownFrameCount = APP_WiFi_LwIP_GetRxEthernetFrameCount();
+    g_wifiConnectedLinkRefreshIssued = 0U;
     APP_WiFi_Logf("[wifi] runtime: link issue from %s, grace=%lu ms\n",
                   (source != NULL) ? source : "unknown",
                   (unsigned long)APP_WIFI_CONNECTED_LINK_DOWN_GRACE_MS);
+    APP_WiFi_LogLwipRuntimeSnapshot("link-issue");
   }
 
   g_wifiConnectedLinkDownStatus = status;
@@ -2855,6 +3021,7 @@ static void APP_WiFi_ClearConnectedLinkIssue(const char *source)
     APP_WiFi_Logf("[wifi] runtime: link restored by %s after %lu ms\n",
                   (source != NULL) ? source : "event",
                   (unsigned long)(HAL_GetTick() - g_wifiConnectedLinkDownTick));
+    APP_WiFi_LogLwipRuntimeSnapshot("link-restored");
   }
 
   g_wifiConnectedLinkDownPending = 0U;
@@ -2862,6 +3029,7 @@ static void APP_WiFi_ClearConnectedLinkIssue(const char *source)
   g_wifiConnectedLinkDownStatus = 0U;
   g_wifiConnectedLinkDownReason = 0U;
   g_wifiConnectedLinkDownFrameCount = 0U;
+  g_wifiConnectedLinkRefreshIssued = 0U;
 }
 
 /* Evaluate deferred runtime link issues and escalate to recovery when grace expires. */
@@ -2884,6 +3052,7 @@ static void APP_WiFi_ProcessConnectedLinkRecovery(void)
     g_wifiConnectedLinkDownStatus = 0U;
     g_wifiConnectedLinkDownReason = 0U;
     g_wifiConnectedLinkDownFrameCount = 0U;
+    g_wifiConnectedLinkRefreshIssued = 0U;
     return;
   }
 
@@ -2904,8 +3073,18 @@ static void APP_WiFi_ProcessConnectedLinkRecovery(void)
                     (unsigned long)rxDelta,
                     (unsigned long)stableMs);
       APP_WiFi_ClearConnectedLinkIssue("lwip rx traffic");
+      return;
     }
-    return;
+  }
+
+  if ((APP_WIFI_CONNECTED_LINK_SESSION_REFRESH_MS > 0U) &&
+      (g_wifiConnectedLinkRefreshIssued == 0U) &&
+      ((now - g_wifiConnectedLinkDownTick) >= APP_WIFI_CONNECTED_LINK_SESSION_REFRESH_MS))
+  {
+    g_wifiConnectedLinkRefreshIssued = 1U;
+    APP_WiFi_Logf("[wifi] runtime: link issue pending %lu ms, refresh lwip sessions\n",
+                  (unsigned long)(now - g_wifiConnectedLinkDownTick));
+    APP_WiFi_LwIP_RequestSessionRefresh();
   }
 
   if ((now - g_wifiConnectedLinkDownTick) < APP_WIFI_CONNECTED_LINK_DOWN_GRACE_MS)
@@ -2919,6 +3098,7 @@ static void APP_WiFi_ProcessConnectedLinkRecovery(void)
   APP_WiFi_Logf("[wifi] runtime: link issue persisted, reconnect status=%lu reason=%lu\n",
                 (unsigned long)g_wifiConnectedLinkDownStatus,
                 (unsigned long)g_wifiConnectedLinkDownReason);
+  APP_WiFi_LogLwipRuntimeSnapshot("link-persisted");
   APP_WiFi_FailJoin("runtime link lost", g_wifiConnectedLinkDownStatus, g_wifiConnectedLinkDownReason);
   if (g_wifiState == APP_WIFI_STATE_MAILBOX_READY)
   {
@@ -2953,6 +3133,7 @@ static void APP_WiFi_FailJoin(const char *reason, uint32_t status, uint32_t deta
   g_wifiConnectedLinkDownStatus = 0U;
   g_wifiConnectedLinkDownReason = 0U;
   g_wifiConnectedLinkDownFrameCount = 0U;
+  g_wifiConnectedLinkRefreshIssued = 0U;
   if ((g_wifiJoinRequestedSsidLength != 0U) &&
       (g_wifiJoinRetryCount < APP_WIFI_JOIN_RETRY_MAX))
   {
@@ -3691,10 +3872,12 @@ static uint32_t APP_WiFi_DrainSdpcmRxQueue(uint8_t maxFrames)
 {
   uint32_t framesDrained = 0U;
 
-  if (maxFrames == 0U)
+  if ((maxFrames == 0U) || (g_wifiRxDrainActive != 0U))
   {
     return 0U;
   }
+
+  g_wifiRxDrainActive = 1U;
 
   if (APP_WiFi_TryProbeSdpcmRxInternal(1U) != 0U)
   {
@@ -3706,6 +3889,7 @@ static uint32_t APP_WiFi_DrainSdpcmRxQueue(uint8_t maxFrames)
   }
   else
   {
+    g_wifiRxDrainActive = 0U;
     return 0U;
   }
 
@@ -3719,6 +3903,7 @@ static uint32_t APP_WiFi_DrainSdpcmRxQueue(uint8_t maxFrames)
     ++framesDrained;
   }
 
+  g_wifiRxDrainActive = 0U;
   return framesDrained;
 }
 
@@ -4120,7 +4305,118 @@ static void APP_WiFi_LogStateDetails(APP_WiFiState_t state)
   }
 }
 
-/* Run periodic maintenance: staged ioctls, scan driver, and debug heartbeat. */
+/* Drive one firmware pre-join setup step whenever the mailbox/control path is idle. */
+static void APP_WiFi_ProcessMailboxReadySetup(void)
+{
+  if (g_wifiState != APP_WIFI_STATE_MAILBOX_READY)
+  {
+    return;
+  }
+
+  if ((g_wifiIoctlProbeSent != 0U) &&
+      (g_wifiIoctlProbeCompleted == 0U))
+  {
+    return;
+  }
+
+  if (g_wifiIoctlProbeSent == 0U)
+  {
+    (void)APP_WiFi_SendGetVersionIoctl();
+  }
+  else if ((g_wifiVersionProbeCompleted != 0U) &&
+           (g_wifiUpProbeSent == 0U))
+  {
+    if ((g_wifiTxGlomSent == 0U) ||
+        (g_wifiApstaSent == 0U) ||
+        (g_wifiCountrySent == 0U) ||
+        (g_wifiGmodeSent == 0U))
+    {
+      g_wifiTxGlomSent = 1U;
+      g_wifiTxGlomCompleted = 1U;
+      g_wifiApstaSent = 1U;
+      g_wifiApstaCompleted = 1U;
+      g_wifiCountrySent = 1U;
+      g_wifiCountryCompleted = 1U;
+      g_wifiGmodeSent = 1U;
+      g_wifiGmodeCompleted = 1U;
+      APP_WiFi_Logf("[wifi] pre-join: skipping txglom/apsta/country/gmode and restoring known-good control chain\n");
+    }
+
+    if (APP_WiFi_SendUpIoctl() == HAL_OK)
+    {
+      g_wifiUpProbeSent = 1U;
+    }
+  }
+  else if ((g_wifiUpProbeCompleted != 0U) &&
+           (g_wifiMacProbeSent == 0U))
+  {
+    const HAL_StatusTypeDef macProbeStatus = APP_WiFi_SendGetCurEtheraddrIovar();
+
+    if (macProbeStatus == HAL_OK)
+    {
+      g_wifiMacProbeSent = 1U;
+    }
+    else if (macProbeStatus == HAL_ERROR)
+    {
+      g_wifiMacProbeSent = 1U;
+      g_wifiMacProbeCompleted = 1U;
+      APP_WiFi_Logf("[wifi] pre-join: cur_etheraddr probe skipped after send failure, continuing bring-up\n");
+    }
+  }
+  else if ((g_wifiMacProbeCompleted != 0U) &&
+           (g_wifiEventMaskSent == 0U))
+  {
+    const HAL_StatusTypeDef eventMaskStatus = APP_WiFi_SendSetEventMsgsIovar();
+
+    if (eventMaskStatus == HAL_OK)
+    {
+      g_wifiEventMaskSent = 1U;
+    }
+    else if (eventMaskStatus == HAL_ERROR)
+    {
+      (void)APP_WiFi_Platform_AbortFunction2Read();
+      g_wifiEventMaskSent = 1U;
+      g_wifiEventMaskCompleted = 1U;
+      APP_WiFi_Logf("[wifi] iovar: event_msgs bypassed after send failure, continuing bring-up\n");
+    }
+  }
+  else if ((g_wifiEventMaskCompleted != 0U) &&
+           (g_wifiScanSuppressSent == 0U))
+  {
+    const HAL_StatusTypeDef scanSuppressStatus = APP_WiFi_SendClearScanSuppressIoctl();
+
+    if (scanSuppressStatus == HAL_OK)
+    {
+      g_wifiScanSuppressSent = 1U;
+    }
+    else if (scanSuppressStatus == HAL_ERROR)
+    {
+      (void)APP_WiFi_Platform_AbortFunction2Read();
+      g_wifiScanSuppressSent = 1U;
+      g_wifiScanSuppressCompleted = 1U;
+      APP_WiFi_Logf("[wifi] ioctl: WLC_SET_SCANSUPPRESS bypassed after send failure, continuing bring-up\n");
+    }
+  }
+  else if ((g_wifiScanSuppressCompleted != 0U) &&
+           (g_wifiPmProbeSent == 0U))
+  {
+    const HAL_StatusTypeDef pmStatus = APP_WiFi_SendSetPmOffIoctl();
+
+    if (pmStatus == HAL_OK)
+    {
+      g_wifiPmProbeSent = 1U;
+    }
+    else if (pmStatus == HAL_ERROR)
+    {
+      (void)APP_WiFi_Platform_AbortFunction2Read();
+      g_wifiPmProbeSent = 1U;
+      g_wifiPmProbeCompleted = 1U;
+      APP_WiFi_Logf("[wifi] ioctl: WLC_SET_PM bypassed after send failure, continuing bring-up\n");
+    }
+  }
+}
+
+/* Run periodic maintenance diagnostics and debug heartbeat. */
 static void APP_WiFi_LogPeriodicHeartbeat(void)
 {
   const uint32_t now = HAL_GetTick();
@@ -4134,114 +4430,6 @@ static void APP_WiFi_LogPeriodicHeartbeat(void)
 
   if (g_wifiState == APP_WIFI_STATE_MAILBOX_READY)
   {
-    if (g_wifiIoctlProbeSent == 0U)
-    {
-      (void)APP_WiFi_SendGetVersionIoctl();
-    }
-    else if ((g_wifiVersionProbeCompleted != 0U) &&
-             (g_wifiUpProbeSent == 0U) &&
-             (g_wifiIoctlProbeCompleted != 0U))
-    {
-      if ((g_wifiTxGlomSent == 0U) ||
-          (g_wifiApstaSent == 0U) ||
-          (g_wifiCountrySent == 0U) ||
-          (g_wifiGmodeSent == 0U))
-      {
-        g_wifiTxGlomSent = 1U;
-        g_wifiTxGlomCompleted = 1U;
-        g_wifiApstaSent = 1U;
-        g_wifiApstaCompleted = 1U;
-        g_wifiCountrySent = 1U;
-        g_wifiCountryCompleted = 1U;
-        g_wifiGmodeSent = 1U;
-        g_wifiGmodeCompleted = 1U;
-        APP_WiFi_Logf("[wifi] pre-join: skipping txglom/apsta/country/gmode and restoring known-good control chain\n");
-      }
-
-      if (APP_WiFi_SendUpIoctl() == HAL_OK)
-      {
-        g_wifiUpProbeSent = 1U;
-      }
-    }
-    else if ((g_wifiUpProbeCompleted != 0U) &&
-             (g_wifiMacProbeSent == 0U) &&
-             (g_wifiIoctlProbeCompleted != 0U))
-    {
-      const HAL_StatusTypeDef macProbeStatus = APP_WiFi_SendGetCurEtheraddrIovar();
-
-      if (macProbeStatus == HAL_OK)
-      {
-        g_wifiMacProbeSent = 1U;
-      }
-      else if (macProbeStatus == HAL_ERROR)
-      {
-        g_wifiMacProbeSent = 1U;
-        g_wifiMacProbeCompleted = 1U;
-        APP_WiFi_Logf("[wifi] pre-join: cur_etheraddr probe skipped after send failure, continuing bring-up\n");
-      }
-    }
-    else if ((g_wifiMacProbeCompleted != 0U) &&
-             (g_wifiEventMaskSent == 0U) &&
-             (g_wifiIoctlProbeCompleted != 0U))
-    {
-      const HAL_StatusTypeDef eventMaskStatus = APP_WiFi_SendSetEventMsgsIovar();
-
-      if (eventMaskStatus == HAL_OK)
-      {
-        g_wifiEventMaskSent = 1U;
-      }
-      else if (eventMaskStatus == HAL_ERROR)
-      {
-        (void)APP_WiFi_Platform_AbortFunction2Read();
-        g_wifiEventMaskSent = 1U;
-        g_wifiEventMaskCompleted = 1U;
-        APP_WiFi_Logf("[wifi] iovar: event_msgs bypassed after send failure, continuing bring-up\n");
-      }
-    }
-    else if ((g_wifiEventMaskCompleted != 0U) &&
-             (g_wifiScanSuppressSent == 0U) &&
-             (g_wifiIoctlProbeCompleted != 0U))
-    {
-      const HAL_StatusTypeDef scanSuppressStatus = APP_WiFi_SendClearScanSuppressIoctl();
-
-      if (scanSuppressStatus == HAL_OK)
-      {
-        g_wifiScanSuppressSent = 1U;
-      }
-      else if (scanSuppressStatus == HAL_ERROR)
-      {
-        (void)APP_WiFi_Platform_AbortFunction2Read();
-        g_wifiScanSuppressSent = 1U;
-        g_wifiScanSuppressCompleted = 1U;
-        APP_WiFi_Logf("[wifi] ioctl: WLC_SET_SCANSUPPRESS bypassed after send failure, continuing bring-up\n");
-      }
-    }
-    else if ((g_wifiScanSuppressCompleted != 0U) &&
-             (g_wifiPmProbeSent == 0U) &&
-             (g_wifiIoctlProbeCompleted != 0U))
-    {
-      const HAL_StatusTypeDef pmStatus = APP_WiFi_SendSetPmOffIoctl();
-
-      if (pmStatus == HAL_OK)
-      {
-        g_wifiPmProbeSent = 1U;
-      }
-      else if (pmStatus == HAL_ERROR)
-      {
-        (void)APP_WiFi_Platform_AbortFunction2Read();
-        g_wifiPmProbeSent = 1U;
-        g_wifiPmProbeCompleted = 1U;
-        APP_WiFi_Logf("[wifi] ioctl: WLC_SET_PM bypassed after send failure, continuing bring-up\n");
-      }
-    }
-    else if ((g_wifiScanRequested != 0U) &&
-             (g_wifiPmProbeCompleted != 0U) &&
-             (g_wifiScanSent == 0U) &&
-             (g_wifiIoctlProbeCompleted != 0U))
-    {
-      APP_WiFi_ProcessScanRequest();
-    }
-
     (void)APP_WiFi_Platform_ProbeConsole();
     (void)APP_WiFi_Platform_ProbeMailbox();
 
@@ -4755,6 +4943,8 @@ void APP_WiFi_Task(void *argument)
         uint32_t drainedFrames = 0U;
         uint8_t extraRounds = 0U;
 
+        APP_WiFi_PollPendingIoctlResponse();
+        APP_WiFi_ProcessMailboxReadySetup();
         APP_WiFi_ProcessJoinRetry();
         APP_WiFi_ProcessJoinRequest();
         APP_WiFi_PollPendingIoctlResponse();

@@ -7,6 +7,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "queue.h"
 
 #include "lwip/dhcp.h"
 #include "lwip/err.h"
@@ -24,14 +25,17 @@
 #include "app_wifi.h"
 
 #define APP_WIFI_LWIP_TCP_SERVER_PORT      5000U
-#define APP_WIFI_LWIP_TX_QUEUE_DEPTH        32U
-#define APP_WIFI_LWIP_TX_BURST_LIMIT        12U
-#define APP_WIFI_LWIP_TX_FLUSH_LOCK_WAIT_MS 10U
+#define APP_WIFI_LWIP_TX_QUEUE_DEPTH        16U
+#define APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH 16U
+#define APP_WIFI_LWIP_TX_BURST_LIMIT        24U
+#define APP_WIFI_LWIP_TX_FLUSH_LOCK_WAIT_MS 2U
+#define APP_WIFI_LWIP_TX_ERROR_RETRY_BEFORE_DROP 8U
 #define APP_WIFI_LWIP_CONTROL_ROOM_COUNT    APP_HOME_DATA_ROOM_COUNT
-#define APP_WIFI_LWIP_CONTROL_POLL_MS       10U
-#define APP_WIFI_LWIP_CONTROL_ACK_TIMEOUT_MS 20000U
-#define APP_WIFI_LWIP_CONTROL_TX_GAP_MS     1500U
-#define APP_WIFI_LWIP_CONTROL_DEBOUNCE_MS   1500U
+#define APP_WIFI_LWIP_CONTROL_POLL_MS       2U
+#define APP_WIFI_LWIP_CONTROL_TX_GAP_MS      40U
+#define APP_WIFI_LWIP_CONTROL_DEBOUNCE_MS    40U
+#define APP_WIFI_LWIP_CONTROL_RETRY_MS       APP_WIFI_LWIP_CONTROL_TX_GAP_MS
+#define APP_WIFI_LWIP_CONTROL_SUPERSEDE_MS   250U
 #define APP_WIFI_LWIP_GRATUITOUS_ARP_ENABLE 0U
 #define APP_WIFI_LWIP_INFO_LOG_ENABLE       0U
 #define APP_WIFI_LWIP_ARP_REFRESH_MS        5000U
@@ -41,24 +45,28 @@
 #define APP_WIFI_LWIP_ETH_TRACE_ENABLE      0U
 #define APP_WIFI_LWIP_SOCKET_STACK_BYTES    4096U
 #define APP_WIFI_LWIP_CLIENT_STACK_BYTES    4096U
-#define APP_WIFI_LWIP_SOCKET_PRIORITY       23U
+#define APP_WIFI_LWIP_SOCKET_PRIORITY       25U
 #define APP_WIFI_LWIP_LISTEN_BACKLOG        8U
-#define APP_WIFI_LWIP_ACCEPT_POLL_MS        10U
+#define APP_WIFI_LWIP_ACCEPT_POLL_MS        2U
 #define APP_WIFI_LWIP_CLIENT_RECV_TIMEOUT_MS 80U
 #define APP_WIFI_LWIP_CLIENT_SEND_TIMEOUT_MS 500U
 #define APP_WIFI_LWIP_CLIENT_IDLE_TIMEOUT_MS 0U
-#define APP_WIFI_LWIP_MAX_CLIENTS            (APP_HOME_DATA_ROOM_COUNT + 2U)
+#define APP_WIFI_LWIP_CLIENT_RX_YIELD_MS    1U
+#define APP_WIFI_LWIP_MAX_CLIENTS            (APP_HOME_DATA_ROOM_COUNT + 4U)
 #define APP_WIFI_LWIP_RX_LOG_LIMIT          0U
 #define APP_WIFI_LWIP_VERBOSE_PROTO_LOG     0U
 #define APP_WIFI_LWIP_CLIENT_RX_BUFFER_SIZE 512U
 #define APP_WIFI_LWIP_PEER_CACHE_SIZE       (APP_WIFI_LWIP_MAX_CLIENTS + 2U)
 #define APP_WIFI_LWIP_IPV4_STR_LEN          16U
 #define APP_WIFI_LWIP_MAC_STR_LEN           18U
+#define APP_WIFI_LWIP_SEND_WOULDBLOCK_RETRY_MAX 2U
+#define APP_WIFI_PROTO_FAN_AUTO               4U
 
 typedef struct
 {
   uint8_t *data;
   uint16_t length;
+  uint8_t priority;
 } APP_WiFi_LwIP_TxPacket_t;
 
 typedef struct
@@ -103,18 +111,20 @@ static SemaphoreHandle_t g_txFlushMutex = NULL;
 static SemaphoreHandle_t g_controlMutex = NULL;
 static SemaphoreHandle_t g_clientSlotsMutex = NULL;
 static APP_WiFi_LwIP_TxPacket_t g_txQueue[APP_WIFI_LWIP_TX_QUEUE_DEPTH] = {0};
+static APP_WiFi_LwIP_TxPacket_t g_txPriorityQueue[APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH] = {0};
 static APP_WiFi_LwIP_ClientSlot_t g_clientSlots[APP_WIFI_LWIP_MAX_CLIENTS] = {0};
 static APP_WiFi_LwIP_PeerCacheEntry_t g_peerCache[APP_WIFI_LWIP_PEER_CACHE_SIZE] = {0};
 static APP_WiFi_LwIP_ControlCommand_t g_pendingControls[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
-static APP_WiFi_LwIP_ControlCommand_t g_inflightControls[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
 static uint8_t g_pendingControlValid[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
-static uint8_t g_inflightControlValid[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
+static uint8_t g_pendingControlRetryCount[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
 static uint8_t g_txQueueHead = 0U;
 static uint8_t g_txQueueTail = 0U;
 static uint8_t g_txQueueCount = 0U;
+static uint8_t g_txPriorityQueueHead = 0U;
+static uint8_t g_txPriorityQueueTail = 0U;
+static uint8_t g_txPriorityQueueCount = 0U;
 static uint16_t g_controlSequence = 1U;
 static TickType_t g_pendingControlReadyTick[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
-static TickType_t g_inflightControlTxTick[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
 static TickType_t g_nextControlTxTick[APP_WIFI_LWIP_CONTROL_ROOM_COUNT] = {0};
 static uint8_t g_tcpipStarted = 0U;
 static uint8_t g_netifAdded = 0U;
@@ -125,6 +135,7 @@ static uint8_t g_ipAnnounced = 0U;
 static uint8_t g_peerProtocolSeen = 0U;
 static uint8_t g_serverStarted = 0U;
 static uint8_t g_lwipReadyLogged = 0U;
+static volatile uint8_t g_serverRebuildRequested = 0U;
 static TickType_t g_nextArpRefreshTick = 0U;
 static TickType_t g_dhcpStartTick = 0U;
 static TickType_t g_nextDhcpWaitLogTick = 0U;
@@ -133,17 +144,20 @@ static uint32_t g_txOkCount = 0U;
 static uint32_t g_txBusyCount = 0U;
 static uint32_t g_txErrorCount = 0U;
 static uint32_t g_txEnqueueFailCount = 0U;
+static uint32_t g_txQueueDropOldestCount = 0U;
+static uint8_t *g_txLastErrorHeadData = NULL;
+static uint16_t g_txLastErrorHeadLen = 0U;
+static uint8_t g_txHeadErrorStreak = 0U;
 static uint32_t g_arpRefreshCount = 0U;
+#if (APP_WIFI_LWIP_ETH_TRACE_ENABLE != 0U)
 static uint32_t g_netifRxLogCount = 0U;
+#endif
 static uint32_t g_serverRxCount = 0U;
 static uint32_t g_serverFrameCount = 0U;
 static uint32_t g_serverAckCount = 0U;
 static uint32_t g_serverErrCount = 0U;
 static uint32_t g_serverControlQueuedCount = 0U;
 static uint32_t g_serverControlTxCount = 0U;
-static uint32_t g_serverControlAckCount = 0U;
-static uint32_t g_serverControlErrCount = 0U;
-static uint32_t g_serverControlTimeoutCount = 0U;
 static uint32_t g_serverSendErrorCount = 0U;
 static uint32_t g_dhcpRestartCount = 0U;
 static uint32_t g_rxPbufAllocFailCount = 0U;
@@ -153,11 +167,13 @@ static uint32_t g_rxEthernetFrameCount = 0U;
 static void APP_WiFi_LwIP_TcpipInitDone(void *arg);
 static err_t APP_WiFi_LwIP_NetifInit(struct netif *netif);
 static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p);
-static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length);
+static uint8_t APP_WiFi_LwIP_IsPriorityTxFrame(const uint8_t *data, uint16_t length);
+static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length, uint8_t priority);
 static uint8_t APP_WiFi_LwIP_QueuePeek(APP_WiFi_LwIP_TxPacket_t *packet);
-static void APP_WiFi_LwIP_QueuePop(void);
+static void APP_WiFi_LwIP_QueuePop(uint8_t priority);
 static void APP_WiFi_LwIP_DropQueuedTx(void);
 static void APP_WiFi_LwIP_FlushTxQueue(void);
+static void APP_WiFi_LwIP_LogRuntimeStats(const char *source);
 static void APP_WiFi_LwIP_LogRxFrame(const uint8_t *frame, uint16_t length);
 static void APP_WiFi_LwIP_LogTxFrame(const uint8_t *frame, uint16_t length, uint32_t packetIndex);
 static void APP_WiFi_LwIP_LogBufferHex(const char *prefix, const uint8_t *data, uint16_t length);
@@ -174,12 +190,17 @@ static void APP_WiFi_LwIP_StartDhcp(void);
 static void APP_WiFi_LwIP_CheckDhcpProgress(void);
 static uint8_t APP_WiFi_LwIP_EnsureControlMutex(void);
 static void APP_WiFi_LwIP_ResetControlState(void);
+static uint8_t APP_WiFi_LwIP_StorePendingControlEx(const APP_WiFi_LwIP_ControlCommand_t *command,
+                                                   uint8_t retryCount);
 static uint8_t APP_WiFi_LwIP_StorePendingControl(const APP_WiFi_LwIP_ControlCommand_t *command);
 static uint8_t APP_WiFi_LwIP_IsSameControlPayload(const APP_WiFi_LwIP_ControlCommand_t *lhs,
                                                   const APP_WiFi_LwIP_ControlCommand_t *rhs);
 static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint16_t length);
+static void APP_WiFi_LwIP_AbortSocket(int socketHandle);
 static uint8_t APP_WiFi_LwIP_SendControlFrame(int clientSocket, const APP_WiFi_LwIP_ControlCommand_t *command);
 static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientNode);
+static uint8_t APP_WiFi_LwIP_FindActiveNodeSocket(uint8_t node, int *socketHandle);
+static void APP_WiFi_LwIP_DrainAllPendingControls(void);
 static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
                                               uint8_t slotIndex,
                                               const APP_HomeProtocolFrame_t *frame,
@@ -217,6 +238,7 @@ static void APP_WiFi_LwIP_LogClientEndpoint(const char *eventName,
                                             uint16_t port,
                                             int32_t extraValue,
                                             const char *extraLabel);
+static void APP_WiFi_LwIP_RegisterQueueForDebug(QueueHandle_t handle, const char *name);
 
 /* tcpip_init completion callback used to release init wait semaphore. */
 static void APP_WiFi_LwIP_TcpipInitDone(void *arg)
@@ -227,6 +249,20 @@ static void APP_WiFi_LwIP_TcpipInitDone(void *arg)
   {
     (void)xSemaphoreGive(*doneSemaphore);
   }
+}
+
+/* Register RTOS objects so kernel-aware debugger can show readable names. */
+static void APP_WiFi_LwIP_RegisterQueueForDebug(QueueHandle_t handle, const char *name)
+{
+#if (configQUEUE_REGISTRY_SIZE > 0)
+  if ((handle != NULL) && (name != NULL))
+  {
+    vQueueAddToRegistry(handle, (char *)name);
+  }
+#else
+  (void)handle;
+  (void)name;
+#endif
 }
 
 /* Pack IPv4 octets into host-order 32-bit cache key. */
@@ -454,6 +490,7 @@ static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p)
   uint8_t *copy = NULL;
   uint16_t packetLength = 0U;
   uint16_t bytesCopied = 0U;
+  uint8_t priority = 0U;
 
   (void)netif;
 
@@ -481,7 +518,8 @@ static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p)
     return ERR_VAL;
   }
 
-  if (APP_WiFi_LwIP_QueuePush(copy, packetLength) == 0U)
+  priority = APP_WiFi_LwIP_IsPriorityTxFrame(copy, packetLength);
+  if (APP_WiFi_LwIP_QueuePush(copy, packetLength, priority) == 0U)
   {
     g_txEnqueueFailCount++;
     vPortFree(copy);
@@ -490,7 +528,7 @@ static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p)
       printf("[lwip] tx enqueue failed #%lu len=%u q=%u\n",
              (unsigned long)g_txEnqueueFailCount,
              (unsigned int)packetLength,
-             (unsigned int)g_txQueueCount);
+             (unsigned int)(g_txQueueCount + g_txPriorityQueueCount));
     }
     return ERR_MEM;
   }
@@ -503,7 +541,7 @@ static err_t APP_WiFi_LwIP_LinkOutput(struct netif *netif, struct pbuf *p)
            (unsigned int)packetLength,
            (packetLength >= 13U) ? (unsigned int)copy[12] : 0U,
            (packetLength >= 14U) ? (unsigned int)copy[13] : 0U,
-           (unsigned int)g_txQueueCount);
+           (unsigned int)(g_txQueueCount + g_txPriorityQueueCount));
     APP_WiFi_LwIP_LogTxFrame(copy, packetLength, g_linkOutputCount);
   }
 
@@ -602,7 +640,7 @@ static void APP_WiFi_LwIP_MaybeRefreshArp(void)
     return;
   }
 
-  if (g_txQueueCount != 0U)
+  if ((g_txQueueCount + g_txPriorityQueueCount) != 0U)
   {
     /* Give normal traffic priority and avoid ARP frames filling the TX queue. */
     g_nextArpRefreshTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_ARP_REFRESH_MS);
@@ -660,7 +698,7 @@ static void APP_WiFi_LwIP_CheckDhcpProgress(void)
            (unsigned long)g_txOkCount,
            (unsigned long)g_txBusyCount,
            (unsigned long)g_txErrorCount,
-           (unsigned int)g_txQueueCount);
+           (unsigned int)(g_txQueueCount + g_txPriorityQueueCount));
     g_nextDhcpWaitLogTick = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_DHCP_WAIT_LOG_MS);
   }
 
@@ -673,7 +711,7 @@ static void APP_WiFi_LwIP_CheckDhcpProgress(void)
            (unsigned long)g_txOkCount,
            (unsigned long)g_txBusyCount,
            (unsigned long)g_txErrorCount,
-           (unsigned int)g_txQueueCount);
+           (unsigned int)(g_txQueueCount + g_txPriorityQueueCount));
 
     (void)netifapi_dhcp_stop(&g_wifiNetif);
     g_dhcpStarted = 0U;
@@ -683,9 +721,61 @@ static void APP_WiFi_LwIP_CheckDhcpProgress(void)
   }
 }
 
-/* Push one outgoing Ethernet frame into bounded TX queue. */
-static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length)
+/* Classify server-to-node TCP payloads so controls do not sit behind pure ACK traffic. */
+static uint8_t APP_WiFi_LwIP_IsPriorityTxFrame(const uint8_t *data, uint16_t length)
 {
+  uint16_t etherType = 0U;
+  uint16_t ipHeaderLength = 0U;
+  uint16_t ipTotalLength = 0U;
+  uint16_t tcpOffset = 0U;
+  uint16_t tcpHeaderLength = 0U;
+  uint16_t tcpPayloadLength = 0U;
+  uint16_t srcPort = 0U;
+
+  if ((data == NULL) || (length < 54U))
+  {
+    return 0U;
+  }
+
+  etherType = (uint16_t)(((uint16_t)data[12] << 8) | data[13]);
+  if ((etherType != 0x0800U) || (data[23] != 6U))
+  {
+    return 0U;
+  }
+
+  ipHeaderLength = (uint16_t)((data[14] & 0x0FU) * 4U);
+  if ((ipHeaderLength < 20U) || (length < (uint16_t)(14U + ipHeaderLength + 20U)))
+  {
+    return 0U;
+  }
+
+  ipTotalLength = (uint16_t)(((uint16_t)data[16] << 8) | data[17]);
+  if ((ipTotalLength < ipHeaderLength) || (length < (uint16_t)(14U + ipTotalLength)))
+  {
+    return 0U;
+  }
+
+  tcpOffset = (uint16_t)(14U + ipHeaderLength);
+  tcpHeaderLength = (uint16_t)(((data[tcpOffset + 12U] >> 4) & 0x0FU) * 4U);
+  if ((tcpHeaderLength < 20U) ||
+      (ipTotalLength < (uint16_t)(ipHeaderLength + tcpHeaderLength)))
+  {
+    return 0U;
+  }
+
+  tcpPayloadLength = (uint16_t)(ipTotalLength - ipHeaderLength - tcpHeaderLength);
+  srcPort = (uint16_t)(((uint16_t)data[tcpOffset] << 8) | data[tcpOffset + 1U]);
+
+  return ((srcPort == APP_WIFI_LWIP_TCP_SERVER_PORT) && (tcpPayloadLength != 0U)) ? 1U : 0U;
+}
+
+/* Push one outgoing Ethernet frame into bounded TX queue. */
+static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length, uint8_t priority)
+{
+  uint8_t *droppedData = NULL;
+  uint16_t droppedLen = 0U;
+  uint8_t queueCountAfter = 0U;
+
   if ((data == NULL) || (g_txQueueMutex == NULL))
   {
     return 0U;
@@ -696,18 +786,74 @@ static uint8_t APP_WiFi_LwIP_QueuePush(uint8_t *data, uint16_t length)
     return 0U;
   }
 
-  if (g_txQueueCount >= APP_WIFI_LWIP_TX_QUEUE_DEPTH)
+  if (priority != 0U)
   {
-    (void)xSemaphoreGive(g_txQueueMutex);
-    return 0U;
+    if (g_txPriorityQueueCount >= APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH)
+    {
+      droppedData = g_txPriorityQueue[g_txPriorityQueueHead].data;
+      droppedLen = g_txPriorityQueue[g_txPriorityQueueHead].length;
+      g_txPriorityQueue[g_txPriorityQueueHead].data = NULL;
+      g_txPriorityQueue[g_txPriorityQueueHead].length = 0U;
+      g_txPriorityQueue[g_txPriorityQueueHead].priority = 0U;
+      g_txPriorityQueueHead = (uint8_t)((g_txPriorityQueueHead + 1U) % APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH);
+      if (g_txPriorityQueueCount != 0U)
+      {
+        g_txPriorityQueueCount--;
+      }
+      g_txQueueDropOldestCount++;
+    }
+
+    g_txPriorityQueue[g_txPriorityQueueTail].data = data;
+    g_txPriorityQueue[g_txPriorityQueueTail].length = length;
+    g_txPriorityQueue[g_txPriorityQueueTail].priority = 1U;
+    g_txPriorityQueueTail = (uint8_t)((g_txPriorityQueueTail + 1U) % APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH);
+    g_txPriorityQueueCount++;
+  }
+  else
+  {
+    if (g_txQueueCount >= APP_WIFI_LWIP_TX_QUEUE_DEPTH)
+    {
+      /*
+       * Under bursty multi-node traffic, preserving newest frames gives better
+       * control responsiveness than blocking all new egress behind stale backlog.
+       */
+      droppedData = g_txQueue[g_txQueueHead].data;
+      droppedLen = g_txQueue[g_txQueueHead].length;
+      g_txQueue[g_txQueueHead].data = NULL;
+      g_txQueue[g_txQueueHead].length = 0U;
+      g_txQueue[g_txQueueHead].priority = 0U;
+      g_txQueueHead = (uint8_t)((g_txQueueHead + 1U) % APP_WIFI_LWIP_TX_QUEUE_DEPTH);
+      if (g_txQueueCount != 0U)
+      {
+        g_txQueueCount--;
+      }
+      g_txQueueDropOldestCount++;
+    }
+
+    g_txQueue[g_txQueueTail].data = data;
+    g_txQueue[g_txQueueTail].length = length;
+    g_txQueue[g_txQueueTail].priority = 0U;
+    g_txQueueTail = (uint8_t)((g_txQueueTail + 1U) % APP_WIFI_LWIP_TX_QUEUE_DEPTH);
+    g_txQueueCount++;
   }
 
-  g_txQueue[g_txQueueTail].data = data;
-  g_txQueue[g_txQueueTail].length = length;
-  g_txQueueTail = (uint8_t)((g_txQueueTail + 1U) % APP_WIFI_LWIP_TX_QUEUE_DEPTH);
-  g_txQueueCount++;
+  queueCountAfter = (uint8_t)(g_txQueueCount + g_txPriorityQueueCount);
 
   (void)xSemaphoreGive(g_txQueueMutex);
+
+  if (droppedData != NULL)
+  {
+    vPortFree(droppedData);
+    if ((g_txQueueDropOldestCount <= 8U) || ((g_txQueueDropOldestCount % 32U) == 0U))
+    {
+      printf("[lwip] tx queue drop-oldest #%lu dropped_len=%u keep_len=%u q=%u\n",
+             (unsigned long)g_txQueueDropOldestCount,
+             (unsigned int)droppedLen,
+             (unsigned int)length,
+             (unsigned int)queueCountAfter);
+    }
+  }
+
   return 1U;
 }
 
@@ -724,19 +870,28 @@ static uint8_t APP_WiFi_LwIP_QueuePeek(APP_WiFi_LwIP_TxPacket_t *packet)
     return 0U;
   }
 
-  if (g_txQueueCount == 0U)
+  if ((g_txPriorityQueueCount == 0U) && (g_txQueueCount == 0U))
   {
     (void)xSemaphoreGive(g_txQueueMutex);
     return 0U;
   }
 
-  *packet = g_txQueue[g_txQueueHead];
+  if (g_txPriorityQueueCount != 0U)
+  {
+    *packet = g_txPriorityQueue[g_txPriorityQueueHead];
+    packet->priority = 1U;
+  }
+  else
+  {
+    *packet = g_txQueue[g_txQueueHead];
+    packet->priority = 0U;
+  }
   (void)xSemaphoreGive(g_txQueueMutex);
   return 1U;
 }
 
 /* Pop and free the head entry after successful or dropped TX handling. */
-static void APP_WiFi_LwIP_QueuePop(void)
+static void APP_WiFi_LwIP_QueuePop(uint8_t priority)
 {
   if (g_txQueueMutex == NULL)
   {
@@ -748,10 +903,22 @@ static void APP_WiFi_LwIP_QueuePop(void)
     return;
   }
 
-  if (g_txQueueCount != 0U)
+  if (priority != 0U)
+  {
+    if (g_txPriorityQueueCount != 0U)
+    {
+      g_txPriorityQueue[g_txPriorityQueueHead].data = NULL;
+      g_txPriorityQueue[g_txPriorityQueueHead].length = 0U;
+      g_txPriorityQueue[g_txPriorityQueueHead].priority = 0U;
+      g_txPriorityQueueHead = (uint8_t)((g_txPriorityQueueHead + 1U) % APP_WIFI_LWIP_TX_PRIORITY_QUEUE_DEPTH);
+      g_txPriorityQueueCount--;
+    }
+  }
+  else if (g_txQueueCount != 0U)
   {
     g_txQueue[g_txQueueHead].data = NULL;
     g_txQueue[g_txQueueHead].length = 0U;
+    g_txQueue[g_txQueueHead].priority = 0U;
     g_txQueueHead = (uint8_t)((g_txQueueHead + 1U) % APP_WIFI_LWIP_TX_QUEUE_DEPTH);
     g_txQueueCount--;
   }
@@ -768,6 +935,10 @@ static uint8_t APP_WiFi_LwIP_EnsureControlMutex(void)
   }
 
   g_controlMutex = xSemaphoreCreateMutex();
+  if (g_controlMutex != NULL)
+  {
+    APP_WiFi_LwIP_RegisterQueueForDebug((QueueHandle_t)g_controlMutex, "lwip_control_mutex");
+  }
   return (g_controlMutex != NULL) ? 1U : 0U;
 }
 
@@ -781,18 +952,17 @@ static void APP_WiFi_LwIP_ResetControlState(void)
   }
 
   memset(g_pendingControls, 0, sizeof(g_pendingControls));
-  memset(g_inflightControls, 0, sizeof(g_inflightControls));
   memset(g_pendingControlValid, 0, sizeof(g_pendingControlValid));
-  memset(g_inflightControlValid, 0, sizeof(g_inflightControlValid));
+  memset(g_pendingControlRetryCount, 0, sizeof(g_pendingControlRetryCount));
   memset(g_pendingControlReadyTick, 0, sizeof(g_pendingControlReadyTick));
-  memset(g_inflightControlTxTick, 0, sizeof(g_inflightControlTxTick));
   memset(g_nextControlTxTick, 0, sizeof(g_nextControlTxTick));
 
   (void)xSemaphoreGive(g_controlMutex);
 }
 
-/* Store latest control intent per room with debounce gap before transmission. */
-static uint8_t APP_WiFi_LwIP_StorePendingControl(const APP_WiFi_LwIP_ControlCommand_t *command)
+/* Store latest control intent per room with a short settle window. */
+static uint8_t APP_WiFi_LwIP_StorePendingControlEx(const APP_WiFi_LwIP_ControlCommand_t *command,
+                                                   uint8_t retryCount)
 {
   uint8_t roomIndex = 0U;
   TickType_t readyTick = xTaskGetTickCount() + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_DEBOUNCE_MS);
@@ -811,10 +981,17 @@ static uint8_t APP_WiFi_LwIP_StorePendingControl(const APP_WiFi_LwIP_ControlComm
 
   g_pendingControls[roomIndex] = *command;
   g_pendingControlValid[roomIndex] = 1U;
+  g_pendingControlRetryCount[roomIndex] = retryCount;
   g_pendingControlReadyTick[roomIndex] = readyTick;
+  g_nextControlTxTick[roomIndex] = 0U;
 
   (void)xSemaphoreGive(g_controlMutex);
   return 1U;
+}
+
+static uint8_t APP_WiFi_LwIP_StorePendingControl(const APP_WiFi_LwIP_ControlCommand_t *command)
+{
+  return APP_WiFi_LwIP_StorePendingControlEx(command, 0U);
 }
 
 static uint8_t APP_WiFi_LwIP_IsSameControlPayload(const APP_WiFi_LwIP_ControlCommand_t *lhs,
@@ -858,7 +1035,7 @@ uint8_t APP_WiFi_LwIP_HasPendingTx(void)
     return 1U;
   }
 
-  hasPending = (g_txQueueCount != 0U) ? 1U : 0U;
+  hasPending = ((g_txQueueCount + g_txPriorityQueueCount) != 0U) ? 1U : 0U;
   (void)xSemaphoreGive(g_txQueueMutex);
   return hasPending;
 }
@@ -867,6 +1044,139 @@ uint8_t APP_WiFi_LwIP_HasPendingTx(void)
 uint32_t APP_WiFi_LwIP_GetRxEthernetFrameCount(void)
 {
   return g_rxEthernetFrameCount;
+}
+
+/* Snapshot lightweight lwIP runtime load indicators for recovery diagnostics. */
+void APP_WiFi_LwIP_GetRuntimeStats(APP_WiFi_LwIP_RuntimeStats_t *stats)
+{
+  uint16_t activeClients = 0U;
+  uint16_t closePendingClients = 0U;
+  uint16_t txQueueDepth = 0U;
+  uint16_t pendingControls = 0U;
+
+  if (stats == NULL)
+  {
+    return;
+  }
+
+  memset(stats, 0, sizeof(*stats));
+
+  if ((g_clientSlotsMutex != NULL) &&
+      (xSemaphoreTake(g_clientSlotsMutex, pdMS_TO_TICKS(2U)) == pdTRUE))
+  {
+    for (uint32_t index = 0U; index < APP_WIFI_LWIP_MAX_CLIENTS; index++)
+    {
+      const APP_WiFi_LwIP_ClientSlot_t *slot = &g_clientSlots[index];
+      if (slot->active != 0U)
+      {
+        activeClients++;
+        if (slot->closeRequested != 0U)
+        {
+          closePendingClients++;
+        }
+      }
+    }
+    (void)xSemaphoreGive(g_clientSlotsMutex);
+  }
+
+  if ((g_txQueueMutex != NULL) &&
+      (xSemaphoreTake(g_txQueueMutex, pdMS_TO_TICKS(2U)) == pdTRUE))
+  {
+    txQueueDepth = (uint16_t)(g_txQueueCount + g_txPriorityQueueCount);
+    (void)xSemaphoreGive(g_txQueueMutex);
+  }
+
+  if ((g_controlMutex != NULL) &&
+      (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(2U)) == pdTRUE))
+  {
+    for (uint32_t index = 0U; index < APP_WIFI_LWIP_CONTROL_ROOM_COUNT; index++)
+    {
+      if (g_pendingControlValid[index] != 0U)
+      {
+        pendingControls++;
+      }
+    }
+    (void)xSemaphoreGive(g_controlMutex);
+  }
+
+  stats->activeClients = activeClients;
+  stats->closePendingClients = closePendingClients;
+  stats->txQueueDepth = txQueueDepth;
+  stats->pendingControls = pendingControls;
+  stats->inflightControls = 0U;
+  stats->taskCount = (uint32_t)uxTaskGetNumberOfTasks();
+  stats->freeHeapBytes = (uint32_t)xPortGetFreeHeapSize();
+  stats->minEverFreeHeapBytes = (uint32_t)xPortGetMinimumEverFreeHeapSize();
+  stats->txEnqueueFailCount = g_txEnqueueFailCount;
+  stats->rxPbufAllocFailCount = g_rxPbufAllocFailCount;
+  stats->rxTcpipInputFailCount = g_rxTcpipInputFailCount;
+}
+
+/* Print one compact runtime-load snapshot for control-path debugging. */
+static void APP_WiFi_LwIP_LogRuntimeStats(const char *source)
+{
+  APP_WiFi_LwIP_RuntimeStats_t stats;
+
+  memset(&stats, 0, sizeof(stats));
+  APP_WiFi_LwIP_GetRuntimeStats(&stats);
+
+  printf("[lwip] runtime source=%s clients=%u closing=%u txq=%u pending=%u inflight=%u tasks=%lu heap=%lu min_heap=%lu txq_fail=%lu rx_pbuf_fail=%lu rx_input_fail=%lu\n",
+         (source != NULL) ? source : "unknown",
+         (unsigned int)stats.activeClients,
+         (unsigned int)stats.closePendingClients,
+         (unsigned int)stats.txQueueDepth,
+         (unsigned int)stats.pendingControls,
+         (unsigned int)stats.inflightControls,
+         (unsigned long)stats.taskCount,
+         (unsigned long)stats.freeHeapBytes,
+         (unsigned long)stats.minEverFreeHeapBytes,
+         (unsigned long)stats.txEnqueueFailCount,
+         (unsigned long)stats.rxPbufAllocFailCount,
+         (unsigned long)stats.rxTcpipInputFailCount);
+}
+
+/* Force-close all node sessions so clients reconnect on a clean TCP state. */
+void APP_WiFi_LwIP_RequestSessionRefresh(void)
+{
+  APP_WiFi_LwIP_RequestCloseAllClients();
+  APP_WiFi_LwIP_ResetControlState();
+  APP_WiFi_LwIP_DropQueuedTx();
+  g_peerProtocolSeen = 0U;
+  g_serverRebuildRequested = 1U;
+  printf("[lwip] session refresh requested\n");
+}
+
+/* Fully bounce lwIP netif state after WiFi link churn while keeping stack objects alive. */
+void APP_WiFi_LwIP_RequestNetworkRebind(void)
+{
+  APP_WiFi_LwIP_RequestCloseAllClients();
+  APP_WiFi_LwIP_ResetControlState();
+  APP_WiFi_LwIP_DropQueuedTx();
+
+  if ((g_netifAdded != 0U) && (g_netifUp != 0U))
+  {
+    if (g_dhcpStarted != 0U)
+    {
+      (void)netifapi_dhcp_stop(&g_wifiNetif);
+    }
+
+    (void)netifapi_netif_set_link_down(&g_wifiNetif);
+    (void)netifapi_netif_set_down(&g_wifiNetif);
+  }
+
+  g_netifUp = 0U;
+  g_netifMacSynced = 0U;
+  g_dhcpStarted = 0U;
+  g_ipAnnounced = 0U;
+  g_peerProtocolSeen = 0U;
+  g_dhcpStartTick = 0U;
+  g_nextDhcpWaitLogTick = 0U;
+  g_dhcpRestartCount = 0U;
+  g_nextArpRefreshTick = 0U;
+  g_arpRefreshCount = 0U;
+  memset(g_peerCache, 0, sizeof(g_peerCache));
+  g_serverRebuildRequested = 1U;
+  printf("[lwip] network rebind requested\n");
 }
 
 /* Queue/merge one outbound CONTROL command for target node (room-mapped). */
@@ -908,13 +1218,6 @@ uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
     return 1U;
   }
 
-  if ((g_inflightControlValid[roomIndex] != 0U) &&
-      (APP_WiFi_LwIP_IsSameControlPayload(&command, &g_inflightControls[roomIndex]) != 0U))
-  {
-    (void)xSemaphoreGive(g_controlMutex);
-    return 1U;
-  }
-
   command.sequence = g_controlSequence++;
   if (g_controlSequence == 0U)
   {
@@ -929,6 +1232,7 @@ uint8_t APP_WiFi_LwIP_SendControl(uint8_t node,
   }
 
   g_serverControlQueuedCount++;
+  APP_WiFi_LwIP_LogRuntimeStats("control-queued");
 #if (APP_WIFI_LWIP_INFO_LOG_ENABLE != 0U)
   printf("[proto] control queued #%lu node=%u seq=%u target_x10=%d mode=%u fan=%u flags=0x%02X settle=%ums\n",
          (unsigned long)g_serverControlQueuedCount,
@@ -956,7 +1260,7 @@ static void APP_WiFi_LwIP_DropQueuedTx(void)
       break;
     }
 
-    APP_WiFi_LwIP_QueuePop();
+    APP_WiFi_LwIP_QueuePop(packet.priority);
     if (packet.data != NULL)
     {
       vPortFree(packet.data);
@@ -994,15 +1298,18 @@ static void APP_WiFi_LwIP_FlushTxQueue(void)
     if (status == APP_WIFI_TX_STATUS_OK)
     {
       g_txOkCount++;
+      g_txHeadErrorStreak = 0U;
+      g_txLastErrorHeadData = NULL;
+      g_txLastErrorHeadLen = 0U;
       if ((APP_WIFI_LWIP_ETH_TRACE_ENABLE != 0U) && (g_txOkCount <= 32U))
       {
         printf("[lwip] tx ok #%lu len=%u q=%u\n",
                (unsigned long)g_txOkCount,
                (unsigned int)packet.length,
-               (unsigned int)g_txQueueCount);
+               (unsigned int)(g_txQueueCount + g_txPriorityQueueCount));
       }
 
-      APP_WiFi_LwIP_QueuePop();
+      APP_WiFi_LwIP_QueuePop(packet.priority);
       if (packet.data != NULL)
       {
         vPortFree(packet.data);
@@ -1014,11 +1321,44 @@ static void APP_WiFi_LwIP_FlushTxQueue(void)
     if (status == APP_WIFI_TX_STATUS_ERROR)
     {
       g_txErrorCount++;
-      printf("[lwip] dropping queued frame len=%u after tx error\n", (unsigned int)packet.length);
-      APP_WiFi_LwIP_QueuePop();
-      if (packet.data != NULL)
+      if ((packet.data == g_txLastErrorHeadData) &&
+          (packet.length == g_txLastErrorHeadLen))
       {
-        vPortFree(packet.data);
+        if (g_txHeadErrorStreak < 0xFFU)
+        {
+          g_txHeadErrorStreak++;
+        }
+      }
+      else
+      {
+        g_txLastErrorHeadData = packet.data;
+        g_txLastErrorHeadLen = packet.length;
+        g_txHeadErrorStreak = 1U;
+      }
+
+      if (g_txHeadErrorStreak >= APP_WIFI_LWIP_TX_ERROR_RETRY_BEFORE_DROP)
+      {
+        printf("[lwip] dropping queued frame len=%u after tx error streak=%u\n",
+               (unsigned int)packet.length,
+               (unsigned int)g_txHeadErrorStreak);
+        APP_WiFi_LwIP_QueuePop(packet.priority);
+        if (packet.data != NULL)
+        {
+          vPortFree(packet.data);
+        }
+        g_txHeadErrorStreak = 0U;
+        g_txLastErrorHeadData = NULL;
+        g_txLastErrorHeadLen = 0U;
+      }
+      else
+      {
+        if ((g_txHeadErrorStreak <= 4U) || ((g_txHeadErrorStreak % 4U) == 0U))
+        {
+          printf("[lwip] tx error retry head len=%u streak=%u/%u\n",
+                 (unsigned int)packet.length,
+                 (unsigned int)g_txHeadErrorStreak,
+                 (unsigned int)APP_WIFI_LWIP_TX_ERROR_RETRY_BEFORE_DROP);
+        }
       }
     }
     else
@@ -1026,10 +1366,10 @@ static void APP_WiFi_LwIP_FlushTxQueue(void)
       g_txBusyCount++;
       if ((APP_WIFI_LWIP_ETH_TRACE_ENABLE != 0U) && (g_txBusyCount <= 32U))
       {
-        printf("[lwip] tx busy #%lu len=%u q=%u\n",
-               (unsigned long)g_txBusyCount,
-               (unsigned int)packet.length,
-               (unsigned int)g_txQueueCount);
+          printf("[lwip] tx busy #%lu len=%u q=%u\n",
+                 (unsigned long)g_txBusyCount,
+                 (unsigned int)packet.length,
+                 (unsigned int)(g_txQueueCount + g_txPriorityQueueCount));
       }
     }
 
@@ -1243,6 +1583,7 @@ static void APP_WiFi_LwIP_LogBufferHex(const char *prefix, const uint8_t *data, 
 static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint16_t length)
 {
   uint16_t offset = 0U;
+  uint32_t wouldBlockRetries = 0U;
 
   if ((socketHandle < 0) || (data == NULL) || (length == 0U))
   {
@@ -1255,6 +1596,37 @@ static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint
                     &data[offset],
                     (size_t)(length - offset),
                     0);
+    if (sent > 0)
+    {
+      offset = (uint16_t)(offset + (uint16_t)sent);
+      wouldBlockRetries = 0U;
+      continue;
+    }
+
+    if ((errno == EWOULDBLOCK) || (errno == EAGAIN))
+    {
+      /*
+       * Keep socket sends non-blocking. A blocked control send is requeued by
+       * the caller so the WiFi task can continue draining SDIO RX/TX.
+       */
+      wouldBlockRetries++;
+      if (wouldBlockRetries > APP_WIFI_LWIP_SEND_WOULDBLOCK_RETRY_MAX)
+      {
+        g_serverSendErrorCount++;
+        if ((g_serverSendErrorCount <= 8U) || ((g_serverSendErrorCount % 32U) == 0U))
+        {
+          printf("[proto] send blocked too long #%lu after=%u len=%u\n",
+                 (unsigned long)g_serverSendErrorCount,
+                 (unsigned int)offset,
+                 (unsigned int)length);
+        }
+        return 0U;
+      }
+
+      vTaskDelay(pdMS_TO_TICKS(1U));
+      continue;
+    }
+
     if (sent <= 0)
     {
       g_serverSendErrorCount++;
@@ -1264,11 +1636,26 @@ static uint8_t APP_WiFi_LwIP_SendAll(int socketHandle, const uint8_t *data, uint
              (unsigned int)length);
       return 0U;
     }
-
-    offset = (uint16_t)(offset + (uint16_t)sent);
   }
 
   return 1U;
+}
+
+/* Force-close socket with abortive behavior so peer immediately sees disconnect. */
+static void APP_WiFi_LwIP_AbortSocket(int socketHandle)
+{
+  struct linger lingerOption;
+
+  if (socketHandle < 0)
+  {
+    return;
+  }
+
+  lingerOption.l_onoff = 1;
+  lingerOption.l_linger = 0;
+  (void)setsockopt(socketHandle, SOL_SOCKET, SO_LINGER, &lingerOption, (socklen_t)sizeof(lingerOption));
+  (void)shutdown(socketHandle, SHUT_RDWR);
+  closesocket(socketHandle);
 }
 
 /* Serialize and send one control command frame to selected node socket. */
@@ -1276,7 +1663,7 @@ static uint8_t APP_WiFi_LwIP_SendControlFrame(int clientSocket, const APP_WiFi_L
 {
   /*
    * Encode one CONTROL command into protocol frame and send atomically.
-   * Socket send success only means bytes left lwIP; final apply is confirmed by ACK/ERR.
+   * Socket send success only means bytes left lwIP; final apply is reflected by next telemetry state.
    */
   uint8_t payload[APP_HOME_CONTROL_PAYLOAD_LEN] = {0U};
   uint8_t txFrame[APP_HOME_PROTOCOL_MAX_FRAME_LEN] = {0U};
@@ -1305,10 +1692,7 @@ static uint8_t APP_WiFi_LwIP_SendControlFrame(int clientSocket, const APP_WiFi_L
     return 0U;
   }
 
-  APP_WiFi_LwIP_FlushTxQueue();
-
   g_serverControlTxCount++;
-#if (APP_WIFI_LWIP_INFO_LOG_ENABLE != 0U)
   printf("[proto] control tx #%lu node=%u seq=%u target_x10=%d mode=%u fan=%u flags=0x%02X\n",
          (unsigned long)g_serverControlTxCount,
          (unsigned int)command->node,
@@ -1317,20 +1701,140 @@ static uint8_t APP_WiFi_LwIP_SendControlFrame(int clientSocket, const APP_WiFi_L
          (unsigned int)command->mode,
          (unsigned int)command->fan,
          (unsigned int)command->flags);
-#endif
 
   return 1U;
+}
+
+/* Find the currently active socket for a node without holding slot lock during send. */
+static uint8_t APP_WiFi_LwIP_FindActiveNodeSocket(uint8_t node, int *socketHandle)
+{
+  int foundSocket = -1;
+
+  if ((socketHandle == NULL) ||
+      (APP_WiFi_LwIP_IsKnownNode(node) == 0U) ||
+      (APP_WiFi_LwIP_EnsureClientSlotsMutex() == 0U))
+  {
+    return 0U;
+  }
+
+  if (xSemaphoreTake(g_clientSlotsMutex, pdMS_TO_TICKS(1U)) != pdTRUE)
+  {
+    return 0U;
+  }
+
+  for (uint32_t index = 0U; index < APP_WIFI_LWIP_MAX_CLIENTS; index++)
+  {
+    const APP_WiFi_LwIP_ClientSlot_t *slot = &g_clientSlots[index];
+
+    if ((slot->active != 0U) &&
+        (slot->closeRequested == 0U) &&
+        (slot->node == node) &&
+        (slot->socketHandle >= 0))
+    {
+      foundSocket = slot->socketHandle;
+      break;
+    }
+  }
+
+  (void)xSemaphoreGive(g_clientSlotsMutex);
+
+  if (foundSocket < 0)
+  {
+    return 0U;
+  }
+
+  *socketHandle = foundSocket;
+  return 1U;
+}
+
+/* Service pending controls from the WiFi/lwIP service loop so client RX load cannot starve TX. */
+static void APP_WiFi_LwIP_DrainAllPendingControls(void)
+{
+  const TickType_t nowTick = xTaskGetTickCount();
+
+  if ((APP_WiFi_LwIP_IsNetworkOnline() == 0U) ||
+      (APP_WiFi_LwIP_EnsureControlMutex() == 0U))
+  {
+    return;
+  }
+
+  for (uint8_t roomIndex = 0U; roomIndex < APP_WIFI_LWIP_CONTROL_ROOM_COUNT; roomIndex++)
+  {
+    APP_WiFi_LwIP_ControlCommand_t command = {0};
+    int clientSocket = -1;
+    uint8_t hasCommand = 0U;
+
+    if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) != pdTRUE)
+    {
+      return;
+    }
+
+    if ((g_nextControlTxTick[roomIndex] != 0U) &&
+        ((int32_t)(nowTick - g_nextControlTxTick[roomIndex]) < 0))
+    {
+      (void)xSemaphoreGive(g_controlMutex);
+      continue;
+    }
+
+    if ((g_pendingControlValid[roomIndex] != 0U) &&
+        ((int32_t)(nowTick - g_pendingControlReadyTick[roomIndex]) >= 0))
+    {
+      command = g_pendingControls[roomIndex];
+      g_pendingControlValid[roomIndex] = 0U;
+      g_pendingControlRetryCount[roomIndex] = 0U;
+      g_pendingControlReadyTick[roomIndex] = 0U;
+      hasCommand = 1U;
+    }
+
+    (void)xSemaphoreGive(g_controlMutex);
+
+    if (hasCommand == 0U)
+    {
+      continue;
+    }
+
+    if (APP_WiFi_LwIP_FindActiveNodeSocket(command.node, &clientSocket) == 0U)
+    {
+      if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) == pdTRUE)
+      {
+        g_pendingControls[roomIndex] = command;
+        g_pendingControlValid[roomIndex] = 1U;
+        g_pendingControlReadyTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+        g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+        (void)xSemaphoreGive(g_controlMutex);
+      }
+      continue;
+    }
+
+    APP_WiFi_LwIP_FlushTxQueue();
+    if (APP_WiFi_LwIP_SendControlFrame(clientSocket, &command) != 0U)
+    {
+      APP_WiFi_LwIP_FlushTxQueue();
+      if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) == pdTRUE)
+      {
+        g_nextControlTxTick[roomIndex] = 0U;
+        (void)xSemaphoreGive(g_controlMutex);
+      }
+    }
+    else
+    {
+      if (xSemaphoreTake(g_controlMutex, pdMS_TO_TICKS(1U)) == pdTRUE)
+      {
+        g_pendingControls[roomIndex] = command;
+        g_pendingControlValid[roomIndex] = 1U;
+        g_pendingControlRetryCount[roomIndex] = 0U;
+        g_pendingControlReadyTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+        g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+        (void)xSemaphoreGive(g_controlMutex);
+      }
+    }
+  }
 }
 
 /* Try sending queued controls whose destination matches active client node. */
 static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientNode)
 {
-  /*
-   * Per-node control scheduler:
-   * - keep at most one in-flight command waiting for ACK/ERR
-   * - apply tx gap to absorb rapid UI toggles
-   * - requeue on transient send failure without dropping newest intent
-   */
+  /* Latest-intent control scheduler without protocol ACK dependency. */
   APP_WiFi_LwIP_ControlCommand_t command = {0};
   uint8_t roomIndex = 0U;
   uint8_t hasCommand = 0U;
@@ -1347,25 +1851,6 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
     return;
   }
 
-  if (g_inflightControlValid[roomIndex] != 0U)
-  {
-    if ((int32_t)(nowTick - g_inflightControlTxTick[roomIndex]) >= (int32_t)pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_ACK_TIMEOUT_MS))
-    {
-      /* ACK timeout: release inflight slot so next desired state can be retried. */
-      g_serverControlTimeoutCount++;
-      printf("[proto] control ack timeout #%lu node=%u seq=%u\n",
-             (unsigned long)g_serverControlTimeoutCount,
-             (unsigned int)g_inflightControls[roomIndex].node,
-             (unsigned int)g_inflightControls[roomIndex].sequence);
-      memset(&g_inflightControls[roomIndex], 0, sizeof(g_inflightControls[roomIndex]));
-      g_inflightControlValid[roomIndex] = 0U;
-      g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_TX_GAP_MS);
-    }
-
-    (void)xSemaphoreGive(g_controlMutex);
-    return;
-  }
-
   if ((g_nextControlTxTick[roomIndex] != 0U) &&
       ((int32_t)(nowTick - g_nextControlTxTick[roomIndex]) < 0))
   {
@@ -1378,6 +1863,7 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
   {
     command = g_pendingControls[roomIndex];
     g_pendingControlValid[roomIndex] = 0U;
+    g_pendingControlRetryCount[roomIndex] = 0U;
     g_pendingControlReadyTick[roomIndex] = 0U;
     hasCommand = 1U;
   }
@@ -1393,9 +1879,8 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
   {
     if (xSemaphoreTake(g_controlMutex, portMAX_DELAY) == pdTRUE)
     {
-      g_inflightControls[roomIndex] = command;
-      g_inflightControlValid[roomIndex] = 1U;
-      g_inflightControlTxTick[roomIndex] = nowTick;
+      /* Telemetry will prove the final state; avoid ACK/confirm retries that amplify load. */
+      g_nextControlTxTick[roomIndex] = 0U;
       (void)xSemaphoreGive(g_controlMutex);
     }
   }
@@ -1405,83 +1890,24 @@ static void APP_WiFi_LwIP_DrainPendingControls(int clientSocket, uint8_t clientN
     {
       g_pendingControls[roomIndex] = command;
       g_pendingControlValid[roomIndex] = 1U;
-      g_pendingControlReadyTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_TX_GAP_MS);
-      g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_TX_GAP_MS);
+      g_pendingControlRetryCount[roomIndex] = 0U;
+      g_pendingControlReadyTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
+      g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_RETRY_MS);
       (void)xSemaphoreGive(g_controlMutex);
     }
   }
 }
 
-/* Match control ACK/ERR reply and release inflight command tracking. */
+/* ACK/ERR frames are intentionally ignored; telemetry is the source of truth. */
 static void APP_WiFi_LwIP_HandleControlReply(const APP_HomeProtocolFrame_t *frame, uint8_t isError)
 {
-  /*
-   * Match ACK/ERR to in-flight control by room + sequence.
-   * Only matching replies can clear the in-flight guard.
-   */
-  uint8_t roomIndex = 0U;
-  TickType_t nowTick = xTaskGetTickCount();
-
-  if ((frame == NULL) ||
-      (APP_HomeData_NodeToRoomIndex(frame->node, &roomIndex) == 0U) ||
-      (APP_WiFi_LwIP_EnsureControlMutex() == 0U))
-  {
-    return;
-  }
-
-  if (xSemaphoreTake(g_controlMutex, portMAX_DELAY) != pdTRUE)
-  {
-    return;
-  }
-
-  if ((g_inflightControlValid[roomIndex] == 0U) ||
-      (frame->sequence != g_inflightControls[roomIndex].sequence))
-  {
-    (void)xSemaphoreGive(g_controlMutex);
-    return;
-  }
-
-  if ((frame->command == APP_HOME_CMD_ACK) &&
-      (frame->length >= 1U) &&
-      (frame->payload[0] != APP_HOME_CMD_CONTROL))
-  {
-    (void)xSemaphoreGive(g_controlMutex);
-    return;
-  }
-
-  if (isError != 0U)
-  {
-    g_serverControlErrCount++;
-    printf("[proto] control err #%lu node=%u seq=%u\n",
-           (unsigned long)g_serverControlErrCount,
-           (unsigned int)frame->node,
-           (unsigned int)frame->sequence);
-  }
-  else
-  {
-    g_serverControlAckCount++;
-#if (APP_WIFI_LWIP_INFO_LOG_ENABLE != 0U)
-    printf("[proto] control ack #%lu node=%u seq=%u\n",
-           (unsigned long)g_serverControlAckCount,
-           (unsigned int)frame->node,
-           (unsigned int)frame->sequence);
-#endif
-  }
-
-  memset(&g_inflightControls[roomIndex], 0, sizeof(g_inflightControls[roomIndex]));
-  g_inflightControlValid[roomIndex] = 0U;
-  g_nextControlTxTick[roomIndex] = nowTick + pdMS_TO_TICKS(APP_WIFI_LWIP_CONTROL_TX_GAP_MS);
-  (void)xSemaphoreGive(g_controlMutex);
+  (void)frame;
+  (void)isError;
 }
 
-/* Requeue inflight command after disconnect to avoid command loss. */
+/* Release any pending command immediately when a client reconnects. */
 static void APP_WiFi_LwIP_RequeueInflightControl(uint8_t clientNode)
 {
-  /*
-   * Client disconnect/reconnect recovery:
-   * move unsafely in-flight control back to pending queue so the latest intent
-   * is replayed when the node socket is restored.
-   */
   uint8_t roomIndex = 0U;
   TickType_t nowTick = xTaskGetTickCount();
 
@@ -1496,18 +1922,8 @@ static void APP_WiFi_LwIP_RequeueInflightControl(uint8_t clientNode)
     return;
   }
 
-  if (g_inflightControlValid[roomIndex] != 0U)
+  if (g_pendingControlValid[roomIndex] != 0U)
   {
-    g_pendingControls[roomIndex] = g_inflightControls[roomIndex];
-    g_pendingControlValid[roomIndex] = 1U;
-    g_pendingControlReadyTick[roomIndex] = nowTick;
-    memset(&g_inflightControls[roomIndex], 0, sizeof(g_inflightControls[roomIndex]));
-    g_inflightControlValid[roomIndex] = 0U;
-    g_nextControlTxTick[roomIndex] = 0U;
-  }
-  else if (g_pendingControlValid[roomIndex] != 0U)
-  {
-    /* Client reconnected path: release pending control immediately. */
     g_pendingControlReadyTick[roomIndex] = nowTick;
     g_nextControlTxTick[roomIndex] = 0U;
   }
@@ -1515,7 +1931,7 @@ static void APP_WiFi_LwIP_RequeueInflightControl(uint8_t clientNode)
   (void)xSemaphoreGive(g_controlMutex);
 }
 
-/* Send protocol ACK referencing original command id and sequence. */
+/* Send a lightweight protocol ACK for peer frames that expect flow confirmation. */
 static void APP_WiFi_LwIP_SendProtocolAck(int clientSocket, const APP_HomeProtocolFrame_t *frame)
 {
   uint8_t payload[1] = {0U};
@@ -1625,6 +2041,10 @@ static uint8_t APP_WiFi_LwIP_EnsureClientSlotsMutex(void)
   }
 
   g_clientSlotsMutex = xSemaphoreCreateMutex();
+  if (g_clientSlotsMutex != NULL)
+  {
+    APP_WiFi_LwIP_RegisterQueueForDebug((QueueHandle_t)g_clientSlotsMutex, "lwip_slots_mutex");
+  }
   return (g_clientSlotsMutex != NULL) ? 1U : 0U;
 }
 
@@ -1875,14 +2295,19 @@ static void APP_WiFi_LwIP_RequestCloseAllClients(void)
   {
     if (g_clientSlots[index].active != 0U)
     {
+      const uint8_t node = g_clientSlots[index].node;
       g_clientSlots[index].closeRequested = 1U;
       APP_WiFi_LwIP_LogClientEndpoint("request close (netif down)",
                                       (uint8_t)index,
-                                      g_clientSlots[index].node,
+                                      node,
                                       g_clientSlots[index].ipAddress,
                                       0U,
                                       (int32_t)g_clientSlots[index].socketHandle,
                                       "socket");
+      if (APP_WiFi_LwIP_IsKnownNode(node) != 0U)
+      {
+        (void)APP_HomeData_UpdateNodeOnline(node, 0U);
+      }
     }
   }
 
@@ -1900,10 +2325,10 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
    * 1) bind node identity to the current TCP slot
    * 2) validate command/payload
    * 3) push telemetry/control data into shared model state
-   * 4) emit ACK/ERR when required by protocol semantics
+   * 4) ACK only handshake/control commands; keep periodic reports one-way
    */
-  uint8_t shouldAck = 1U;
   APP_HomeProtocolError_t error = APP_HOME_ERR_NONE;
+  uint8_t shouldAck = 0U;
 
   if (frame == NULL)
   {
@@ -1954,6 +2379,7 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
   switch (frame->command)
   {
     case APP_HOME_CMD_HELLO:
+      shouldAck = 1U;
       if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
       {
         error = APP_HOME_ERR_BAD_NODE;
@@ -2009,11 +2435,11 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
                (unsigned int)frame->payload[6],
                (unsigned int)frame->payload[7]);
 #endif
-        shouldAck = 0U;
       }
       break;
 
     case APP_HOME_CMD_CONTROL:
+      shouldAck = 1U;
       if (APP_WiFi_LwIP_IsKnownNode(frame->node) == 0U)
       {
         error = APP_HOME_ERR_BAD_NODE;
@@ -2075,20 +2501,10 @@ static void APP_WiFi_LwIP_HandleProtocolFrame(int clientSocket,
       break;
 
     case APP_HOME_CMD_ACK:
-      shouldAck = 0U;
-#if (APP_WIFI_LWIP_INFO_LOG_ENABLE != 0U)
-      printf("[proto] peer ack node=%u seq=%u\n",
-             (unsigned int)frame->node,
-             (unsigned int)frame->sequence);
-#endif
       APP_WiFi_LwIP_HandleControlReply(frame, 0U);
       break;
 
     case APP_HOME_CMD_ERR:
-      shouldAck = 0U;
-      printf("[proto] peer err node=%u seq=%u\n",
-             (unsigned int)frame->node,
-             (unsigned int)frame->sequence);
       APP_WiFi_LwIP_HandleControlReply(frame, 1U);
       break;
 
@@ -2149,6 +2565,7 @@ static void APP_WiFi_LwIP_ClientTask(void *argument)
   int clientSocket = -1;
   uint32_t clientIpAddress = 0U;
   uint16_t clientPort = 0U;
+  uint8_t abortiveClose = 0U;
 #if (APP_WIFI_LWIP_CLIENT_IDLE_TIMEOUT_MS > 0U)
   TickType_t lastRxTick = xTaskGetTickCount();
 #endif
@@ -2187,6 +2604,7 @@ static void APP_WiFi_LwIP_ClientTask(void *argument)
                                       clientPort,
                                       0,
                                       NULL);
+      abortiveClose = 1U;
       break;
     }
 
@@ -2265,6 +2683,10 @@ static void APP_WiFi_LwIP_ClientTask(void *argument)
                                         parser.lastError);
       }
     }
+
+#if (APP_WIFI_LWIP_CLIENT_RX_YIELD_MS > 0U)
+    vTaskDelay(pdMS_TO_TICKS(APP_WIFI_LWIP_CLIENT_RX_YIELD_MS));
+#endif
   }
 
   if ((APP_WiFi_LwIP_IsKnownNode(clientNode) != 0U) &&
@@ -2276,7 +2698,14 @@ static void APP_WiFi_LwIP_ClientTask(void *argument)
   (void)APP_WiFi_LwIP_GetSlotSnapshot(slotIndex, &clientIpAddress, &clientNode);
   APP_WiFi_LwIP_ReleaseClientSlot(slotIndex);
 
-  closesocket(clientSocket);
+  if (abortiveClose != 0U)
+  {
+    APP_WiFi_LwIP_AbortSocket(clientSocket);
+  }
+  else
+  {
+    closesocket(clientSocket);
+  }
   APP_WiFi_LwIP_LogClientEndpoint("client disconnected",
                                   slotIndex,
                                   clientNode,
@@ -2363,6 +2792,13 @@ static void APP_WiFi_LwIP_ServerTask(void *argument)
       socklen_t clientLength = (socklen_t)sizeof(clientAddress);
       int clientSocket = accept(listenSocket, (struct sockaddr *)&clientAddress, &clientLength);
 
+      if (g_serverRebuildRequested != 0U)
+      {
+        g_serverRebuildRequested = 0U;
+        printf("[lwip] rebuild server socket requested\n");
+        break;
+      }
+
       if (clientSocket < 0)
       {
         if ((errno == EWOULDBLOCK) || (errno == EAGAIN))
@@ -2396,6 +2832,7 @@ static void APP_WiFi_LwIP_ServerTask(void *argument)
         int32_t slotIndex = -1;
         int noDelay = 1;
         int keepAlive = 1;
+        unsigned long clientNonBlocking = 1UL;
         struct timeval recvTimeout = {0};
         struct timeval sendTimeout = {0};
 
@@ -2408,6 +2845,18 @@ static void APP_WiFi_LwIP_ServerTask(void *argument)
         (void)setsockopt(clientSocket, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, (socklen_t)sizeof(keepAlive));
         (void)setsockopt(clientSocket, SOL_SOCKET, SO_RCVTIMEO, &recvTimeout, (socklen_t)sizeof(recvTimeout));
         (void)setsockopt(clientSocket, SOL_SOCKET, SO_SNDTIMEO, &sendTimeout, (socklen_t)sizeof(sendTimeout));
+        if (ioctl(clientSocket, FIONBIO, &clientNonBlocking) != 0)
+        {
+          APP_WiFi_LwIP_LogClientEndpoint("client nonblocking failed",
+                                          0xFFU,
+                                          APP_HOME_NODE_NONE,
+                                          clientIp,
+                                          (uint16_t)ntohs(clientAddress.sin_port),
+                                          0,
+                                          NULL);
+          closesocket(clientSocket);
+          continue;
+        }
 
         slotIndex = APP_WiFi_LwIP_ClaimClientSlot(clientIp, clientSocket);
         if (slotIndex < 0)
@@ -2496,6 +2945,7 @@ static void APP_WiFi_LwIP_EnsureInitialized(void)
       printf("[lwip] tcpip init semaphore allocation failed\n");
       return;
     }
+    APP_WiFi_LwIP_RegisterQueueForDebug((QueueHandle_t)g_tcpipInitSemaphore, "lwip_tcpip_init_sem");
 
     tcpip_init(APP_WiFi_LwIP_TcpipInitDone, &g_tcpipInitSemaphore);
     if (xSemaphoreTake(g_tcpipInitSemaphore, portMAX_DELAY) != pdTRUE)
@@ -2519,6 +2969,7 @@ static void APP_WiFi_LwIP_EnsureInitialized(void)
       printf("[lwip] tx queue mutex allocation failed\n");
       return;
     }
+    APP_WiFi_LwIP_RegisterQueueForDebug((QueueHandle_t)g_txQueueMutex, "lwip_tx_queue_mutex");
   }
 
   if (g_txFlushMutex == NULL)
@@ -2529,6 +2980,7 @@ static void APP_WiFi_LwIP_EnsureInitialized(void)
       printf("[lwip] tx flush mutex allocation failed\n");
       return;
     }
+    APP_WiFi_LwIP_RegisterQueueForDebug((QueueHandle_t)g_txFlushMutex, "lwip_tx_flush_mutex");
   }
 
   if (APP_WiFi_LwIP_EnsureControlMutex() == 0U)
@@ -2724,6 +3176,7 @@ void APP_WiFi_LwIP_Service(void)
       g_arpRefreshCount = 0U;
     }
 
+    APP_WiFi_LwIP_DrainAllPendingControls();
     APP_WiFi_LwIP_FlushTxQueue();
 #if (APP_WIFI_LWIP_GRATUITOUS_ARP_ENABLE != 0U)
     APP_WiFi_LwIP_MaybeRefreshArp();
