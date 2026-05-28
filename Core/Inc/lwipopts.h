@@ -32,6 +32,7 @@
 #define DHCP_DOES_ARP_CHECK                 0
 #define ARP_QUEUEING                        1
 #define LWIP_STATS                          0
+#define LWIP_DISABLE_TCP_SANITY_CHECKS      1
 
 #define MEM_ALIGNMENT                       4
 #define MEM_LIBC_MALLOC                     0
@@ -61,10 +62,10 @@
 #define DEFAULT_ACCEPTMBOX_SIZE             32
 
 #define TCP_MSS                             1460
-#define TCP_WND                             (2 * TCP_MSS)
-#define TCP_SND_BUF                         (2 * TCP_MSS)
+#define TCP_WND                             (1 * TCP_MSS)
+#define TCP_SND_BUF                         (1 * TCP_MSS)
 #define TCP_SND_QUEUELEN                    (2 * (TCP_SND_BUF / TCP_MSS))
-#define TCP_SNDLOWAT                        TCP_MSS
+#define TCP_SNDLOWAT                        (TCP_MSS / 2)
 #define TCP_SNDQUEUELOWAT                   2
 #define TCP_LISTEN_BACKLOG                  1
 #define TCP_DEFAULT_LISTEN_BACKLOG          8

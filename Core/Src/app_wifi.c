@@ -16,9 +16,9 @@
 #define APP_WIFI_RESET_RELEASE_GUARD_MS 50U
 #define APP_WIFI_MODULE_SETTLE_MS       200U
 #define APP_WIFI_POLL_MS                1000U
-#define APP_WIFI_RX_DRAIN_BURST_MAIN    24U
-#define APP_WIFI_RX_DRAIN_BURST_EXTRA   16U
-#define APP_WIFI_RX_DRAIN_EXTRA_ROUNDS  2U
+#define APP_WIFI_RX_DRAIN_BURST_MAIN    8U
+#define APP_WIFI_RX_DRAIN_BURST_EXTRA   8U
+#define APP_WIFI_RX_DRAIN_EXTRA_ROUNDS  3U
 #define APP_WIFI_HEARTBEAT_MS           5000U
 #define APP_WIFI_HEARTBEAT_LOG_ENABLE   0U
 #define APP_WIFI_SDPCM_TRACE_ENABLE     0U
@@ -2373,15 +2373,6 @@ APP_WiFiTxStatus_t APP_WiFi_SendDataFrame(const uint8_t *frame, uint16_t length)
   availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
   if (availableCredits == 0U)
   {
-    if (g_wifiRxDrainActive == 0U)
-    {
-      (void)APP_WiFi_DrainSdpcmRxQueue(2U);
-      availableCredits = (uint8_t)(g_wifiBusCredit - g_wifiTxSequence);
-    }
-  }
-
-  if (availableCredits == 0U)
-  {
     dataTxBusyCount++;
     if ((APP_WIFI_DATA_TX_LOG_ENABLE != 0U) && (dataTxBusyCount <= 32U))
     {
@@ -2647,13 +2638,9 @@ static void APP_WiFi_HandleAsyncEvent(const uint8_t *frame, uint16_t captured)
         g_wifiJoinLinkReady = 1U;
         if ((g_wifiLinkState == APP_WIFI_LINK_STATE_CONNECTED) && (hadPendingLinkIssue != 0U))
         {
-          APP_WiFi_Logf("[wifi] runtime: link-up after transient down, rebind lwip network\n");
-          /*
-           * After a connected-state transient link loss, the firmware data path
-           * can recover while lwIP still keeps stale netif/DHCP/ARP state.
-           * Bounce the netif so reset nodes can discover and reconnect cleanly.
-           */
-          APP_WiFi_LwIP_RequestNetworkRebind();
+          APP_WiFi_Logf("[wifi] runtime: link-up after transient down, refresh sessions\n");
+          APP_WiFi_ResetNoCreditStall();
+          APP_WiFi_LwIP_RequestSessionRefresh();
           APP_WiFi_ClearConnectedLinkIssue("link up");
         }
         else
@@ -4956,32 +4943,27 @@ void APP_WiFi_Task(void *argument)
         }
         APP_WiFi_ProcessScanRequest();
         APP_WiFi_PollActiveScanResults();
-        drainedFrames = APP_WiFi_DrainSdpcmRxQueue(APP_WIFI_RX_DRAIN_BURST_MAIN);
         APP_WiFi_LwIP_Service();
-        /*
-         * TCP handshakes are timing-sensitive on ESP01S AT firmware. LwIP may
-         * enqueue replies while we are draining RX frames; run a second pass only
-         * when there was RX activity or pending TX to reduce idle-loop overhead.
-         */
+        drainedFrames = APP_WiFi_DrainSdpcmRxQueue(APP_WIFI_RX_DRAIN_BURST_MAIN);
         if ((drainedFrames != 0U) || (APP_WiFi_LwIP_HasPendingTx() != 0U))
         {
-          (void)APP_WiFi_DrainSdpcmRxQueue(APP_WIFI_RX_DRAIN_BURST_EXTRA);
           APP_WiFi_LwIP_Service();
+          (void)APP_WiFi_DrainSdpcmRxQueue(APP_WIFI_RX_DRAIN_BURST_EXTRA);
 
           while (extraRounds < APP_WIFI_RX_DRAIN_EXTRA_ROUNDS)
           {
+            APP_WiFi_LwIP_Service();
             uint32_t roundDrained = APP_WiFi_DrainSdpcmRxQueue(APP_WIFI_RX_DRAIN_BURST_EXTRA);
             if ((roundDrained == 0U) && (APP_WiFi_LwIP_HasPendingTx() == 0U))
             {
               break;
             }
 
-            APP_WiFi_LwIP_Service();
             extraRounds++;
           }
         }
         APP_WiFi_LogPeriodicHeartbeat();
-        osDelay(APP_WIFI_STACK_WAIT_MS);
+        osDelay((APP_WiFi_LwIP_HasPendingTx() != 0U) ? 1U : APP_WIFI_STACK_WAIT_MS);
         break;
       }
 
